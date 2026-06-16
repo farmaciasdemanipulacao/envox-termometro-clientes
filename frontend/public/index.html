@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENVOX Intelligence — Dashboard Executivo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* Custom styles além do Tailwind */
+        .temperature-ring {
+            background: conic-gradient(
+                from 180deg,
+                #ef4444 0deg 36deg,
+                #f97316 36deg 72deg,
+                #eab308 72deg 108deg,
+                #22c55e 108deg 180deg
+            );
+            border-radius: 50%;
+        }
+        .metric-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .alert-critical { border-left: 4px solid #ef4444; }
+        .alert-high     { border-left: 4px solid #f97316; }
+        .alert-medium   { border-left: 4px solid #eab308; }
+        .alert-low      { border-left: 4px solid #22c55e; }
+        .sentiment-positive { color: #22c55e; }
+        .sentiment-neutral  { color: #6b7280; }
+        .sentiment-negative { color: #f97316; }
+        .sentiment-critical { color: #ef4444; }
+        .fade-in { animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+        .loading-spinner {
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px; height: 24px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Scrollbar custom */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<!-- ===================== SIDEBAR ===================== -->
+<div class="flex h-screen overflow-hidden">
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shadow-xl flex-shrink-0">
+        <!-- Logo -->
+        <div class="p-6 border-b border-gray-700">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-brain text-white text-lg"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-white text-lg leading-tight">ENVOX</div>
+                    <div class="text-blue-400 text-xs">Intelligence</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <a href="#overview" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white cursor-pointer">
+                <i class="fas fa-tachometer-alt w-5"></i>
+                <span class="text-sm font-medium">Visão Geral</span>
+            </a>
+            <a href="#summary" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer transition">
+                <i class="fas fa-file-alt w-5"></i>
+                <span class="text-sm">Resumo Executivo</span>
+            </a>
+            <a href="#alerts" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer transition">
+                <i class="fas fa-bell w-5"></i>
+                <span class="text-sm">Alertas</span>
+                <span id="alerts-badge" class="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+            </a>
+            <a href="#groups" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer transition">
+                <i class="fas fa-users w-5"></i>
+                <span class="text-sm">Grupos</span>
+            </a>
+            <a href="#team" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer transition">
+                <i class="fas fa-user-tie w-5"></i>
+                <span class="text-sm">Time</span>
+            </a>
+
+            <div class="border-t border-gray-700 my-3"></div>
+
+            <div class="px-4 py-2 text-xs text-gray-500 uppercase tracking-wider">Sistema</div>
+            <a href="#" onclick="openDocs()" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer transition">
+                <i class="fas fa-code w-5"></i>
+                <span class="text-sm">API Docs</span>
+            </a>
+        </nav>
+
+        <!-- User info -->
+        <div class="p-4 border-t border-gray-700">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-xs"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-white truncate" id="username-display">Admin</div>
+                    <div class="text-xs text-gray-400">ENVOX</div>
+                </div>
+                <button onclick="logout()" class="text-gray-400 hover:text-red-400 transition" title="Sair">
+                    <i class="fas fa-sign-out-alt text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main class="flex-1 overflow-y-auto">
+
+        <!-- LOGIN OVERLAY -->
+        <div id="login-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-brain text-white text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900">ENVOX Intelligence</h1>
+                    <p class="text-gray-500 mt-1 text-sm">Plataforma de Inteligência Operacional</p>
+                </div>
+                <form id="login-form" onsubmit="doLogin(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+                            <input type="text" id="login-username" value="admin" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="admin">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                            <input type="password" id="login-password" value="admin123" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="••••••••">
+                        </div>
+                        <div id="login-error" class="text-red-500 text-sm hidden"></div>
+                        <button type="submit" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span>Entrar</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- HEADER -->
+        <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+            <div>
+                <h1 class="text-xl font-bold text-gray-900" id="page-title">Dashboard Executivo</h1>
+                <p class="text-sm text-gray-500" id="last-update">Carregando dados...</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="refreshAll()" class="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition">
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                    Atualizar
+                </button>
+                <button onclick="generateSummary()" class="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition">
+                    <i class="fas fa-magic"></i>
+                    Gerar Resumo
+                </button>
+            </div>
+        </header>
+
+        <div class="p-8 space-y-8">
+
+            <!-- ===================== SEÇÃO: VISÃO GERAL ===================== -->
+            <section id="overview" class="fade-in">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-tachometer-alt text-blue-600"></i>
+                    Visão Geral do Dia
+                </h2>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                    <div class="metric-card bg-white rounded-xl p-4 shadow-sm border border-gray-100 col-span-1">
+                        <div class="text-xs text-gray-500 mb-1">Mensagens Hoje</div>
+                        <div class="text-2xl font-bold text-gray-900" id="kpi-messages">-</div>
+                        <div class="text-xs mt-1" id="kpi-messages-trend"></div>
+                    </div>
+                    <div class="metric-card bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <div class="text-xs text-gray-500 mb-1">Grupos Ativos</div>
+                        <div class="text-2xl font-bold text-gray-900" id="kpi-conversations">-</div>
+                    </div>
+                    <div class="metric-card bg-white rounded-xl p-4 shadow-sm border border-red-100 bg-red-50">
+                        <div class="text-xs text-red-600 mb-1">Alertas Abertos</div>
+                        <div class="text-2xl font-bold text-red-700" id="kpi-alerts">-</div>
+                        <div class="text-xs text-red-500" id="kpi-alerts-critical"></div>
+                    </div>
+                    <div class="metric-card bg-white rounded-xl p-4 shadow-sm border border-green-100 bg-green-50">
+                        <div class="text-xs text-green-600 mb-1">Oportunidades</div>
+                        <div class="text-2xl font-bold text-green-700" id="kpi-opportunities">-</div>
+                    </div>
+                    <div class="metric-card bg-white rounded-xl p-4 shadow-sm border border-yellow-100 bg-yellow-50">
+                        <div class="text-xs text-yellow-700 mb-1">Follow-ups Pend.</div>
+                        <div class="text-2xl font-bold text-yellow-800" id="kpi-followups">-</div>
+                    </div>
+                    <div class="metric-card bg-white rounded-xl p-4 shadow-sm border border-orange-100 bg-orange-50">
+                        <div class="text-xs text-orange-600 mb-1">Riscos Churn</div>
+                        <div class="text-2xl font-bold text-orange-700" id="kpi-churn">-</div>
+                    </div>
+                </div>
+
+                <!-- Termômetro + Alertas por severidade -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Termômetro Operacional -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                            <i class="fas fa-thermometer-half text-blue-600"></i>
+                            Termômetro Operacional
+                        </h3>
+                        <div class="flex flex-col items-center">
+                            <div class="relative w-32 h-32 mb-4">
+                                <canvas id="temperature-chart" width="128" height="128"></canvas>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span class="text-3xl font-bold text-gray-900" id="temp-score">-</span>
+                                    <span class="text-xs text-gray-500">/ 100</span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <span class="px-3 py-1 rounded-full text-sm font-medium" id="temp-label-badge">-</span>
+                                <p class="text-xs text-gray-500 mt-2">Saúde geral da operação</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alertas por severidade -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                            Distribuição de Alertas
+                        </h3>
+                        <div class="space-y-3" id="alert-distribution">
+                            <div class="text-sm text-gray-400">Carregando...</div>
+                        </div>
+                    </div>
+
+                    <!-- Tendências -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-green-600"></i>
+                            Tendências (vs Ontem)
+                        </h3>
+                        <div class="space-y-3" id="trends-section">
+                            <div class="text-sm text-gray-400">Carregando...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===================== SEÇÃO: RESUMO EXECUTIVO ===================== -->
+            <section id="summary" class="fade-in">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-file-alt text-blue-600"></i>
+                    Resumo Executivo
+                </h2>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div id="summary-content">
+                        <div class="flex items-center gap-2 text-gray-400">
+                            <span class="loading-spinner"></span>
+                            <span class="text-sm">Carregando resumo...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===================== SEÇÃO: ALERTAS ===================== -->
+            <section id="alerts" class="fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-bell text-blue-600"></i>
+                        Alertas em Aberto
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <select id="alert-filter" onchange="loadAlerts()" class="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Todos</option>
+                            <option value="critical">Crítico</option>
+                            <option value="high">Alto</option>
+                            <option value="medium">Médio</option>
+                            <option value="low">Baixo</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="alerts-list" class="space-y-3">
+                    <div class="text-sm text-gray-400">Carregando alertas...</div>
+                </div>
+            </section>
+
+            <!-- ===================== SEÇÃO: GRUPOS ===================== -->
+            <section id="groups" class="fade-in">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-users text-blue-600"></i>
+                    Monitoramento por Grupo
+                </h2>
+                <div id="groups-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div class="text-sm text-gray-400">Carregando grupos...</div>
+                </div>
+            </section>
+
+            <!-- ===================== SEÇÃO: TIME ===================== -->
+            <section id="team" class="fade-in">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-user-tie text-blue-600"></i>
+                    Performance do Time
+                </h2>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div id="team-content" class="p-6">
+                        <div class="text-sm text-gray-400">Dados de performance do time serão exibidos aqui conforme as métricas forem acumuladas.</div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<!-- TOAST NOTIFICATIONS -->
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+<script>
+// ================================================================
+// ENVOX Intelligence — Dashboard JS
+// ================================================================
+
+const API_BASE = '/api/v1';
+let authToken = localStorage.getItem('envox_token') || '';
+let tempChart = null;
+
+// ================================================================
+// AUTH
+// ================================================================
+
+async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const errEl = document.getElementById('login-error');
+    const username = document.getElementById('login-username').value;
+    const password = document.getElementById('login-password').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Entrando...';
+    errEl.classList.add('hidden');
+
+    try {
+        const resp = await fetch(`${API_BASE}/auth/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || 'Credenciais inválidas');
+        }
+
+        const data = await resp.json();
+        authToken = data.access_token;
+        localStorage.setItem('envox_token', authToken);
+        document.getElementById('username-display').textContent = username;
+        document.getElementById('login-overlay').style.display = 'none';
+        showToast('Bem-vindo ao ENVOX Intelligence!', 'success');
+        refreshAll();
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Entrar</span>';
+    }
+}
+
+function logout() {
+    localStorage.removeItem('envox_token');
+    authToken = '';
+    document.getElementById('login-overlay').style.display = 'flex';
+}
+
+async function apiGet(path) {
+    const resp = await fetch(`${API_BASE}${path}`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (resp.status === 401) {
+        logout();
+        throw new Error('Sessão expirada');
+    }
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    return resp.json();
+}
+
+async function apiPost(path, body = {}) {
+    const resp = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    return resp.json();
+}
+
+async function apiPatch(path, body = {}) {
+    const resp = await fetch(`${API_BASE}${path}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+    return resp.json();
+}
+
+// ================================================================
+// REFRESH
+// ================================================================
+
+async function refreshAll() {
+    const icon = document.getElementById('refresh-icon');
+    icon.classList.add('fa-spin');
+
+    const now = new Date().toLocaleString('pt-BR');
+    document.getElementById('last-update').textContent = `Atualizado em ${now}`;
+
+    try {
+        await Promise.all([
+            loadOverview(),
+            loadSummary(),
+            loadAlerts(),
+            loadGroups(),
+        ]);
+    } catch (err) {
+        if (err.message !== 'Sessão expirada') {
+            showToast('Erro ao carregar dados: ' + err.message, 'error');
+        }
+    } finally {
+        icon.classList.remove('fa-spin');
+    }
+}
+
+// ================================================================
+// OVERVIEW
+// ================================================================
+
+async function loadOverview() {
+    try {
+        const data = await apiGet('/dashboard/overview');
+
+        // KPIs
+        document.getElementById('kpi-messages').textContent = data.total_messages_today ?? '-';
+        document.getElementById('kpi-conversations').textContent = data.active_conversations ?? '-';
+        document.getElementById('kpi-alerts').textContent = data.alerts?.open ?? '-';
+        document.getElementById('kpi-opportunities').textContent = data.opportunities_detected ?? '-';
+        document.getElementById('kpi-followups').textContent = data.followups_pending ?? '-';
+        document.getElementById('kpi-churn').textContent = data.churn_signals ?? '-';
+
+        // Alertas críticos badge
+        const critCount = data.alerts?.critical || 0;
+        document.getElementById('kpi-alerts-critical').textContent =
+            critCount > 0 ? `${critCount} crítico(s)` : '';
+
+        // Badge sidebar
+        const badge = document.getElementById('alerts-badge');
+        if (data.alerts?.open > 0) {
+            badge.textContent = Math.min(data.alerts.open, 99);
+            badge.classList.remove('hidden');
+        }
+
+        // Tendência de volume
+        const trend = data.message_volume_trend || 0;
+        const trendEl = document.getElementById('kpi-messages-trend');
+        if (trend > 0) {
+            trendEl.innerHTML = `<span class="text-green-600">▲ ${trend.toFixed(1)}% vs ontem</span>`;
+        } else if (trend < 0) {
+            trendEl.innerHTML = `<span class="text-red-500">▼ ${Math.abs(trend).toFixed(1)}% vs ontem</span>`;
+        } else {
+            trendEl.innerHTML = `<span class="text-gray-400">= vs ontem</span>`;
+        }
+
+        // Termômetro
+        renderTemperature(data.temperature_score, data.temperature_label);
+
+        // Alertas por severidade
+        renderAlertDistribution(data.alerts);
+
+        // Tendências
+        renderTrends(data);
+
+    } catch (err) {
+        console.error('loadOverview error', err);
+    }
+}
+
+function renderTemperature(score, label) {
+    document.getElementById('temp-score').textContent = score ?? '-';
+
+    const labelEl = document.getElementById('temp-label-badge');
+    const labelMap = {
+        'excellent': { text: '🟢 Excelente', cls: 'bg-green-100 text-green-800' },
+        'good':      { text: '🔵 Bom', cls: 'bg-blue-100 text-blue-800' },
+        'attention': { text: '🟡 Atenção', cls: 'bg-yellow-100 text-yellow-800' },
+        'warning':   { text: '🟠 Alerta', cls: 'bg-orange-100 text-orange-800' },
+        'critical':  { text: '🔴 Crítico', cls: 'bg-red-100 text-red-800' },
+    };
+    const lm = labelMap[label] || { text: label, cls: 'bg-gray-100 text-gray-800' };
+    labelEl.textContent = lm.text;
+    labelEl.className = `px-3 py-1 rounded-full text-sm font-medium ${lm.cls}`;
+
+    // Chart doughnut
+    const ctx = document.getElementById('temperature-chart').getContext('2d');
+    if (tempChart) tempChart.destroy();
+
+    const color = score >= 81 ? '#22c55e' : score >= 61 ? '#3b82f6' : score >= 41 ? '#eab308' : score >= 21 ? '#f97316' : '#ef4444';
+
+    tempChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [score, 100 - score],
+                backgroundColor: [color, '#e5e7eb'],
+                borderWidth: 0,
+                cutout: '75%',
+            }]
+        },
+        options: {
+            responsive: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { duration: 600 },
+        }
+    });
+}
+
+function renderAlertDistribution(alerts) {
+    const el = document.getElementById('alert-distribution');
+    if (!alerts) { el.innerHTML = '<div class="text-sm text-gray-400">Sem dados</div>'; return; }
+
+    const items = [
+        { key: 'critical', label: 'Crítico', color: 'bg-red-500', count: alerts.critical },
+        { key: 'high',     label: 'Alto',    color: 'bg-orange-400', count: alerts.high },
+        { key: 'medium',   label: 'Médio',   color: 'bg-yellow-400', count: alerts.medium },
+        { key: 'low',      label: 'Baixo',   color: 'bg-green-400',  count: alerts.low },
+    ];
+
+    el.innerHTML = items.map(item => `
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full ${item.color}"></span>
+                <span class="text-sm text-gray-600">${item.label}</span>
+            </div>
+            <span class="text-sm font-semibold text-gray-800">${item.count || 0}</span>
+        </div>
+    `).join('');
+}
+
+function renderTrends(data) {
+    const el = document.getElementById('trends-section');
+    const trend = data.message_volume_trend || 0;
+    const trendIcon = trend > 5 ? '📈' : trend < -5 ? '📉' : '➡️';
+    const trendColor = trend > 5 ? 'text-green-600' : trend < -5 ? 'text-red-500' : 'text-gray-500';
+
+    el.innerHTML = `
+        <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Volume mensagens</span>
+            <span class="text-sm font-medium ${trendColor}">${trendIcon} ${trend > 0 ? '+' : ''}${trend.toFixed(1)}%</span>
+        </div>
+        <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Alertas abertos</span>
+            <span class="text-sm font-medium text-gray-800">${data.alerts?.open || 0}</span>
+        </div>
+        <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Follow-ups pend.</span>
+            <span class="text-sm font-medium ${(data.followups_pending || 0) > 5 ? 'text-yellow-700' : 'text-gray-800'}">${data.followups_pending || 0}</span>
+        </div>
+        <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Oportunidades</span>
+            <span class="text-sm font-medium text-green-700">${data.opportunities_detected || 0}</span>
+        </div>
+    `;
+}
+
+// ================================================================
+// RESUMO EXECUTIVO
+// ================================================================
+
+async function loadSummary() {
+    const el = document.getElementById('summary-content');
+    try {
+        const summary = await apiGet('/summaries/today');
+        if (!summary) {
+            el.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-file-alt text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500 mb-4">Nenhum resumo gerado para hoje ainda.</p>
+                    <button onclick="generateSummary()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+                        <i class="fas fa-magic mr-2"></i>Gerar Agora
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        const tempColors = {
+            'excellent': 'text-green-600', 'good': 'text-blue-600',
+            'attention': 'text-yellow-600', 'warning': 'text-orange-600', 'critical': 'text-red-600'
+        };
+        const tempColor = tempColors[summary.temperature_label] || 'text-gray-600';
+
+        const markdownText = (summary.executive_text || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n\n/g, '</p><p class="mt-3">');
+
+        el.innerHTML = `
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                <div>
+                    <div class="text-sm text-gray-500">Resumo de ${new Date(summary.summary_date + 'T00:00:00').toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long'})}</div>
+                    <div class="text-xs text-gray-400 mt-1">Gerado via ${summary.generation_method === 'heuristic' ? 'Heurísticas' : 'IA'}</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-3xl font-bold ${tempColor}">${summary.temperature_score}</div>
+                    <div class="text-xs text-gray-500">Termômetro</div>
+                </div>
+            </div>
+
+            <div class="prose text-gray-700 text-sm leading-relaxed mb-6">
+                <p>${markdownText}</p>
+            </div>
+
+            ${summary.highlights?.length ? `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <div class="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">✨ Destaques</div>
+                    <ul class="space-y-1">${(summary.highlights||[]).map(h => `<li class="text-sm text-blue-800">• ${h}</li>`).join('')}</ul>
+                </div>
+                ${summary.critical_points?.length ? `
+                <div class="bg-red-50 rounded-lg p-4">
+                    <div class="text-xs font-semibold text-red-700 mb-2 uppercase tracking-wide">⚠️ Pontos Críticos</div>
+                    <ul class="space-y-1">${(summary.critical_points||[]).map(p => `<li class="text-sm text-red-800">• ${p}</li>`).join('')}</ul>
+                </div>` : ''}
+                ${summary.opportunities?.length ? `
+                <div class="bg-green-50 rounded-lg p-4">
+                    <div class="text-xs font-semibold text-green-700 mb-2 uppercase tracking-wide">💡 Oportunidades</div>
+                    <ul class="space-y-1">${(summary.opportunities||[]).map(o => `<li class="text-sm text-green-800">• ${o}</li>`).join('')}</ul>
+                </div>` : ''}
+            </div>` : ''}
+        `;
+    } catch (err) {
+        el.innerHTML = `<div class="text-red-500 text-sm">Erro ao carregar resumo: ${err.message}</div>`;
+    }
+}
+
+async function generateSummary() {
+    showToast('Gerando resumo executivo...', 'info');
+    try {
+        const summary = await apiPost('/summaries/generate');
+        showToast('Resumo gerado com sucesso!', 'success');
+        loadSummary();
+        loadOverview();
+    } catch (err) {
+        showToast('Erro ao gerar resumo: ' + err.message, 'error');
+    }
+}
+
+// ================================================================
+// ALERTAS
+// ================================================================
+
+async function loadAlerts() {
+    const el = document.getElementById('alerts-list');
+    const severity = document.getElementById('alert-filter').value;
+
+    try {
+        const params = severity ? `?severity=${severity}&status=open` : '?status=open';
+        const alerts = await apiGet(`/alerts${params}`);
+
+        if (!alerts.length) {
+            el.innerHTML = `
+                <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
+                    <i class="fas fa-check-circle text-4xl text-green-400 mb-3"></i>
+                    <p class="text-gray-500">Nenhum alerta aberto ${severity ? 'nesta severidade' : ''}. Operação tranquila! ✅</p>
+                </div>
+            `;
+            return;
+        }
+
+        const severityMap = {
+            'critical': { cls: 'alert-critical', badge: 'bg-red-100 text-red-800', icon: 'fa-exclamation-circle text-red-500', label: 'Crítico' },
+            'high':     { cls: 'alert-high',     badge: 'bg-orange-100 text-orange-800', icon: 'fa-exclamation-triangle text-orange-500', label: 'Alto' },
+            'medium':   { cls: 'alert-medium',   badge: 'bg-yellow-100 text-yellow-800', icon: 'fa-exclamation text-yellow-500', label: 'Médio' },
+            'low':      { cls: 'alert-low',       badge: 'bg-green-100 text-green-800', icon: 'fa-info-circle text-green-500', label: 'Baixo' },
+        };
+
+        const typeLabels = {
+            'churn_risk': '⚠️ Risco Churn', 'risk': '🔴 Risco', 'opportunity': '💡 Oportunidade',
+            'followup_delay': '⏰ Follow-up', 'sla_breach': '⏱️ SLA', 'friction': '😤 Atrito',
+            'complaint': '😠 Reclamação', 'escalation': '🔥 Escalada', 'promise_unmet': '🤝 Promessa'
+        };
+
+        el.innerHTML = alerts.map(a => {
+            const sm = severityMap[a.severity] || severityMap['medium'];
+            const ts = new Date(a.triggered_at).toLocaleString('pt-BR');
+            return `
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 ${sm.cls} fade-in">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3 flex-1">
+                            <i class="fas ${sm.icon} mt-1 flex-shrink-0"></i>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 flex-wrap mb-1">
+                                    <span class="font-semibold text-sm text-gray-900">${a.title}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-xs ${sm.badge}">${sm.label}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">${typeLabels[a.alert_type] || a.alert_type}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-1">${a.description}</p>
+                                ${a.excerpt ? `<div class="bg-gray-50 rounded-lg p-2 text-xs text-gray-500 italic">"${a.excerpt.substring(0, 150)}${a.excerpt.length > 150 ? '...' : ''}"</div>` : ''}
+                                <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                                    ${a.conversation_name ? `<span><i class="fas fa-users mr-1"></i>${a.conversation_name}</span>` : ''}
+                                    <span><i class="fas fa-clock mr-1"></i>${ts}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 flex-shrink-0">
+                            <button onclick="acknowledgeAlert('${a.id}')" class="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition" title="Marcar como visto">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="resolveAlert('${a.id}')" class="px-2 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100 transition" title="Resolver">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        el.innerHTML = `<div class="text-red-500 text-sm">Erro ao carregar alertas: ${err.message}</div>`;
+    }
+}
+
+async function acknowledgeAlert(id) {
+    try {
+        await apiPatch(`/alerts/${id}`, { status: 'acknowledged' });
+        showToast('Alerta marcado como visto', 'success');
+        loadAlerts();
+        loadOverview();
+    } catch (err) {
+        showToast('Erro: ' + err.message, 'error');
+    }
+}
+
+async function resolveAlert(id) {
+    try {
+        await apiPatch(`/alerts/${id}`, { status: 'resolved' });
+        showToast('Alerta resolvido!', 'success');
+        loadAlerts();
+        loadOverview();
+    } catch (err) {
+        showToast('Erro: ' + err.message, 'error');
+    }
+}
+
+// ================================================================
+// GRUPOS
+// ================================================================
+
+async function loadGroups() {
+    const el = document.getElementById('groups-grid');
+    try {
+        const groups = await apiGet('/dashboard/groups');
+
+        if (!groups.length) {
+            el.innerHTML = `<div class="col-span-3 text-sm text-gray-400 py-8 text-center">
+                <i class="fas fa-users text-4xl text-gray-200 mb-3 block"></i>
+                Nenhum grupo com mensagens hoje. Ingira dados via API.
+            </div>`;
+            return;
+        }
+
+        const tempColor = (score) => {
+            if (score >= 80) return 'text-green-600 bg-green-50';
+            if (score >= 60) return 'text-blue-600 bg-blue-50';
+            if (score >= 40) return 'text-yellow-600 bg-yellow-50';
+            if (score >= 20) return 'text-orange-600 bg-orange-50';
+            return 'text-red-600 bg-red-50';
+        };
+
+        const sentIcon = (label) => {
+            if (label === 'positive') return '<i class="fas fa-smile text-green-500"></i>';
+            if (label === 'negative') return '<i class="fas fa-frown text-orange-500"></i>';
+            if (label === 'critical') return '<i class="fas fa-angry text-red-500"></i>';
+            return '<i class="fas fa-meh text-gray-400"></i>';
+        };
+
+        el.innerHTML = groups.map(g => {
+            const tc = tempColor(g.temperature_score);
+            return `
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 metric-card">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold text-gray-900 text-sm truncate">${g.conversation_name}</h3>
+                            <div class="text-xs text-gray-400 mt-0.5">${g.total_messages} msg hoje</div>
+                        </div>
+                        <div class="flex-shrink-0 ml-2">
+                            <span class="inline-flex items-center px-2 py-1 rounded-lg text-sm font-bold ${tc}">
+                                ${g.temperature_score}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1">
+                            ${sentIcon(g.sentiment_label)}
+                            <span class="text-gray-600">Clima: ${g.sentiment_label === 'positive' ? 'Positivo' : g.sentiment_label === 'negative' ? 'Negativo' : g.sentiment_label === 'critical' ? 'Crítico' : 'Neutro'}</span>
+                        </div>
+                        <div class="flex items-center gap-1 ${g.risk_score >= 60 ? 'text-red-600' : 'text-gray-600'}">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Risco: ${g.risk_score.toFixed(0)}/100</span>
+                        </div>
+                        ${g.opportunity_score > 0 ? `
+                        <div class="flex items-center gap-1 text-green-600">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Oport: ${g.opportunity_score.toFixed(0)}/100</span>
+                        </div>` : '<div></div>'}
+                        ${g.followups_pending > 0 ? `
+                        <div class="flex items-center gap-1 text-yellow-600">
+                            <i class="fas fa-clock"></i>
+                            <span>${g.followups_pending} follow-up(s)</span>
+                        </div>` : ''}
+                        ${g.open_alerts > 0 ? `
+                        <div class="flex items-center gap-1 text-red-600">
+                            <i class="fas fa-bell"></i>
+                            <span>${g.open_alerts} alerta(s)</span>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        el.innerHTML = `<div class="text-red-500 text-sm">Erro: ${err.message}</div>`;
+    }
+}
+
+// ================================================================
+// UTILS
+// ================================================================
+
+function openDocs() {
+    window.open('/docs', '_blank');
+}
+
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-green-600',
+        error: 'bg-red-600',
+        info: 'bg-blue-600',
+        warning: 'bg-yellow-600',
+    };
+    const toast = document.createElement('div');
+    toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2 fade-in max-w-sm`;
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info-circle'}"></i> ${message}`;
+    document.getElementById('toast-container').appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+
+// Nav active state
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(i => {
+            i.classList.remove('active', 'bg-blue-600', 'text-white');
+            i.classList.add('text-gray-300');
+        });
+        item.classList.add('active', 'bg-blue-600', 'text-white');
+        item.classList.remove('text-gray-300');
+    });
+});
+
+// ================================================================
+// INIT
+// ================================================================
+
+if (authToken) {
+    document.getElementById('login-overlay').style.display = 'none';
+    refreshAll();
+    // Auto-refresh a cada 5 minutos
+    setInterval(refreshAll, 5 * 60 * 1000);
+}
+</script>
+</body>
+</html>

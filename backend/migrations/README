@@ -1,0 +1,17 @@
+Migrations do ENVOX Intelligence (Alembic).
+
+Comandos úteis:
+  # Aplicar todas as migrations pendentes
+  alembic upgrade head
+
+  # Ver status atual
+  alembic current
+
+  # Ver histórico
+  alembic history
+
+  # Gerar nova migration após mudança de model
+  alembic revision --autogenerate -m "descricao_da_mudanca"
+
+  # Reverter última migration
+  alembic downgrade -1

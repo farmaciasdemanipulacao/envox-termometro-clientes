@@ -1,0 +1,50 @@
+# === AMBIENTE ===
+.env
+*.env
+
+# === PYTHON ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# === ALEMBIC ===
+migrations/versions/*.pyc
+
+# === BANCO DE DADOS ===
+*.db
+*.sqlite
+
+# === NODE / FRONTEND ===
+node_modules/
+.next/
+dist/
+.cache/
+
+# === EDITOR ===
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# === DOCKER ===
+# Volumes são gerenciados pelo docker
+
+# === LOGS ===
+*.log
+logs/
+
+# === BACKUPS ===
+*.sql.gz
+*.tar.gz
+backups/

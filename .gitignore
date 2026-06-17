@@ -48,3 +48,4 @@ logs/
 *.sql.gz
 *.tar.gz
 backups/
+.github/workflows/

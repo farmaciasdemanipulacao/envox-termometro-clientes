@@ -1,6 +1,9 @@
 // tc-screens-a.jsx — LoginScreen, DashboardScreen, AlertsScreen (com API real)
-
-const { Button, KPICard, AlertItem, GroupCard } = window.ENVOXIntelligenceDesignSystem_daebe7;
+// Componentes DS já expostos por tc-shared.jsx via window — usar var (não const)
+var Button    = window.Button;
+var KPICard   = window.KPICard;
+var AlertItem = window.AlertItem;
+var GroupCard = window.GroupCard;
 
 // ─────────────────────────────────────────────────────────────
 // LoginScreen — conecta na API real

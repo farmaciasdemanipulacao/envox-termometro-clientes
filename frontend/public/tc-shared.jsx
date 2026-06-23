@@ -1,6 +1,20 @@
 // tc-shared.jsx — Sidebar, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, Toast
 
-const { Button } = window.ENVOXIntelligenceDesignSystem_daebe7;
+// Extrai UMA VEZ todos os componentes do DS e expõe globalmente via window
+// Os outros arquivos JSX NÃO devem redeclarar — usam window.DS_Button etc.
+(function() {
+  var _ds = window.ENVOXIntelligenceDesignSystem_daebe7 || {};
+  window.DS_Button    = _ds.Button    || null;
+  window.DS_KPICard   = _ds.KPICard   || null;
+  window.DS_AlertItem = _ds.AlertItem || null;
+  window.DS_GroupCard = _ds.GroupCard || null;
+})();
+
+// Alias local curto (var, não const — não conflita entre arquivos Babel)
+var Button    = window.DS_Button;
+var KPICard   = window.DS_KPICard;
+var AlertItem = window.DS_AlertItem;
+var GroupCard = window.DS_GroupCard;
 
 // ── Toast system ──────────────────────────────────────────────
 window.showToast = function(message, type = 'info') {
@@ -18,7 +32,7 @@ window.showToast = function(message, type = 'info') {
 };
 
 // ── API helpers ───────────────────────────────────────────────
-const API_BASE = '/api/v1';
+var API_BASE = '/api/v1';
 
 window.getToken = () => localStorage.getItem('envox_token') || '';
 
@@ -226,4 +240,4 @@ function Spinner({ size, color }) {
   );
 }
 
-Object.assign(window, { Sidebar, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner });
+Object.assign(window, { Sidebar, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, Button, KPICard, AlertItem, GroupCard });

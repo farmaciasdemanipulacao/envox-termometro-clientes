@@ -1,8 +1,8 @@
 // tc-wpp.jsx — WhatsApp Connection Screen
 
-const WPP_BASE  = 'http://187.127.6.191:21465';
-const WPP_SECRET = 'THISISMYSECURETOKEN';
-const WPP_SESSION = 'termonitor';
+var WPP_BASE    = (localStorage.getItem('envox_wpp_base')    || 'http://187.127.6.191:21465');
+var WPP_SECRET  = (localStorage.getItem('envox_wpp_secret')  || 'THISISMYSECURETOKEN');
+var WPP_SESSION = (localStorage.getItem('envox_wpp_session') || 'termonitor');
 
 // ── helpers ──────────────────────────────────────────────────
 async function wppGenerateToken() {

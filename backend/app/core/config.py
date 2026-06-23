@@ -2,7 +2,8 @@
 Configurações centrais da aplicação ENVOX Intelligence.
 Todas as configurações vêm de variáveis de ambiente (.env).
 """
-from typing import Optional
+from typing import Optional, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,7 +39,22 @@ class Settings(BaseSettings):
     API_KEY_SECRET: str = "envox-default-api-key-change-in-production"
 
     # === CORS ===
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    # Aceita string separada por vírgula ou lista JSON no .env
+    ALLOWED_ORIGINS: Union[list[str], str] = ["http://localhost:3000", "http://localhost:8000"]
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        if isinstance(v, str):
+            # Remove colchetes se vier como JSON string
+            v = v.strip().strip("[]")
+            # Divide por vírgula e limpa espaços e aspas
+            return [
+                o.strip().strip('"').strip("'")
+                for o in v.split(",")
+                if o.strip().strip('"').strip("'")
+            ]
+        return v
 
     # === ANÁLISE ===
     DATA_RETENTION_DAYS: int = 90

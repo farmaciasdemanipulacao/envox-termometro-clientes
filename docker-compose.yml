@@ -21,7 +21,7 @@ services:
 
   # ============================================================
   # Backend — FastAPI
-  # restart:always garante retry se postgres ainda não estiver pronto
+  # SEM volume mount — código fica dentro da imagem buildada
   # ============================================================
   backend:
     build:
@@ -35,8 +35,6 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-envox}:${POSTGRES_PASSWORD:-envox123}@postgres:5432/${POSTGRES_DB:-envox_intel}
     depends_on:
       - postgres
-    volumes:
-      - ./backend:/app:ro
     networks:
       - envox-internal
     labels:

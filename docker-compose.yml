@@ -4,7 +4,6 @@ services:
 
   # ============================================================
   # PostgreSQL 15 — Banco de dados principal
-  # INTERNO — sem porta exposta ao host
   # ============================================================
   postgres:
     image: postgres:15-alpine
@@ -17,17 +16,12 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-envox} -d ${POSTGRES_DB:-envox_intel}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - envox-internal
 
   # ============================================================
   # Backend — FastAPI
-  # Traefik usa network_mode:host — labels são suficientes
+  # restart:always garante retry se postgres ainda não estiver pronto
   # ============================================================
   backend:
     build:
@@ -40,40 +34,29 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-envox}:${POSTGRES_PASSWORD:-envox123}@postgres:5432/${POSTGRES_DB:-envox_intel}
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     volumes:
       - ./backend:/app:ro
     networks:
       - envox-internal
     labels:
       - "traefik.enable=true"
-      # Rota /api/
       - "traefik.http.routers.envox-api.rule=Host(`${DOMAIN:-intel.envox.com.br}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.envox-api.entrypoints=websecure"
       - "traefik.http.routers.envox-api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.envox-api.service=envox-api-svc"
       - "traefik.http.services.envox-api-svc.loadbalancer.server.port=8000"
-      # Rota /docs
       - "traefik.http.routers.envox-docs.rule=Host(`${DOMAIN:-intel.envox.com.br}`) && PathPrefix(`/docs`)"
       - "traefik.http.routers.envox-docs.entrypoints=websecure"
       - "traefik.http.routers.envox-docs.tls.certresolver=letsencrypt"
       - "traefik.http.routers.envox-docs.service=envox-api-svc"
-      # Rota /openapi.json
       - "traefik.http.routers.envox-openapi.rule=Host(`${DOMAIN:-intel.envox.com.br}`) && PathPrefix(`/openapi.json`)"
       - "traefik.http.routers.envox-openapi.entrypoints=websecure"
       - "traefik.http.routers.envox-openapi.tls.certresolver=letsencrypt"
       - "traefik.http.routers.envox-openapi.service=envox-api-svc"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # ============================================================
   # Frontend — Nginx com dashboard estático
-  # Traefik roteia o domínio raiz para cá
   # ============================================================
   frontend:
     image: nginx:alpine
@@ -100,7 +83,6 @@ volumes:
     name: envox-intel-postgres-data
 
 networks:
-  # Rede interna isolada entre os containers deste projeto
   envox-internal:
     name: envox-intel-internal
     driver: bridge

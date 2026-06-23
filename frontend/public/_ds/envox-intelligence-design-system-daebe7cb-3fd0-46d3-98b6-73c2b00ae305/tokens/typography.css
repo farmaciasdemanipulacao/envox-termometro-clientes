@@ -1,0 +1,57 @@
+/* ============================================================
+   ENVOX Intelligence — Typography Tokens
+   NOTE: The original project uses Tailwind's system font stack
+   (no custom font). Inter is used here as the nearest quality
+   equivalent. Provide brand TTF files to replace this.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* =========================================
+     FONT FAMILIES
+  ========================================= */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Source Code Pro',
+    Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+
+  /* =========================================
+     TYPE SCALE
+  ========================================= */
+  --text-xs:   0.75rem;     /* 12px — labels, badges, captions */
+  --text-sm:   0.875rem;    /* 14px — body copy, nav, buttons   */
+  --text-base: 1rem;        /* 16px — default body              */
+  --text-lg:   1.125rem;    /* 18px — section headings          */
+  --text-xl:   1.25rem;     /* 20px — page headings             */
+  --text-2xl:  1.5rem;      /* 24px — KPI values                */
+  --text-3xl:  1.875rem;    /* 30px — large score display       */
+
+  /* =========================================
+     LINE HEIGHTS
+  ========================================= */
+  --leading-tight:   1.25;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.625;
+
+  /* =========================================
+     FONT WEIGHTS
+  ========================================= */
+  --font-normal:   400;
+  --font-medium:   500;
+  --font-semibold: 600;
+  --font-bold:     700;
+
+  /* =========================================
+     SEMANTIC TYPE ROLES
+  ========================================= */
+  --text-kpi:             var(--text-2xl);
+  --text-section-heading: var(--text-lg);
+  --text-page-heading:    var(--text-xl);
+  --text-card-label:      var(--text-xs);
+  --text-body:            var(--text-sm);
+  --text-nav:             var(--text-sm);
+  --text-badge:           var(--text-xs);
+  --text-caption:         var(--text-xs);
+}

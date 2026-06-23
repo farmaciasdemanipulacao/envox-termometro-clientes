@@ -1,0 +1,116 @@
+/* ============================================================
+   ENVOX Intelligence — Color Tokens
+   ============================================================ */
+
+:root {
+  /* =========================================
+     BRAND — Blue
+     Primary action color throughout the UI
+  ========================================= */
+  --color-brand-50:  #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;   /* Primary CTA */
+  --color-brand-700: #1d4ed8;   /* Hover state */
+  --color-brand-800: #1e40af;   /* Pressed / dark text */
+
+  /* =========================================
+     NEUTRAL — Gray
+     Page chrome, text, borders, sidebar
+  ========================================= */
+  --color-neutral-50:  #f9fafb;   /* Page background */
+  --color-neutral-100: #f3f4f6;   /* Card border, subtle fills */
+  --color-neutral-200: #e5e7eb;   /* Dividers, input borders (default) */
+  --color-neutral-300: #d1d5db;   /* Input borders, inactive nav */
+  --color-neutral-400: #9ca3af;   /* Placeholder text, scrollbar */
+  --color-neutral-500: #6b7280;   /* Muted text, captions */
+  --color-neutral-600: #4b5563;   /* Secondary text */
+  --color-neutral-700: #374151;   /* Sidebar hover, medium headings */
+  --color-neutral-800: #1f2937;   /* Section headings */
+  --color-neutral-900: #111827;   /* Sidebar background, primary text */
+
+  /* =========================================
+     SEVERITY — Alert Scale
+     Used for alert borders, KPI cards,
+     thermometer score coloring
+  ========================================= */
+
+  /* 🔴 Critical */
+  --color-critical:        #ef4444;
+  --color-critical-dark:   #dc2626;
+  --color-critical-bg:     #fef2f2;
+  --color-critical-border: #fee2e2;
+  --color-critical-text:   #991b1b;
+
+  /* 🟠 High */
+  --color-high:        #f97316;
+  --color-high-dark:   #ea580c;
+  --color-high-bg:     #fff7ed;
+  --color-high-border: #ffedd5;
+  --color-high-text:   #9a3412;
+
+  /* 🟡 Medium */
+  --color-medium:        #eab308;
+  --color-medium-dark:   #ca8a04;
+  --color-medium-bg:     #fefce8;
+  --color-medium-border: #fef9c3;
+  --color-medium-text:   #854d0e;
+
+  /* 🟢 Low */
+  --color-low:        #22c55e;
+  --color-low-dark:   #16a34a;
+  --color-low-bg:     #f0fdf4;
+  --color-low-border: #dcfce7;
+  --color-low-text:   #166534;
+
+  /* =========================================
+     TEMPERATURE SCORE — 0–100
+     Maps score ranges to color
+  ========================================= */
+  --color-temp-excellent: #22c55e;   /* 81–100 */
+  --color-temp-good:      #3b82f6;   /* 61–80  */
+  --color-temp-attention: #eab308;   /* 41–60  */
+  --color-temp-warning:   #f97316;   /* 21–40  */
+  --color-temp-critical:  #ef4444;   /* 0–20   */
+
+  /* =========================================
+     SEMANTIC ALIASES
+     Use these in components; reference raw
+     values only in the tokens above
+  ========================================= */
+
+  /* Backgrounds */
+  --color-bg-page:          var(--color-neutral-50);
+  --color-bg-sidebar:       var(--color-neutral-900);
+  --color-bg-card:          #ffffff;
+  --color-bg-hover-sidebar: var(--color-neutral-700);
+  --color-bg-input:         #ffffff;
+
+  /* Text */
+  --color-text-primary:          var(--color-neutral-900);
+  --color-text-secondary:        var(--color-neutral-600);
+  --color-text-muted:            var(--color-neutral-500);
+  --color-text-placeholder:      var(--color-neutral-400);
+  --color-text-inverse:          #ffffff;
+  --color-text-sidebar-inactive: var(--color-neutral-300);
+  --color-text-brand:            var(--color-brand-600);
+  --color-text-brand-subtle:     var(--color-brand-400);
+
+  /* Borders */
+  --color-border-card:    var(--color-neutral-100);
+  --color-border-default: var(--color-neutral-200);
+  --color-border-input:   var(--color-neutral-300);
+  --color-border-focus:   var(--color-brand-500);
+
+  /* Primary actions */
+  --color-primary:              var(--color-brand-600);
+  --color-primary-hover:        var(--color-brand-700);
+  --color-primary-light:        var(--color-brand-50);
+  --color-primary-light-hover:  var(--color-brand-100);
+  --color-primary-text-on:      #ffffff;
+
+  /* Scrollbar */
+  --color-scrollbar-track: #f1f5f9;
+  --color-scrollbar-thumb: #94a3b8;
+}

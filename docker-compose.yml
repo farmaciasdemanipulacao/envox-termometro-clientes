@@ -1,10 +1,5 @@
-version: "3.9"
-
 services:
 
-  # ============================================================
-  # PostgreSQL 15 — Banco de dados principal
-  # ============================================================
   postgres:
     image: postgres:15-alpine
     container_name: envox-intel-postgres
@@ -17,70 +12,81 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - envox-internal
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-envox}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ============================================================
-  # Backend — FastAPI
-  # SEM volume mount — código fica dentro da imagem buildada
-  # ============================================================
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: envox-intel-backend
     restart: unless-stopped
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-envox}:${POSTGRES_PASSWORD:-envox123}@postgres:5432/${POSTGRES_DB:-envox_intel}
+      WPP_BASE_URL: "http://host.docker.internal:21465"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
-      - envox-internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.envox-api.rule=Host(`${DOMAIN:-intel.envox.com.br}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.envox-api.entrypoints=websecure"
-      - "traefik.http.routers.envox-api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.envox-api.service=envox-api-svc"
-      - "traefik.http.services.envox-api-svc.loadbalancer.server.port=8000"
-      - "traefik.http.routers.envox-docs.rule=Host(`${DOMAIN:-intel.envox.com.br}`) && PathPrefix(`/docs`)"
-      - "traefik.http.routers.envox-docs.entrypoints=websecure"
-      - "traefik.http.routers.envox-docs.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.envox-docs.service=envox-api-svc"
-      - "traefik.http.routers.envox-openapi.rule=Host(`${DOMAIN:-intel.envox.com.br}`) && PathPrefix(`/openapi.json`)"
-      - "traefik.http.routers.envox-openapi.entrypoints=websecure"
-      - "traefik.http.routers.envox-openapi.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.envox-openapi.service=envox-api-svc"
+      - internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ============================================================
-  # Frontend — Nginx com dashboard estático
-  # ============================================================
   frontend:
     image: nginx:alpine
     container_name: envox-intel-frontend
     restart: unless-stopped
+    ports:
+      - "8080:80"
     volumes:
       - ./frontend/public:/usr/share/nginx/html:ro
       - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
-      - envox-internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.envox-frontend.rule=Host(`${DOMAIN:-intel.envox.com.br}`)"
-      - "traefik.http.routers.envox-frontend.entrypoints=websecure"
-      - "traefik.http.routers.envox-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.envox-frontend.service=envox-frontend-svc"
-      - "traefik.http.services.envox-frontend-svc.loadbalancer.server.port=80"
-      - "traefik.http.routers.envox-frontend.priority=1"
+      - internal
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
 
 volumes:
   postgres_data:
     name: envox-intel-postgres-data
 
 networks:
-  envox-internal:
+  internal:
     name: envox-intel-internal
     driver: bridge

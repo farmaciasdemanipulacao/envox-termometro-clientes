@@ -88,6 +88,18 @@ async def setup_scheduler():
     _setup()
 
 
+async def _connect_wppconnect():
+    """Conecta ao WppConnect Server no startup (em background)."""
+    import asyncio
+    await asyncio.sleep(3)  # aguarda app estar totalmente pronto
+    from app.connectors.wppconnect_server import wpp_client
+    connected = await wpp_client.ensure_active()
+    if connected:
+        logger.info("wpp_startup_connected")
+    else:
+        logger.info("wpp_startup_awaiting_qr", hint="Escaneie o QR em intel.envox.com.br")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle da aplicação — startup e shutdown."""
@@ -102,9 +114,15 @@ async def lifespan(app: FastAPI):
 
     # Cria tabelas (via Alembic ou create_all em dev)
     if settings.is_development:
-        # Em dev, cria tabelas diretamente se não existirem
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Adiciona colunas novas em tabelas existentes (safe: IF NOT EXISTS)
+            for sql in [
+                "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS custom_name VARCHAR(500)",
+                "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS group_type VARCHAR(50)",
+                "ALTER TABLE participants ADD COLUMN IF NOT EXISTS custom_name VARCHAR(500)",
+            ]:
+                await conn.execute(__import__("sqlalchemy").text(sql))
         logger.info("tables_created_or_verified")
 
     # Dados iniciais
@@ -112,6 +130,11 @@ async def lifespan(app: FastAPI):
 
     # Scheduler de jobs
     await setup_scheduler()
+
+    # Conecta/reconecta sessão WppConnect em background
+    if settings.WPP_AUTO_RECONNECT:
+        import asyncio
+        asyncio.create_task(_connect_wppconnect())
 
     logger.info("app_ready", host=settings.APP_HOST, port=settings.APP_PORT)
 
@@ -165,7 +188,7 @@ app.add_middleware(
 
 # === ROTAS DA API ===
 
-from app.api.routes import health, auth, ingest, dashboard, alerts, summaries
+from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence
 
 API_PREFIX = "/api/v1"
 
@@ -175,6 +198,8 @@ app.include_router(ingest.router, prefix=API_PREFIX, tags=["Ingestão"])
 app.include_router(dashboard.router, prefix=API_PREFIX, tags=["Dashboard"])
 app.include_router(alerts.router, prefix=API_PREFIX, tags=["Alertas"])
 app.include_router(summaries.router, prefix=API_PREFIX, tags=["Resumos"])
+app.include_router(wppconnect.router, prefix=API_PREFIX, tags=["WhatsApp"])
+app.include_router(intelligence.router, prefix=API_PREFIX, tags=["Inteligência"])
 
 # === STATIC FILES (Frontend) ===
 # Serve o dashboard HTML estático

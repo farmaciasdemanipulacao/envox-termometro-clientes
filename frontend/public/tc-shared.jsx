@@ -78,11 +78,13 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, onLog
   const [hovered, setHovered] = React.useState(null);
 
   const navItems = [
-    { id: 'dashboard', icon: 'tachometer-alt', label: 'Visão Geral' },
-    { id: 'summary',   icon: 'file-alt',       label: 'Resumo Executivo' },
-    { id: 'alerts',    icon: 'bell',            label: 'Alertas', badge: alertsCount },
-    { id: 'groups',    icon: 'users',           label: 'Grupos' },
-    { id: 'team',      icon: 'user-tie',        label: 'Time' },
+    { id: 'dashboard',     icon: 'tachometer-alt', label: 'Visão Geral' },
+    { id: 'intelligence',  icon: 'bolt',           label: 'Inteligência Operacional' },
+    { id: 'tags',          icon: 'tags',           label: 'Relatório de Tags' },
+    { id: 'summary',       icon: 'file-alt',       label: 'Resumo Executivo' },
+    { id: 'alerts',        icon: 'bell',            label: 'Alertas', badge: alertsCount },
+    { id: 'groups',        icon: 'users',           label: 'Grupos' },
+    { id: 'team',          icon: 'user-tie',        label: 'Time' },
   ];
   const sysItems = [
     { id: 'wpp',     icon: 'whatsapp fab', label: 'Conexão WhatsApp' },

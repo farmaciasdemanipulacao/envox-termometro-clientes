@@ -60,7 +60,17 @@ def setup_scheduler() -> AsyncIOScheduler:
         replace_existing=True,
     )
 
-    # Job 4: Cleanup de dados antigos — todo domingo às 02:00
+    # Job 4 (novo): Health check WppConnect — a cada WPP_HEALTH_CHECK_INTERVAL_MIN minutos
+    _scheduler.add_job(
+        func=run_wpp_health_check_job,
+        trigger=IntervalTrigger(minutes=settings.WPP_HEALTH_CHECK_INTERVAL_MIN),
+        id="wpp_health_check",
+        name="Health Check WppConnect",
+        replace_existing=True,
+        misfire_grace_time=60,
+    )
+
+    # Job 5: Cleanup de dados antigos — todo domingo às 02:00
     _scheduler.add_job(
         func=run_cleanup_job,
         trigger=CronTrigger(day_of_week="sun", hour=2, minute=0),
@@ -172,6 +182,24 @@ async def run_metrics_update_job():
     logger.debug("metrics_update_job_started")
     # TODO: Implementar cálculo de métricas por colaborador e grupo
     # Fase 2: calcular avg_response_time, quality_score, etc.
+
+
+async def run_wpp_health_check_job():
+    """
+    Verifica se a sessão WppConnect está ativa.
+    Se estiver CLOSED/desconectada, tenta reconectar automaticamente.
+    """
+    from app.connectors.wppconnect_server import wpp_client
+    logger.debug("wpp_health_check_started")
+    try:
+        connected = await wpp_client.ensure_active()
+        if connected:
+            logger.debug("wpp_health_check_ok")
+        else:
+            logger.warning("wpp_health_check_needs_qr",
+                           hint="Sessão iniciada mas aguardando QR scan")
+    except Exception as e:
+        logger.error("wpp_health_check_failed", error=str(e))
 
 
 async def run_cleanup_job():

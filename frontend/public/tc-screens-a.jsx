@@ -95,6 +95,7 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
   const [overview, setOverview]     = React.useState(null);
   const [alerts, setAlerts]         = React.useState([]);
   const [groups, setGroups]         = React.useState([]);
+  const [recentMsgs, setRecentMsgs] = React.useState([]);
   const [isRefreshing, setRefreshing] = React.useState(false);
   const [lastUpdate, setLastUpdate]   = React.useState('');
 
@@ -102,15 +103,17 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
     setRefreshing(true);
     setLastUpdate('Atualizando...');
     try {
-      const [ov, al, gr] = await Promise.all([
+      const [ov, al, gr, rm] = await Promise.all([
         window.apiGet('/dashboard/overview').catch(() => null),
         window.apiGet('/alerts?status=open&limit=3').catch(() => []),
         window.apiGet('/dashboard/groups').catch(() => []),
+        window.apiGet('/dashboard/recent-messages?limit=15').catch(() => []),
       ]);
       setOverview(ov);
       setAlerts(Array.isArray(al) ? al : []);
       setGroups(Array.isArray(gr) ? gr.slice(0, 4) : []);
-      setLastUpdate('Atualizado em ' + new Date().toLocaleString('pt-BR'));
+      setRecentMsgs(Array.isArray(rm) ? rm : []);
+      setLastUpdate('Atualizado em ' + new Date().toLocaleTimeString('pt-BR'));
     } catch(e) {
       window.showToast('Erro ao carregar dados', 'error');
     } finally {
@@ -118,7 +121,11 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
     }
   };
 
-  React.useEffect(() => { load(); }, []);
+  React.useEffect(() => {
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const tempScore = overview?.temperature_score ?? 0;
   const dist = overview?.alerts || { critical:0, high:0, medium:0, low:0, open:0 };
@@ -260,6 +267,51 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
               </div>
           }
         </section>
+
+        {/* Feed de mensagens recentes */}
+        <section style={{ animation: 'fadeInUp 0.4s ease 0.3s both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <SectionTitle icon="stream" label="Feed em Tempo Real" />
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+              <i className="fas fa-circle" style={{ color: '#22c55e', fontSize: '8px', marginRight: '5px', animation: 'pulse 2s infinite' }}></i>
+              atualiza a cada 30s
+            </span>
+          </div>
+          {recentMsgs.length === 0
+            ? <div style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', background: 'white', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-card)' }}>
+                Aguardando mensagens do WhatsApp...
+              </div>
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {recentMsgs.map(m => {
+                  const riskColor = m.risk_score >= 70 ? '#dc2626' : m.risk_score >= 40 ? '#ea580c' : '#94a3b8';
+                  const sentAt = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                  return (
+                    <div key={m.id} style={{ background: 'white', borderRadius: 'var(--radius-lg)', padding: '10px 14px', border: '1px solid var(--color-border-card)', display: 'flex', alignItems: 'flex-start', gap: '10px', borderLeft: m.risk_score >= 70 ? '3px solid #dc2626' : m.is_opportunity ? '3px solid #22c55e' : '3px solid transparent' }}>
+                      <span style={{ fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>{m.type_icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, fontSize: 'var(--text-xs)', color: 'var(--color-text-primary)' }}>{m.sender}</span>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>em</span>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-brand-600)', fontWeight: 500 }}>{m.group_name}</span>
+                          <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--color-text-muted)' }}>{sentAt}</span>
+                        </div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.content || (m.message_type !== 'text' ? `[${m.message_type}]` : '')}
+                        </div>
+                      </div>
+                      {m.risk_score >= 40 && (
+                        <span style={{ fontSize: '11px', color: riskColor, fontWeight: 700, flexShrink: 0 }}>⚠ {m.risk_score}</span>
+                      )}
+                      {m.is_opportunity && (
+                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700, flexShrink: 0 }}>💡</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+          }
+        </section>
+
       </div>
     </div>
   );

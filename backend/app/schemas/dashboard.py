@@ -45,6 +45,8 @@ class GroupMetric(BaseModel):
     """Métricas de um grupo/conversa para o dashboard."""
     conversation_id: str
     conversation_name: str
+    original_name: str = ""
+    custom_name: Optional[str] = None
     total_messages: int = 0
     avg_sentiment: float = 0.0
     sentiment_label: str = "neutral"

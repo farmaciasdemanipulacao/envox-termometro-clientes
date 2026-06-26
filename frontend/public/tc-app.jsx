@@ -1,10 +1,11 @@
 // tc-app.jsx — Main App com API real
 
 function App() {
-  const [loggedIn,  setLoggedIn]      = React.useState(!!localStorage.getItem('envox_token'));
-  const [userName,  setUserName]      = React.useState(localStorage.getItem('envox_user') || 'Admin');
-  const [page,      setPage]          = React.useState('dashboard');
-  const [alertsCount, setAlertsCount] = React.useState(0);
+  const [loggedIn,      setLoggedIn]      = React.useState(!!localStorage.getItem('envox_token'));
+  const [userName,      setUserName]      = React.useState(localStorage.getItem('envox_user') || 'Admin');
+  const [page,          setPage]          = React.useState('dashboard');
+  const [alertsCount,   setAlertsCount]   = React.useState(0);
+  const [selectedGroup, setSelectedGroup] = React.useState(null);
 
   const company = 'ENVOX';
 
@@ -49,15 +50,20 @@ function App() {
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <DashboardScreen onNavigate={handleNavigate} onGenerateSummary={() => setPage('summary')} />;
-      case 'summary':   return <SummaryScreen onNavigateAlerts={() => setPage('alerts')} />;
-      case 'alerts':    return <AlertsScreen />;
-      case 'groups':    return <GroupsScreen />;
-      case 'team':      return <TeamScreen />;
-      case 'wpp':       return <WppConnectionScreen />;
-      case 'config':    return <ConfigScreen />;
-      case 'api':       return <ApiDocsScreen />;
-      default:          return <DashboardScreen onNavigate={handleNavigate} onGenerateSummary={() => setPage('summary')} />;
+      case 'dashboard':    return <DashboardScreen onNavigate={handleNavigate} onGenerateSummary={() => setPage('summary')} />;
+      case 'intelligence': return <IntelligenceScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
+      case 'tags':         return <TagsScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
+      case 'summary':      return <SummaryScreen onNavigateAlerts={() => setPage('alerts')} />;
+      case 'alerts':       return <AlertsScreen />;
+      case 'groups':       return <GroupsScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
+      case 'conversation': return selectedGroup
+        ? <ConversationScreen group={selectedGroup} onBack={() => setPage('groups')} />
+        : <GroupsScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
+      case 'team':         return <TeamScreen />;
+      case 'wpp':          return <WppConnectionScreen />;
+      case 'config':       return <ConfigScreen />;
+      case 'api':          return <ApiDocsScreen />;
+      default:             return <DashboardScreen onNavigate={handleNavigate} onGenerateSummary={() => setPage('summary')} />;
     }
   };
 

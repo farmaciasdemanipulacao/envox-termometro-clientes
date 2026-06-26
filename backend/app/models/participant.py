@@ -27,6 +27,7 @@ class Participant(Base, UUIDMixin, TimestampMixin):
 
     external_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
+    custom_name: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     # Phone mascarado por padrão (LGPD)
     phone_masked: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

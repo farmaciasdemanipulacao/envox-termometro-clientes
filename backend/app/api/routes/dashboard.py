@@ -18,6 +18,7 @@ from app.models.followup import FollowUpItem, FollowUpStatus
 from app.schemas.dashboard import DashboardOverview, AlertSummary, GroupMetric, CollaboratorMetricOut
 from app.models.metrics import ConversationMetric, CollaboratorMetric
 from app.models.participant import Participant
+from app.models.message import MessageType
 
 router = APIRouter()
 
@@ -146,6 +147,7 @@ async def get_group_metrics(
         select(
             Conversation.id,
             Conversation.name,
+            Conversation.custom_name,
             func.count(Message.id).label("total_messages"),
             func.avg(Message.sentiment_score).label("avg_sentiment"),
             func.avg(Message.risk_score).label("risk_score"),
@@ -153,7 +155,7 @@ async def get_group_metrics(
         )
         .join(Message, Message.conversation_id == Conversation.id)
         .where(Message.sent_at >= today_start)
-        .group_by(Conversation.id, Conversation.name)
+        .group_by(Conversation.id, Conversation.name, Conversation.custom_name)
         .order_by(func.avg(Message.risk_score).desc())
     )
 
@@ -198,7 +200,9 @@ async def get_group_metrics(
 
         groups.append(GroupMetric(
             conversation_id=str(row.id),
-            conversation_name=row.name,
+            conversation_name=row.custom_name or row.name,
+            original_name=row.name,
+            custom_name=row.custom_name,
             total_messages=row.total_messages,
             avg_sentiment=round(avg_sent, 3),
             sentiment_label=sent_label,
@@ -213,3 +217,55 @@ async def get_group_metrics(
         ))
 
     return groups
+
+
+@router.get(
+    "/dashboard/recent-messages",
+    summary="Mensagens recentes",
+    description="Retorna as últimas mensagens recebidas, para feed em tempo real.",
+)
+async def get_recent_messages(
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(
+            Message.id,
+            Message.content,
+            Message.message_type,
+            Message.sent_at,
+            Message.risk_score,
+            Message.is_churn_risk,
+            Message.is_opportunity,
+            func.coalesce(Conversation.custom_name, Conversation.name).label("group_name"),
+            func.coalesce(Participant.custom_name, Participant.name).label("sender"),
+        )
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .join(Participant, Message.participant_id == Participant.id)
+        .order_by(Message.sent_at.desc())
+        .limit(min(limit, 50))
+    )
+    rows = result.fetchall()
+
+    type_icons = {
+        "text": "💬", "audio": "🎤", "image": "🖼️",
+        "document": "📄", "video": "📹", "sticker": "😊",
+        "location": "📍", "contact": "👤",
+    }
+
+    messages = []
+    for r in rows:
+        messages.append({
+            "id": str(r.id),
+            "content": (r.content or "")[:120],
+            "message_type": r.message_type,
+            "type_icon": type_icons.get(r.message_type, "💬"),
+            "sent_at": r.sent_at.isoformat() if r.sent_at else None,
+            "risk_score": round(float(r.risk_score or 0), 0),
+            "is_churn_risk": bool(r.is_churn_risk),
+            "is_opportunity": bool(r.is_opportunity),
+            "group_name": r.group_name or "",
+            "sender": r.sender or "",
+        })
+    return messages

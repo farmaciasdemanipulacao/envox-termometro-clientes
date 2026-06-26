@@ -33,6 +33,7 @@ class Conversation(Base, UUIDMixin, TimestampMixin):
     conversation_type: Mapped[ConversationType] = mapped_column(
         String(50), default=ConversationType.GROUP, nullable=False
     )
+    custom_name: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     participant_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     sla_response_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)

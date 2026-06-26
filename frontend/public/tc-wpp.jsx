@@ -1,8 +1,14 @@
 // tc-wpp.jsx — WhatsApp Connection Screen
 
-var WPP_BASE    = (localStorage.getItem('envox_wpp_base')    || 'http://187.127.6.191:21465');
+var WPP_BASE    = (localStorage.getItem('envox_wpp_base')    || '/wpp-proxy');
 var WPP_SECRET  = (localStorage.getItem('envox_wpp_secret')  || 'THISISMYSECURETOKEN');
 var WPP_SESSION = (localStorage.getItem('envox_wpp_session') || 'termonitor');
+
+// Migração: se o valor salvo é HTTP e a página está em HTTPS, usa o proxy local
+if (WPP_BASE.startsWith('http:') && location.protocol === 'https:') {
+  WPP_BASE = '/wpp-proxy';
+  localStorage.setItem('envox_wpp_base', '/wpp-proxy');
+}
 
 // ── helpers ──────────────────────────────────────────────────
 async function wppGenerateToken() {
@@ -18,7 +24,11 @@ async function wppStartSession(token) {
   const r = await fetch(`${WPP_BASE}/api/${WPP_SESSION}/start-session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ waitForLogin: false }),
+    body: JSON.stringify({
+      waitForLogin: false,
+      autoClose: 0,                                                        // sem expiração de QR
+      webhook: `${location.origin}/api/v1/webhooks/wppconnect`,           // registro do webhook
+    }),
   });
   return r.json();
 }
@@ -27,6 +37,18 @@ async function wppGetQR(token) {
   const r = await fetch(`${WPP_BASE}/api/${WPP_SESSION}/qrcode-session`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (!r.ok) return {};
+  const ct = r.headers.get('content-type') || '';
+  if (ct.startsWith('image/')) {
+    // qrcode-session retorna PNG binário — converte para data URL
+    const blob = await r.blob();
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve({ qrcode: reader.result });
+      reader.onerror  = () => resolve({});
+      reader.readAsDataURL(blob);
+    });
+  }
   return r.json();
 }
 
@@ -53,6 +75,23 @@ function WppConnectionScreen() {
   const [phone, setPhone]     = React.useState('');
   const pollRef               = React.useRef(null);
 
+  const stopPoll = () => clearInterval(pollRef.current);
+
+  const checkStatus = async (tkn, handleClosed = false) => {
+    try {
+      const s = await wppGetStatus(tkn);
+      if (s.status === 'CONNECTED' || s.status === 'isLogged' || s.isLogged === true) {
+        setPhase('connected');
+        setPhone(s.phoneNumber || s.pushname || '');
+        stopPoll();
+      } else if (handleClosed && s.status === 'CLOSED') {
+        stopPoll();
+        setPhase('error');
+        setMessage('QR Code expirou. Clique em Conectar novamente.');
+      }
+    } catch (_) {}
+  };
+
   // Restore token from localStorage on mount + check status
   React.useEffect(() => {
     const saved = localStorage.getItem('tm_wpp_token');
@@ -62,19 +101,6 @@ function WppConnectionScreen() {
     }
     return () => clearInterval(pollRef.current);
   }, []);
-
-  const stopPoll = () => clearInterval(pollRef.current);
-
-  const checkStatus = async (tkn) => {
-    try {
-      const s = await wppGetStatus(tkn);
-      if (s.status === 'CONNECTED' || s.status === 'isLogged' || s.isLogged === true) {
-        setPhase('connected');
-        setPhone(s.phoneNumber || s.pushname || '');
-        stopPoll();
-      }
-    } catch (_) {}
-  };
 
   const handleConnect = async () => {
     setPhase('connecting');
@@ -86,18 +112,23 @@ function WppConnectionScreen() {
       localStorage.setItem('tm_wpp_token', tkn);
 
       setMessage('Iniciando sessão...');
-      await wppStartSession(tkn);
+      const startData = await wppStartSession(tkn);
 
-      setMessage('Aguardando QR Code...');
-      await new Promise(r => setTimeout(r, 1500));
-
-      // First QR fetch
-      await fetchQR(tkn);
+      // Usa QR embutido na resposta do start-session, se disponível
+      if (startData && startData.qrcode) {
+        setQrSrc(startData.qrcode);
+        setPhase('qrcode');
+        setMessage('Escaneie o QR Code com o WhatsApp do número dedicado');
+      } else {
+        setMessage('Aguardando QR Code...');
+        await new Promise(r => setTimeout(r, 1500));
+        await fetchQR(tkn);
+      }
 
       // Poll every 5s: refresh QR + check status
       pollRef.current = setInterval(async () => {
         await fetchQR(tkn);
-        await checkStatus(tkn);
+        await checkStatus(tkn, true);
       }, 5000);
 
     } catch (err) {

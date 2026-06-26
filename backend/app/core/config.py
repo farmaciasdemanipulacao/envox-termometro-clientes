@@ -70,6 +70,14 @@ class Settings(BaseSettings):
     FOLLOWUP_OVERDUE_HOURS: int = 4      # Follow-up sem resposta em 4h = alerta
     SLA_DEFAULT_MINUTES: int = 60        # SLA padrão de resposta: 60 min
 
+    # === WPPCONNECT SERVER ===
+    WPP_BASE_URL: str = "http://localhost:21465"
+    WPP_SESSION: str = "termonitor"
+    WPP_SECRET: str = "THISISMYSECURETOKEN"
+    WPP_WEBHOOK_URL: str = "https://intel.envox.com.br/api/v1/webhooks/wppconnect"
+    WPP_AUTO_RECONNECT: bool = True
+    WPP_HEALTH_CHECK_INTERVAL_MIN: int = 5
+
     # === IA (OPCIONAL) ===
     LLM_ENABLED: bool = False
     OPENAI_API_KEY: Optional[str] = None

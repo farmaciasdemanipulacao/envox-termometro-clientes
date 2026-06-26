@@ -56,6 +56,27 @@ async def _get_wpp_source(db) -> IngestionSource:
     return source
 
 
+@router.get("/wpp/status")
+async def get_wpp_status():
+    """
+    Retorna o status real da sessão WppConnect usando o token do backend (sempre fresco).
+    Não requer autenticação JWT — usado pelo painel para mostrar status de conexão.
+    """
+    from app.connectors.wppconnect_server import wpp_client
+    try:
+        token = await wpp_client.generate_token()
+        status = await wpp_client.get_status(token)
+        current = status.get("status", "UNKNOWN")
+        phone = status.get("phoneNumber") or status.get("pushname") or ""
+        return {
+            "connected": current in ("CONNECTED", "isLogged"),
+            "status": current,
+            "phone": phone,
+        }
+    except Exception as e:
+        return {"connected": False, "status": "ERROR", "phone": "", "error": str(e)}
+
+
 @router.post("/webhooks/wppconnect")
 async def wppconnect_webhook(request: Request, background_tasks: BackgroundTasks):
     """

@@ -92,13 +92,17 @@ function WppConnectionScreen() {
     } catch (_) {}
   };
 
-  // Restore token from localStorage on mount + check status
+  // Checa status via backend (token sempre fresco) ao montar
   React.useEffect(() => {
+    window.apiGet('/wpp/status').then(s => {
+      if (s.connected) {
+        setPhase('connected');
+        setPhone(s.phone || '');
+      }
+    }).catch(() => {});
+    // Também tenta restaurar token local para operações de QR/logout
     const saved = localStorage.getItem('tm_wpp_token');
-    if (saved) {
-      setToken(saved);
-      checkStatus(saved);
-    }
+    if (saved) setToken(saved);
     return () => clearInterval(pollRef.current);
   }, []);
 

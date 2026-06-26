@@ -346,23 +346,32 @@ function GroupsScreen({ onSelectGroup }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SummaryScreen — dados reais da API
+// SummaryScreen — Resumo Executivo + Briefing 18h
 // ─────────────────────────────────────────────────────────────
 function SummaryScreen({ onNavigateAlerts }) {
-  const [summary, setSummary]   = React.useState(null);
-  const [loading, setLoading]   = React.useState(true);
-  const [generating, setGen]    = React.useState(false);
+  const [activeTab, setActiveTab]      = React.useState('resumo');
+  const [summary, setSummary]          = React.useState(null);
+  const [loading, setLoading]          = React.useState(true);
+  const [generating, setGen]           = React.useState(false);
+  const [briefing, setBriefing]        = React.useState(null);
+  const [loadingBriefing, setLoadingB] = React.useState(false);
+  const [genBriefing, setGenBriefing]  = React.useState(false);
 
-  const load = async () => {
+  const loadSummary = async () => {
     setLoading(true);
-    try {
-      const d = await window.apiGet('/summaries/today');
-      setSummary(d);
-    } catch(e) { setSummary(null); }
+    try { setSummary(await window.apiGet('/summaries/today')); }
+    catch(e) { setSummary(null); }
     finally { setLoading(false); }
   };
 
-  React.useEffect(() => { load(); }, []);
+  const loadBriefing = async () => {
+    setLoadingB(true);
+    try { setBriefing(await window.apiGet('/briefings/today')); }
+    catch(e) { setBriefing(null); }
+    finally { setLoadingB(false); }
+  };
+
+  React.useEffect(() => { loadSummary(); loadBriefing(); }, []);
 
   const handleGenerate = async () => {
     setGen(true);
@@ -370,12 +379,41 @@ function SummaryScreen({ onNavigateAlerts }) {
     try {
       await window.apiPost('/summaries/generate');
       window.showToast('Resumo gerado!', 'success');
-      load();
+      loadSummary();
     } catch(e) { window.showToast('Erro: ' + e.message, 'error'); }
     finally { setGen(false); }
   };
 
+  const handleGenBriefing = async () => {
+    setGenBriefing(true);
+    window.showToast('Gerando briefing de fim de dia...', 'info');
+    try {
+      const result = await window.apiPost('/briefings/generate');
+      setBriefing(result);
+      window.showToast('Briefing gerado!', 'success');
+    } catch(e) { window.showToast('Erro: ' + e.message, 'error'); }
+    finally { setGenBriefing(false); }
+  };
+
   const tempColors = { excellent: '#16a34a', good: '#2563eb', attention: '#ca8a04', warning: '#ea580c', critical: '#dc2626' };
+
+  const renderMd = (text) => (text || '')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n\n/g, '</p><p style="margin:10px 0 0">')
+    .replace(/\n/g, '<br/>');
+
+  const groupByAssignee = (items) => {
+    var map = {};
+    (items || []).forEach(function(item) {
+      var key = item.assignee || 'Equipe ENVOX';
+      if (!map[key]) map[key] = [];
+      map[key].push(item);
+    });
+    return map;
+  };
+
+  const priorityIcon = (p) => p === 'high' ? '🔴' : '🟡';
+  const typeLabel    = (t) => t === 'followup' ? 'Follow-up' : t === 'alert' ? 'Alerta' : t === 'churn_risk' ? 'Churn' : t;
 
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -383,86 +421,252 @@ function SummaryScreen({ onNavigateAlerts }) {
         title="Resumo Executivo"
         subtitle={new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         actions={
-          <button onClick={handleGenerate} disabled={generating} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#16a34a', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: generating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
-            {generating ? <><Spinner size={12} />&nbsp; Gerando...</> : <><i className="fas fa-magic"></i>&nbsp; {summary ? 'Regerar Resumo' : 'Gerar Resumo'}</>}
-          </button>
+          activeTab === 'resumo'
+            ? <button onClick={handleGenerate} disabled={generating} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#16a34a', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: generating ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+                {generating ? <><Spinner size={12} />&nbsp; Gerando...</> : <><i className="fas fa-magic"></i>&nbsp; {summary ? 'Regerar Resumo' : 'Gerar Resumo'}</>}
+              </button>
+            : <button onClick={handleGenBriefing} disabled={genBriefing} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: genBriefing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+                {genBriefing ? <><Spinner size={12} />&nbsp; Gerando...</> : <><i className="fas fa-bolt"></i>&nbsp; Gerar Briefing (Teste)</>}
+              </button>
         }
       />
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-card)', padding: '0 32px', background: 'var(--color-bg-secondary)' }}>
+        {[
+          { id: 'resumo',   label: 'Resumo do Dia', icon: 'fa-chart-line' },
+          { id: 'briefing', label: 'Briefing 18h',  icon: 'fa-tasks' },
+        ].map(tab => {
+          const active = activeTab === tab.id;
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: active ? 600 : 400, color: active ? 'var(--color-brand-600)' : 'var(--color-text-muted)', borderBottom: active ? '2px solid var(--color-brand-600)' : '2px solid transparent', marginBottom: '-1px', fontFamily: 'var(--font-sans)' }}>
+              <i className={'fas ' + tab.icon}></i>
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-        {loading
-          ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="#2563eb" /></div>
-          : !summary
-            ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: '16px', animation: 'fadeIn 0.4s ease' }}>
-                <div style={{ width: '72px', height: '72px', background: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className="fas fa-magic" style={{ fontSize: '28px', color: '#2563eb' }}></i>
-                </div>
-                <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-text-primary)' }}>Resumo ainda não gerado</h3>
-                <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: '380px' }}>
-                  Clique em "Gerar Resumo" para consolidar os dados de hoje em um relatório executivo.
-                </p>
-                <button onClick={handleGenerate} style={{ padding: '10px 24px', background: '#2563eb', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
-                  <i className="fas fa-magic" style={{ marginRight: '8px' }}></i>Gerar Resumo do Dia
-                </button>
-              </div>
-            : <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeInUp 0.5s ease' }}>
-                <DsCard>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border-card)' }}>
-                    <div>
-                      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Resumo de {new Date(summary.summary_date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '2px' }}>Gerado via {summary.generation_method === 'heuristic' ? 'Heurísticas' : 'IA'}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '32px', fontWeight: 700, color: tempColors[summary.temperature_label] || '#374151' }}>{summary.temperature_score}</div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Termômetro</div>
-                    </div>
+
+        {/* ── TAB: RESUMO ── */}
+        {activeTab === 'resumo' && (
+          loading
+            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="#2563eb" /></div>
+            : !summary
+              ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: '16px', animation: 'fadeIn 0.4s ease' }}>
+                  <div style={{ width: '72px', height: '72px', background: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fas fa-magic" style={{ fontSize: '28px', color: '#2563eb' }}></i>
                   </div>
-                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: (summary.executive_text || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n\n/g, '</p><p style="margin-top:12px">') }}></div>
-                </DsCard>
-
-                {summary.highlights?.length > 0 && (
-                  <DsCard>
-                    <SectionTitle icon="star" label="Destaques do Dia" color="#2563eb" />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {summary.highlights.map((h, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#eff6ff', borderRadius: 'var(--radius-lg)' }}>
-                          <i className="fas fa-check-circle" style={{ color: '#2563eb', marginTop: '2px', flexShrink: 0 }}></i>
-                          <span style={{ fontSize: 'var(--text-sm)', color: '#1e40af' }}>{h}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </DsCard>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: summary.opportunities?.length ? '1fr 1fr' : '1fr', gap: '20px' }}>
-                  {summary.critical_points?.length > 0 && (
-                    <DsCard>
-                      <SectionTitle icon="exclamation-triangle" label="Pontos Críticos" color="#dc2626" />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {summary.critical_points.map((p, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#fef2f2', borderRadius: 'var(--radius-lg)' }}>
-                            <i className="fas fa-exclamation-circle" style={{ color: '#dc2626', marginTop: '2px', flexShrink: 0 }}></i>
-                            <span style={{ fontSize: 'var(--text-sm)', color: '#991b1b' }}>{p}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </DsCard>
-                  )}
-                  {summary.opportunities?.length > 0 && (
-                    <DsCard>
-                      <SectionTitle icon="lightbulb" label="Oportunidades" color="#16a34a" />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {summary.opportunities.map((o, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#f0fdf4', borderRadius: 'var(--radius-lg)' }}>
-                            <i className="fas fa-lightbulb" style={{ color: '#16a34a', marginTop: '2px', flexShrink: 0 }}></i>
-                            <span style={{ fontSize: 'var(--text-sm)', color: '#166534' }}>{o}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </DsCard>
-                  )}
+                  <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-text-primary)' }}>Resumo ainda não gerado</h3>
+                  <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: '380px' }}>
+                    Clique em "Gerar Resumo" para consolidar os dados de hoje em um relatório executivo.
+                  </p>
+                  <button onClick={handleGenerate} style={{ padding: '10px 24px', background: '#2563eb', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
+                    <i className="fas fa-magic" style={{ marginRight: '8px' }}></i>Gerar Resumo do Dia
+                  </button>
                 </div>
-              </div>
-        }
+              : <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeInUp 0.5s ease' }}>
+                  <DsCard>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border-card)' }}>
+                      <div>
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Resumo de {new Date(summary.summary_date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '2px' }}>Gerado via {summary.generation_method === 'heuristic' ? 'Heurísticas' : 'IA'}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: tempColors[summary.temperature_label] || '#374151' }}>{summary.temperature_score}</div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Termômetro</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: renderMd(summary.executive_text) }}></div>
+                  </DsCard>
+
+                  {summary.highlights?.length > 0 && (
+                    <DsCard>
+                      <SectionTitle icon="star" label="Destaques do Dia" color="#2563eb" />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {summary.highlights.map((h, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#eff6ff', borderRadius: 'var(--radius-lg)' }}>
+                            <i className="fas fa-check-circle" style={{ color: '#2563eb', marginTop: '2px', flexShrink: 0 }}></i>
+                            <span style={{ fontSize: 'var(--text-sm)', color: '#1e40af' }}>{h}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </DsCard>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: summary.opportunities?.length ? '1fr 1fr' : '1fr', gap: '20px' }}>
+                    {summary.critical_points?.length > 0 && (
+                      <DsCard>
+                        <SectionTitle icon="exclamation-triangle" label="Pontos Críticos" color="#dc2626" />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {summary.critical_points.map((p, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#fef2f2', borderRadius: 'var(--radius-lg)' }}>
+                              <i className="fas fa-exclamation-circle" style={{ color: '#dc2626', marginTop: '2px', flexShrink: 0 }}></i>
+                              <span style={{ fontSize: 'var(--text-sm)', color: '#991b1b' }}>{p}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </DsCard>
+                    )}
+                    {summary.opportunities?.length > 0 && (
+                      <DsCard>
+                        <SectionTitle icon="lightbulb" label="Oportunidades" color="#16a34a" />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {summary.opportunities.map((o, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#f0fdf4', borderRadius: 'var(--radius-lg)' }}>
+                              <i className="fas fa-lightbulb" style={{ color: '#16a34a', marginTop: '2px', flexShrink: 0 }}></i>
+                              <span style={{ fontSize: 'var(--text-sm)', color: '#166534' }}>{o}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </DsCard>
+                    )}
+                  </div>
+                </div>
+        )}
+
+        {/* ── TAB: BRIEFING 18h ── */}
+        {activeTab === 'briefing' && (
+          loadingBriefing
+            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="#7c3aed" /></div>
+            : !briefing
+              ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: '16px', animation: 'fadeIn 0.4s ease' }}>
+                  <div style={{ width: '72px', height: '72px', background: '#f5f3ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fas fa-tasks" style={{ fontSize: '28px', color: '#7c3aed' }}></i>
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-text-primary)' }}>Briefing ainda não gerado</h3>
+                  <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: '420px' }}>
+                    O briefing de fim de dia é gerado automaticamente às 18h. Use o botão acima para gerar agora (teste).
+                  </p>
+                  <button onClick={handleGenBriefing} disabled={genBriefing} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: genBriefing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
+                    {genBriefing ? <><Spinner size={12} />&nbsp; Gerando...</> : <><i className="fas fa-bolt"></i>&nbsp; Gerar Briefing Agora</>}
+                  </button>
+                </div>
+              : (() => {
+                  const assigneeMap = groupByAssignee(briefing.action_items);
+                  const assignees   = Object.keys(assigneeMap);
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', animation: 'fadeInUp 0.5s ease' }}>
+
+                      {/* Cabeçalho */}
+                      <DsCard>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border-card)' }}>
+                          <div>
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                              Briefing de {briefing.summary_date ? new Date(briefing.summary_date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : 'hoje'}
+                            </div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '2px' }}>
+                              {briefing.generated_at ? 'Gerado às ' + new Date(briefing.generated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Gerado automaticamente'}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: '28px', fontWeight: 700, color: tempColors[briefing.temperature_label] || '#374151' }}>{briefing.temperature_score}</div>
+                              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Termômetro</div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '8px 14px', background: '#f5f3ff', borderRadius: 'var(--radius-lg)' }}>
+                              <div style={{ fontSize: '20px', fontWeight: 700, color: '#7c3aed' }}>{(briefing.action_items || []).length}</div>
+                              <div style={{ fontSize: 'var(--text-xs)', color: '#6d28d9' }}>Ações</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: renderMd(briefing.executive_text) }}></div>
+                      </DsCard>
+
+                      {/* Distribuição por responsável */}
+                      {assignees.length > 0 && (
+                        <DsCard>
+                          <SectionTitle icon="user-check" label="Distribuição de Responsabilidades" color="#7c3aed" />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
+                            {assignees.map(assignee => {
+                              const items     = assigneeMap[assignee];
+                              const highCount = items.filter(i => i.priority === 'high').length;
+                              return (
+                                <div key={assignee} style={{ borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border-card)', overflow: 'hidden' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f5f3ff', borderBottom: '1px solid #ede9fe' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <span style={{ color: 'white', fontSize: '11px', fontWeight: 700 }}>{assignee.charAt(0).toUpperCase()}</span>
+                                      </div>
+                                      <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: '#4c1d95' }}>{assignee}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                      {highCount > 0 && <span style={{ padding: '2px 8px', background: '#fef2f2', color: '#dc2626', borderRadius: '9999px', fontSize: 'var(--text-xs)', fontWeight: 600 }}>{highCount} urgente{highCount > 1 ? 's' : ''}</span>}
+                                      <span style={{ padding: '2px 8px', background: '#ede9fe', color: '#6d28d9', borderRadius: '9999px', fontSize: 'var(--text-xs)', fontWeight: 600 }}>{items.length} ação{items.length > 1 ? 'ões' : ''}</span>
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {items.map((item, idx) => (
+                                      <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', borderBottom: idx < items.length - 1 ? '1px solid var(--color-border-card)' : 'none', background: item.priority === 'high' ? '#fffbeb' : 'transparent' }}>
+                                        <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>{priorityIcon(item.priority)}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.title}</span>
+                                            <span style={{ padding: '1px 6px', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontSize: '10px', flexShrink: 0 }}>{typeLabel(item.type)}</span>
+                                          </div>
+                                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                                            <i className="fas fa-comments" style={{ marginRight: '4px' }}></i>{item.group}
+                                            {item.description && <span style={{ marginLeft: '8px' }}>— {item.description}</span>}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </DsCard>
+                      )}
+
+                      {/* Tabela de grupos */}
+                      {briefing.group_summary?.length > 0 && (
+                        <DsCard>
+                          <SectionTitle icon="layer-group" label="Panorama dos Grupos" color="#0891b2" />
+                          <div style={{ overflowX: 'auto', marginTop: '12px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                              <thead>
+                                <tr style={{ background: '#f0f9ff', borderBottom: '2px solid #bae6fd' }}>
+                                  {['Grupo', 'Msgs', 'Temp.', 'Alertas', 'Follow-ups', 'Responsável'].map(h => (
+                                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#0e7490', whiteSpace: 'nowrap' }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {briefing.group_summary.map((g, i) => {
+                                  const tempColor = g.temperature >= 80 ? '#16a34a' : g.temperature >= 60 ? '#ca8a04' : g.temperature >= 40 ? '#ea580c' : '#dc2626';
+                                  return (
+                                    <tr key={i} style={{ borderBottom: '1px solid var(--color-border-card)', background: i % 2 === 0 ? 'transparent' : '#f9fafb' }}>
+                                      <td style={{ padding: '9px 12px', fontWeight: 500 }}>{g.group}</td>
+                                      <td style={{ padding: '9px 12px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>{g.messages}</td>
+                                      <td style={{ padding: '9px 12px', textAlign: 'center' }}><span style={{ fontWeight: 700, color: tempColor }}>{g.temperature}</span></td>
+                                      <td style={{ padding: '9px 12px', textAlign: 'center' }}>
+                                        {g.alerts > 0
+                                          ? <span style={{ padding: '2px 8px', background: '#fef2f2', color: '#dc2626', borderRadius: '9999px', fontWeight: 600 }}>{g.alerts}</span>
+                                          : <span style={{ color: '#94a3b8' }}>—</span>}
+                                      </td>
+                                      <td style={{ padding: '9px 12px', textAlign: 'center' }}>
+                                        {g.followups > 0
+                                          ? <span style={{ padding: '2px 8px', background: '#fffbeb', color: '#b45309', borderRadius: '9999px', fontWeight: 600 }}>{g.followups}</span>
+                                          : <span style={{ color: '#94a3b8' }}>—</span>}
+                                      </td>
+                                      <td style={{ padding: '9px 12px', color: 'var(--color-text-secondary)' }}>{g.responsible}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </DsCard>
+                      )}
+
+                    </div>
+                  );
+                })()
+        )}
+
       </div>
     </div>
   );

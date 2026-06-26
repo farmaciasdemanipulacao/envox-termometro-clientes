@@ -1,4 +1,4 @@
-"""Endpoints de resumos diários."""
+"""Endpoints de resumos diários e briefing de fim de dia."""
 from datetime import date
 from typing import Optional
 
@@ -12,6 +12,7 @@ from app.models.user import User
 from app.models.summary import DailySummary, SummaryType
 from app.schemas.summary import DailySummaryOut
 from app.services.analysis.summarizer import summary_service
+from app.services.analysis.briefing import briefing_service
 
 router = APIRouter()
 
@@ -75,6 +76,61 @@ async def generate_summary(
 ):
     summary = await summary_service.generate_daily_summary(db, target_date)
     return _to_out(summary)
+
+
+@router.get(
+    "/briefings/today",
+    summary="Briefing de fim de dia de hoje",
+)
+async def get_today_briefing(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    today = date.today()
+    result = await db.execute(
+        select(DailySummary).where(
+            and_(
+                DailySummary.summary_date == today,
+                DailySummary.summary_type == "briefing_eod",
+            )
+        )
+    )
+    summary = result.scalar_one_or_none()
+    if not summary:
+        return None
+    return _to_out_briefing(summary)
+
+
+@router.post(
+    "/briefings/generate",
+    summary="Gerar briefing de fim de dia (sob demanda / teste)",
+)
+async def generate_briefing(
+    target_date: Optional[date] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    summary = await briefing_service.generate_eod_briefing(db, target_date)
+    await db.commit()
+    return _to_out_briefing(summary)
+
+
+def _to_out_briefing(s: DailySummary) -> dict:
+    extra = s.extra_data or {}
+    return {
+        "id": str(s.id),
+        "summary_date": s.summary_date.isoformat() if s.summary_date else None,
+        "executive_text": s.executive_text,
+        "highlights": s.highlights or [],
+        "critical_points": s.critical_points or [],
+        "pending_followups": s.pending_followups or [],
+        "temperature_score": s.temperature_score,
+        "temperature_label": s.temperature_label,
+        "generated_at": s.generated_at.isoformat() if s.generated_at else None,
+        "generation_method": s.generation_method,
+        "action_items": extra.get("action_items", []),
+        "group_summary": extra.get("group_summary", []),
+    }
 
 
 def _to_out(s: DailySummary) -> DailySummaryOut:

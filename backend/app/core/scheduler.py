@@ -70,7 +70,17 @@ def setup_scheduler() -> AsyncIOScheduler:
         misfire_grace_time=60,
     )
 
-    # Job 5: Cleanup de dados antigos — todo domingo às 02:00
+    # Job 5: Briefing de fim de dia — todo dia às 18h (horário Brasília)
+    _scheduler.add_job(
+        func=run_eod_briefing_job,
+        trigger=CronTrigger(hour=18, minute=0),
+        id="eod_briefing",
+        name="Briefing de Fim de Dia (18h)",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+
+    # Job 6: Cleanup de dados antigos — todo domingo às 02:00
     _scheduler.add_job(
         func=run_cleanup_job,
         trigger=CronTrigger(day_of_week="sun", hour=2, minute=0),
@@ -200,6 +210,24 @@ async def run_wpp_health_check_job():
                            hint="Sessão iniciada mas aguardando QR scan")
     except Exception as e:
         logger.error("wpp_health_check_failed", error=str(e))
+
+
+async def run_eod_briefing_job():
+    """Gera o briefing de fim de dia às 18h — analisa o dia e distribui responsabilidades."""
+    from app.db.session import AsyncSessionLocal
+    from app.services.analysis.briefing import briefing_service
+
+    logger.info("eod_briefing_job_started")
+    async with AsyncSessionLocal() as db:
+        try:
+            summary = await briefing_service.generate_eod_briefing(db)
+            await db.commit()
+            logger.info("eod_briefing_job_done",
+                        temperature=summary.temperature_score,
+                        actions=len((summary.extra_data or {}).get("action_items", [])))
+        except Exception as e:
+            await db.rollback()
+            logger.error("eod_briefing_job_failed", error=str(e))
 
 
 async def run_cleanup_job():

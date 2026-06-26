@@ -188,7 +188,7 @@ app.add_middleware(
 
 # === ROTAS DA API ===
 
-from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence
+from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence  # noqa: E501
 
 API_PREFIX = "/api/v1"
 

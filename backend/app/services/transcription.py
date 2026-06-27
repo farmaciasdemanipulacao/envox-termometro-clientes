@@ -10,8 +10,6 @@ O áudio chega como base64 OGG/Opus vindo do WppConnect.
 """
 import base64
 import io
-import tempfile
-import os
 
 from app.core.logging import get_logger
 

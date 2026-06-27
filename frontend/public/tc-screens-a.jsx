@@ -37,8 +37,13 @@ function LoginScreen({ onLogin, company }) {
       }
       const data = await r.json();
       localStorage.setItem('envox_token', data.access_token);
-      localStorage.setItem('envox_user', username);
-      onLogin({ userName: username });
+      localStorage.setItem('envox_user', data.username || username);
+      onLogin({
+        userName: data.username || username,
+        isAdmin: data.is_admin,
+        userId: data.user_id,
+        fullName: data.full_name,
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -47,8 +52,8 @@ function LoginScreen({ onLogin, company }) {
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-sidebar)' }}>
-      <div style={{ width: '400px', background: 'white', borderRadius: 'var(--radius-2xl)', padding: '40px', boxShadow: 'var(--shadow-modal)', animation: 'fadeInUp 0.4s ease' }}>
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-sidebar)', padding: '16px' }}>
+      <div style={{ width: 'min(400px, 100%)', background: 'white', borderRadius: 'var(--radius-2xl)', padding: 'clamp(24px, 6vw, 40px)', boxShadow: 'var(--shadow-modal)', animation: 'fadeInUp 0.4s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '32px' }}>
           <div style={{ width: '48px', height: '48px', background: 'var(--color-brand-600)', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <i className="fas fa-brain" style={{ color: 'white', fontSize: '22px' }}></i>
@@ -98,6 +103,7 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
   const [recentMsgs, setRecentMsgs] = React.useState([]);
   const [isRefreshing, setRefreshing] = React.useState(false);
   const [lastUpdate, setLastUpdate]   = React.useState('');
+  const isMobile = useIsMobile();
 
   const load = async () => {
     setRefreshing(true);
@@ -158,16 +164,16 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
           <Button variant="success" onClick={onGenerateSummary}><i className="fas fa-magic"></i>&nbsp; Gerar Resumo</Button>
         </>}
       />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px' : '32px', display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '32px' }}>
 
         {/* KPIs */}
         <section style={{ animation: 'fadeInUp 0.4s ease' }}>
           <SectionTitle icon="tachometer-alt" label="Visão Geral do Dia" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '14px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(6,1fr)', gap: isMobile ? '10px' : '14px', marginBottom: '24px' }}>
             {kpis.map((k, i) => <KPICard key={i} label={k.label} value={k.value} colorTheme={k.colorTheme} />)}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? '12px' : '20px' }}>
             <DsCard>
               <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#374151', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="fas fa-thermometer-half" style={{ color: 'var(--color-brand-600)' }}></i> Termômetro Operacional
@@ -254,7 +260,7 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
             ? <div style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', background: 'white', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border-card)' }}>
                 Nenhum grupo monitorado ainda. Ingira dados via API.
               </div>
-            : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px' }}>
+            : <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '14px' }}>
                 {groups.map(g => (
                   <DsCard key={g.conversation_id || g.id} style={{ padding: '16px' }}>
                     <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.conversation_name || g.name}</div>
@@ -375,7 +381,7 @@ function AlertsScreen() {
         </div>
 
         {loading
-          ? <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}><Spinner size={24} color="#2563eb" /></div>
+          ? <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}><Spinner size={24} color="#0d9488" /></div>
           : alerts.length === 0
             ? <div style={{ textAlign: 'center', padding: '64px 32px' }}>
                 <i className="fas fa-check-circle" style={{ fontSize: '48px', color: '#22c55e', display: 'block', marginBottom: '16px' }}></i>
@@ -399,7 +405,7 @@ function AlertsScreen() {
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                        <button onClick={() => handleAck(a.id)} style={{ padding: '6px 10px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: '12px' }} title="Marcar como visto"><i className="fas fa-eye"></i></button>
+                        <button onClick={() => handleAck(a.id)} style={{ padding: '6px 10px', background: '#eff6ff', color: '#0d9488', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: '12px' }} title="Marcar como visto"><i className="fas fa-eye"></i></button>
                         <button onClick={() => handleResolve(a.id)} style={{ padding: '6px 10px', background: '#f0fdf4', color: '#16a34a', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: '12px' }} title="Resolver"><i className="fas fa-check"></i></button>
                       </div>
                     </div>

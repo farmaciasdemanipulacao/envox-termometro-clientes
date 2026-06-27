@@ -37,6 +37,9 @@ class DailySummary(Base, UUIDMixin, TimestampMixin):
     """
     __tablename__ = "daily_summaries"
 
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
     summary_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     conversation_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=True

@@ -1,11 +1,10 @@
-"""Endpoints de alertas."""
+"""Endpoints de alertas — filtrados por tenant."""
 from typing import Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.api.deps import get_current_user
@@ -23,14 +22,20 @@ router = APIRouter()
     summary="Listar alertas",
 )
 async def list_alerts(
-    status: Optional[str] = Query(None, description="Filtrar por status: open|acknowledged|resolved|dismissed"),
-    severity: Optional[str] = Query(None, description="Filtrar por severidade: low|medium|high|critical"),
+    status: Optional[str] = Query(None),
+    severity: Optional[str] = Query(None),
     limit: int = Query(50, le=200),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    query = select(AlertEvent).order_by(AlertEvent.triggered_at.desc()).limit(limit)
-
+    tid = current_user.id
+    query = (
+        select(AlertEvent)
+        .join(Conversation, AlertEvent.conversation_id == Conversation.id)
+        .where(Conversation.tenant_id == tid)
+        .order_by(AlertEvent.triggered_at.desc())
+        .limit(limit)
+    )
     if status:
         query = query.where(AlertEvent.status == status)
     if severity:
@@ -39,13 +44,15 @@ async def list_alerts(
     result = await db.execute(query)
     alerts = result.scalars().all()
 
-    # Enriquecer com nome da conversa
     out = []
     for alert in alerts:
         conv_result = await db.execute(
-            select(Conversation.name).where(Conversation.id == alert.conversation_id)
+            select(Conversation.name, Conversation.custom_name).where(
+                Conversation.id == alert.conversation_id
+            )
         )
-        conv_name = conv_result.scalar_one_or_none()
+        conv_row = conv_result.one_or_none()
+        conv_name = (conv_row.custom_name or conv_row.name) if conv_row else None
 
         out.append(AlertOut(
             id=str(alert.id),
@@ -76,7 +83,12 @@ async def update_alert_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(AlertEvent).where(AlertEvent.id == alert_id))
+    tid = current_user.id
+    result = await db.execute(
+        select(AlertEvent)
+        .join(Conversation, AlertEvent.conversation_id == Conversation.id)
+        .where(AlertEvent.id == alert_id, Conversation.tenant_id == tid)
+    )
     alert = result.scalar_one_or_none()
 
     if not alert:
@@ -90,11 +102,13 @@ async def update_alert_status(
     if payload.status == AlertStatus.RESOLVED:
         alert.resolved_at = datetime.now(timezone.utc)
 
-    # Nome da conversa
     conv_result = await db.execute(
-        select(Conversation.name).where(Conversation.id == alert.conversation_id)
+        select(Conversation.name, Conversation.custom_name).where(
+            Conversation.id == alert.conversation_id
+        )
     )
-    conv_name = conv_result.scalar_one_or_none()
+    conv_row = conv_result.one_or_none()
+    conv_name = (conv_row.custom_name or conv_row.name) if conv_row else None
 
     return AlertOut(
         id=str(alert.id),

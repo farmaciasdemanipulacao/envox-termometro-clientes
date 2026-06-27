@@ -16,6 +16,17 @@ var KPICard   = window.DS_KPICard;
 var AlertItem = window.DS_AlertItem;
 var GroupCard = window.DS_GroupCard;
 
+// ── Mobile detection hook ─────────────────────────────────────
+function useIsMobile() {
+  var [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+  React.useEffect(function() {
+    var handler = function() { setIsMobile(window.innerWidth < 768); };
+    window.addEventListener('resize', handler);
+    return function() { window.removeEventListener('resize', handler); };
+  }, []);
+  return isMobile;
+}
+
 // ── Toast system ──────────────────────────────────────────────
 window.showToast = function(message, type = 'info') {
   const colors = { success: '#16a34a', error: '#dc2626', info: '#2563eb', warning: '#d97706' };
@@ -73,9 +84,19 @@ window.apiPut = async function(path, body = {}) {
   return r.json();
 };
 
+window.apiDelete = async function(path) {
+  const r = await fetch(API_BASE + path, {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer ' + window.getToken() },
+  });
+  if (!r.ok) throw new Error('API error: ' + r.status);
+  return r.status === 204 ? null : r.json();
+};
+
 // ── Sidebar ───────────────────────────────────────────────────
-function Sidebar({ activePage, onNavigate, alertsCount, company, userName, onLogout }) {
+function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdmin, onLogout, onOpenProfile }) {
   const [hovered, setHovered] = React.useState(null);
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   const navItems = [
     { id: 'dashboard',     icon: 'tachometer-alt', label: 'Visão Geral' },
@@ -83,7 +104,8 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, onLog
     { id: 'tags',          icon: 'tags',           label: 'Relatório de Tags' },
     { id: 'summary',       icon: 'file-alt',       label: 'Resumo Executivo' },
     { id: 'alerts',        icon: 'bell',            label: 'Alertas', badge: alertsCount },
-    { id: 'groups',        icon: 'users',           label: 'Grupos' },
+    { id: 'groups',        icon: 'users',           label: 'Grupos WhatsApp' },
+    { id: 'email',         icon: 'envelope',        label: 'E-mails' },
     { id: 'team',          icon: 'user-tie',        label: 'Time' },
   ];
   const sysItems = [
@@ -152,31 +174,284 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, onLog
         })}
       </nav>
 
-      <div style={{ padding: '12px 16px', borderTop: '1px solid #374151' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '32px', height: '32px', background: 'var(--color-brand-600)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      {/* User section com popover */}
+      <div style={{ padding: '12px 16px', borderTop: '1px solid #374151', position: 'relative' }}>
+        {/* Popover menu */}
+        {menuOpen && (
+          <>
+            <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 198 }} />
+            <div style={{
+              position: 'absolute', bottom: '64px', left: '12px', right: '12px',
+              background: '#1f2937', border: '1px solid #374151', borderRadius: '12px',
+              boxShadow: '0 -8px 32px rgba(0,0,0,0.4)', zIndex: 199,
+              overflow: 'hidden', animation: 'fadeInUp 0.18s ease',
+            }}>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid #374151' }}>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: '#6b7280', marginTop: '1px' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
+              </div>
+              {[
+                { icon: 'user-circle', label: 'Meu Perfil', action: () => { setMenuOpen(false); onOpenProfile && onOpenProfile(); } },
+                ...(isAdmin ? [{ icon: 'users-cog', label: 'Gerenciar Usuários', action: () => { setMenuOpen(false); onNavigate('users'); } }] : []),
+                { icon: 'cog', label: 'Configurações', action: () => { setMenuOpen(false); onNavigate('config'); } },
+              ].map((item, i) => (
+                <div key={i} onClick={item.action} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '11px 14px', cursor: 'pointer', color: '#d1d5db', fontSize: 'var(--text-sm)',
+                  transition: 'background 0.12s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <i className={`fas fa-${item.icon}`} style={{ width: '16px', textAlign: 'center', fontSize: '13px', color: '#9ca3af' }}></i>
+                  {item.label}
+                </div>
+              ))}
+              <div style={{ borderTop: '1px solid #374151' }} />
+              <div onClick={() => { setMenuOpen(false); onLogout(); }} style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '11px 14px', cursor: 'pointer', color: '#f87171', fontSize: 'var(--text-sm)',
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fas fa-sign-out-alt" style={{ width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
+                Sair
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* User avatar clicável */}
+        <div
+          onClick={() => setMenuOpen(v => !v)}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '6px 8px', borderRadius: 'var(--radius-lg)', transition: 'background 0.15s', userSelect: 'none' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <div style={{ width: '32px', height: '32px', background: 'var(--color-brand-600)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
             <i className="fas fa-user" style={{ color: 'white', fontSize: '12px' }}></i>
+            {isAdmin && (
+              <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '12px', height: '12px', background: '#f59e0b', borderRadius: '9999px', border: '2px solid var(--color-bg-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fas fa-star" style={{ fontSize: '6px', color: 'white' }}></i>
+              </div>
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 'var(--text-sm)', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: '#9ca3af' }}>{company}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: '#6b7280' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
           </div>
-          <i className="fas fa-sign-out-alt" onClick={onLogout} style={{ color: '#6b7280', fontSize: '13px', cursor: 'pointer' }}></i>
+          <i className={`fas fa-chevron-${menuOpen ? 'down' : 'up'}`} style={{ color: '#6b7280', fontSize: '11px', transition: 'transform 0.2s' }}></i>
         </div>
       </div>
     </aside>
   );
 }
 
+// ── MobileTopBar ──────────────────────────────────────────────
+function MobileTopBar({ company, onMenuOpen }) {
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, height: '56px',
+      background: 'var(--color-bg-sidebar)', zIndex: 100,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0 16px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '32px', height: '32px', background: 'var(--color-brand-600)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <i className="fas fa-brain" style={{ color: 'white', fontSize: '14px' }}></i>
+        </div>
+        <div>
+          <div style={{ fontWeight: 700, color: 'white', fontSize: '15px', lineHeight: 1.15 }}>{company}</div>
+          <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>Intelligence</div>
+        </div>
+      </div>
+      <div onClick={onMenuOpen} style={{ cursor: 'pointer', padding: '10px', color: '#d1d5db' }}>
+        <i className="fas fa-bars" style={{ fontSize: '18px' }}></i>
+      </div>
+    </div>
+  );
+}
+
+// ── BottomNav ─────────────────────────────────────────────────
+function BottomNav({ activePage, onNavigate, alertsCount, onMoreOpen }) {
+  var mainTabs = [
+    { id: 'dashboard',    icon: 'tachometer-alt', label: 'Painel' },
+    { id: 'intelligence', icon: 'bolt',           label: 'Intel' },
+    { id: 'alerts',       icon: 'bell',           label: 'Alertas', badge: alertsCount },
+    { id: 'email',        icon: 'envelope',       label: 'E-mails' },
+  ];
+  return (
+    <div className="bottom-nav-safe" style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      background: 'var(--color-bg-sidebar)', borderTop: '1px solid #374151',
+      display: 'flex', alignItems: 'stretch', zIndex: 100, minHeight: '60px',
+    }}>
+      {mainTabs.map(function(tab) {
+        var isActive = activePage === tab.id;
+        return (
+          <div key={tab.id}
+            onClick={function() { onNavigate(tab.id); }}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: '3px', cursor: 'pointer', padding: '8px 0', position: 'relative',
+              color: isActive ? 'var(--color-brand-400)' : '#6b7280',
+              background: isActive ? 'rgba(14,165,233,0.08)' : 'transparent',
+            }}
+          >
+            <div style={{ position: 'relative' }}>
+              <i className={'fas fa-' + tab.icon} style={{ fontSize: '18px' }}></i>
+              {tab.badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-5px', right: '-9px',
+                  background: '#ef4444', color: 'white', fontSize: '10px',
+                  borderRadius: '9999px', minWidth: '16px', height: '16px',
+                  padding: '0 3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
+                }}>
+                  {tab.badge > 9 ? '9+' : tab.badge}
+                </span>
+              )}
+            </div>
+            <span style={{ fontSize: '10px', fontWeight: isActive ? 600 : 400 }}>{tab.label}</span>
+          </div>
+        );
+      })}
+      <div
+        onClick={onMoreOpen}
+        style={{
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '3px', cursor: 'pointer', padding: '8px 0', color: '#6b7280',
+        }}
+      >
+        <i className="fas fa-ellipsis-h" style={{ fontSize: '18px' }}></i>
+        <span style={{ fontSize: '10px' }}>Mais</span>
+      </div>
+    </div>
+  );
+}
+
+// ── MobileDrawer ──────────────────────────────────────────────
+function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, company, userName, isAdmin, onLogout, onOpenProfile }) {
+  if (!open) return null;
+  var allItems = [
+    { id: 'dashboard',    icon: 'tachometer-alt', label: 'Visão Geral' },
+    { id: 'intelligence', icon: 'bolt',           label: 'Inteligência Operacional' },
+    { id: 'tags',         icon: 'tags',           label: 'Relatório de Tags' },
+    { id: 'summary',      icon: 'file-alt',       label: 'Resumo Executivo' },
+    { id: 'alerts',       icon: 'bell',           label: 'Alertas', badge: alertsCount },
+    { id: 'groups',       icon: 'users',          label: 'Grupos WhatsApp' },
+    { id: 'email',        icon: 'envelope',       label: 'E-mails' },
+    { id: 'team',         icon: 'user-tie',       label: 'Time' },
+  ];
+  var sysItems = [
+    { id: 'wpp',    icon: 'whatsapp fab', label: 'Conexão WhatsApp' },
+    { id: 'config', icon: 'cog',          label: 'Configurações' },
+    { id: 'api',    icon: 'code',         label: 'API Docs' },
+  ];
+  if (isAdmin) sysItems.splice(1, 0, { id: 'users', icon: 'users-cog', label: 'Gerenciar Usuários' });
+
+  var itemStyle = function(id) { return {
+    display: 'flex', alignItems: 'center', gap: '12px',
+    padding: '13px 16px', borderRadius: 'var(--radius-lg)',
+    background: activePage === id ? 'var(--color-brand-600)' : 'transparent',
+    color: activePage === id ? 'white' : '#d1d5db',
+    cursor: 'pointer', fontSize: '15px',
+  }; };
+  return (
+    <div>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200 }}></div>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, bottom: 0, width: '85vw', maxWidth: '320px',
+        background: 'var(--color-bg-sidebar)', zIndex: 201, overflowY: 'auto',
+        display: 'flex', flexDirection: 'column',
+        animation: 'slideInLeft 0.22s ease',
+      }}>
+        <div style={{ padding: '16px', borderBottom: '1px solid #374151', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', background: 'var(--color-brand-600)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="fas fa-brain" style={{ color: 'white', fontSize: '16px' }}></i>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: 'white', fontSize: 'var(--text-lg)' }}>{company}</div>
+              <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>Intelligence</div>
+            </div>
+          </div>
+          <div onClick={onClose} style={{ cursor: 'pointer', padding: '8px', color: '#9ca3af' }}>
+            <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
+          </div>
+        </div>
+        <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {allItems.map(function(item) {
+            return (
+              <div key={item.id} style={itemStyle(item.id)} onClick={function() { onNavigate(item.id); }}>
+                <i className={'fas fa-' + item.icon} style={{ width: '20px', textAlign: 'center' }}></i>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.badge > 0 && (
+                  <span style={{ background: '#ef4444', color: 'white', fontSize: '11px', borderRadius: '9999px', minWidth: '18px', height: '18px', padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+          <div style={{ borderTop: '1px solid #374151', margin: '10px 4px' }}></div>
+          <div style={{ fontSize: '11px', color: '#6b7280', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
+          {sysItems.map(function(item) {
+            var iconClass = item.icon === 'whatsapp fab' ? 'fab fa-whatsapp' : 'fas fa-' + item.icon;
+            return (
+              <div key={item.id} style={itemStyle(item.id)} onClick={function() { onNavigate(item.id); }}>
+                <i className={iconClass} style={{ width: '20px', textAlign: 'center' }}></i>
+                <span>{item.label}</span>
+              </div>
+            );
+          })}
+        </nav>
+        <div style={{ padding: '16px', borderTop: '1px solid #374151' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: '36px', height: '36px', background: 'var(--color-brand-600)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="fas fa-user" style={{ color: 'white', fontSize: '14px' }}></i>
+              </div>
+              {isAdmin && (
+                <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '14px', height: '14px', background: '#f59e0b', borderRadius: '9999px', border: '2px solid var(--color-bg-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className="fas fa-star" style={{ fontSize: '7px', color: 'white' }}></i>
+                </div>
+              )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: '#6b7280' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
+            </div>
+            <div onClick={onOpenProfile} title="Meu Perfil" style={{ cursor: 'pointer', padding: '8px', color: '#9ca3af' }}>
+              <i className="fas fa-user-circle" style={{ fontSize: '16px' }}></i>
+            </div>
+            <div onClick={onLogout} title="Sair" style={{ cursor: 'pointer', padding: '8px', color: '#6b7280' }}>
+              <i className="fas fa-sign-out-alt" style={{ fontSize: '16px' }}></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PageHeader ────────────────────────────────────────────────
 function PageHeader({ title, subtitle, actions }) {
+  var isMobile = useIsMobile();
   return (
-    <header style={{ background: 'white', borderBottom: '1px solid var(--color-border-default)', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, flexShrink: 0 }}>
-      <div>
-        <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2, margin: 0 }}>{title}</h1>
-        {subtitle && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>{subtitle}</p>}
+    <header style={{
+      background: 'var(--color-neutral-900)',
+      borderBottom: '1px solid var(--color-neutral-800)',
+      padding: isMobile ? '10px 16px' : '14px 32px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      position: 'sticky', top: 0, zIndex: 10, flexShrink: 0,
+    }}>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <h1 style={{ fontSize: isMobile ? 'var(--text-base)' : 'var(--text-xl)', fontWeight: 700, color: '#e9edef', lineHeight: 1.2, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h1>
+        {subtitle && !isMobile && <p style={{ fontSize: 'var(--text-sm)', color: '#8696a0', margin: '2px 0 0 0' }}>{subtitle}</p>}
       </div>
-      {actions && <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>{actions}</div>}
+      {actions && <div style={{ display: 'flex', gap: isMobile ? '6px' : '10px', alignItems: 'center', flexShrink: 0, marginLeft: '8px' }}>{actions}</div>}
     </header>
   );
 }
@@ -186,11 +461,11 @@ function TemperatureGauge({ score, size }) {
   size = size || 128;
   const arc = 276.46;
   const fill = (score / 100) * arc * 0.75;
-  const color = score >= 81 ? '#22c55e' : score >= 61 ? '#3b82f6' : score >= 41 ? '#eab308' : score >= 21 ? '#f97316' : '#ef4444';
+  const color = score >= 81 ? '#22c55e' : score >= 61 ? '#0d9488' : score >= 41 ? '#eab308' : score >= 21 ? '#f97316' : '#ef4444';
   const gaugeDash = fill.toFixed(2) + ' ' + arc;
   const lm = score >= 81
     ? { text: '🟢 Excelente', bg: '#dcfce7', color: '#166534' }
-    : score >= 61 ? { text: '🔵 Bom',      bg: '#dbeafe', color: '#1e40af' }
+    : score >= 61 ? { text: '🟢 Bom',      bg: '#ccfbf1', color: '#0f766e' }
     : score >= 41 ? { text: '🟡 Atenção',  bg: '#fef9c3', color: '#854d0e' }
     : score >= 21 ? { text: '🟠 Alerta',   bg: '#ffedd5', color: '#9a3412' }
     :               { text: '🔴 Crítico',   bg: '#fee2e2', color: '#991b1b' };
@@ -242,4 +517,4 @@ function Spinner({ size, color }) {
   );
 }
 
-Object.assign(window, { Sidebar, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, Button, KPICard, AlertItem, GroupCard });
+Object.assign(window, { useIsMobile, Sidebar, MobileTopBar, BottomNav, MobileDrawer, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, Button, KPICard, AlertItem, GroupCard });

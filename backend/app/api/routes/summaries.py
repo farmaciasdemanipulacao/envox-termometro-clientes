@@ -30,7 +30,10 @@ async def list_summaries(
 ):
     result = await db.execute(
         select(DailySummary)
-        .where(DailySummary.summary_type == summary_type)
+        .where(
+            DailySummary.summary_type == summary_type,
+            DailySummary.tenant_id == current_user.id,
+        )
         .order_by(DailySummary.summary_date.desc())
         .limit(limit)
     )
@@ -54,6 +57,7 @@ async def get_today_summary(
                 DailySummary.summary_date == today,
                 DailySummary.summary_type == SummaryType.GLOBAL,
                 DailySummary.conversation_id.is_(None),
+                DailySummary.tenant_id == current_user.id,
             )
         )
     )
@@ -92,6 +96,7 @@ async def get_today_briefing(
             and_(
                 DailySummary.summary_date == today,
                 DailySummary.summary_type == "briefing_eod",
+                DailySummary.tenant_id == current_user.id,
             )
         )
     )

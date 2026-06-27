@@ -12,6 +12,7 @@ from app.models.followup import FollowUpItem
 from app.models.metrics import CollaboratorMetric, ConversationMetric
 from app.models.processing import ProcessingRun
 from app.models.user import User
+from app.models.tenant import TenantConfig
 
 __all__ = [
     "IngestionSource",
@@ -25,4 +26,5 @@ __all__ = [
     "ConversationMetric",
     "ProcessingRun",
     "User",
+    "TenantConfig",
 ]

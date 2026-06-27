@@ -3,7 +3,7 @@ import uuid
 import enum
 from typing import Optional
 
-from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, Text
+from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,6 +28,9 @@ class IngestionSource(Base, UUIDMixin, TimestampMixin):
     """
     __tablename__ = "ingestion_sources"
 
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     source_type: Mapped[SourceType] = mapped_column(

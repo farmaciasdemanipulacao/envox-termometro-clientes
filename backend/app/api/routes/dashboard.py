@@ -1,6 +1,6 @@
 """
 Endpoints do dashboard executivo.
-Entregam os dados consolidados para a visão geral.
+Todos os dados são filtrados pelo tenant do usuário autenticado.
 """
 from datetime import datetime, date, timedelta, timezone
 
@@ -27,7 +27,6 @@ router = APIRouter()
     "/dashboard/overview",
     response_model=DashboardOverview,
     summary="Visão geral executiva",
-    description="Retorna os principais KPIs do dia para o dashboard executivo.",
 )
 async def get_dashboard_overview(
     db: AsyncSession = Depends(get_db),
@@ -36,70 +35,83 @@ async def get_dashboard_overview(
     now = datetime.now(timezone.utc)
     today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
     yesterday_start = today_start - timedelta(days=1)
+    tid = current_user.id
 
-    # Mensagens hoje
+    # Mensagens hoje (deste tenant)
     msgs_today = await db.execute(
-        select(func.count(Message.id)).where(Message.sent_at >= today_start)
+        select(func.count(Message.id))
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .where(Message.sent_at >= today_start, Conversation.tenant_id == tid)
     )
     total_today = msgs_today.scalar() or 0
 
     # Mensagens ontem
     msgs_yesterday = await db.execute(
-        select(func.count(Message.id)).where(
-            and_(Message.sent_at >= yesterday_start, Message.sent_at < today_start)
+        select(func.count(Message.id))
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .where(
+            Message.sent_at >= yesterday_start,
+            Message.sent_at < today_start,
+            Conversation.tenant_id == tid,
         )
     )
     total_yesterday = msgs_yesterday.scalar() or 0
 
-    # Conversas ativas
+    # Conversas ativas hoje
     convs = await db.execute(
-        select(func.count(func.distinct(Message.conversation_id))).where(
-            Message.sent_at >= today_start
-        )
+        select(func.count(func.distinct(Message.conversation_id)))
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .where(Message.sent_at >= today_start, Conversation.tenant_id == tid)
     )
     active_conversations = convs.scalar() or 0
 
-    # Alertas por severidade (abertos)
+    # Alertas abertos (deste tenant — via conversation)
     alerts_data = await db.execute(
-        select(AlertEvent.severity, func.count(AlertEvent.id)).where(
-            AlertEvent.status == AlertStatus.OPEN
-        ).group_by(AlertEvent.severity)
+        select(AlertEvent.severity, func.count(AlertEvent.id))
+        .join(Conversation, AlertEvent.conversation_id == Conversation.id)
+        .where(AlertEvent.status == AlertStatus.OPEN, Conversation.tenant_id == tid)
+        .group_by(AlertEvent.severity)
     )
     alerts_by_severity = {row[0]: row[1] for row in alerts_data.fetchall()}
 
     # Follow-ups pendentes
     followups_r = await db.execute(
-        select(func.count(FollowUpItem.id)).where(
-            FollowUpItem.status == FollowUpStatus.PENDING
-        )
+        select(func.count(FollowUpItem.id))
+        .join(Conversation, FollowUpItem.conversation_id == Conversation.id)
+        .where(FollowUpItem.status == FollowUpStatus.PENDING, Conversation.tenant_id == tid)
     )
     followups_pending = followups_r.scalar() or 0
 
     # Oportunidades hoje
     opps_r = await db.execute(
-        select(func.count(Message.id)).where(
-            and_(Message.sent_at >= today_start, Message.is_opportunity == True)  # noqa
+        select(func.count(Message.id))
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .where(
+            Message.sent_at >= today_start,
+            Message.is_opportunity == True,  # noqa
+            Conversation.tenant_id == tid,
         )
     )
     opportunities = opps_r.scalar() or 0
 
     # Churn signals hoje
     churn_r = await db.execute(
-        select(func.count(Message.id)).where(
-            and_(Message.sent_at >= today_start, Message.is_churn_risk == True)  # noqa
+        select(func.count(Message.id))
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .where(
+            Message.sent_at >= today_start,
+            Message.is_churn_risk == True,  # noqa
+            Conversation.tenant_id == tid,
         )
     )
     churn_signals = churn_r.scalar() or 0
 
-    # Tendência de volume (%)
     trend = 0.0
     if total_yesterday > 0:
         trend = ((total_today - total_yesterday) / total_yesterday) * 100
 
-    # Termômetro — usa último resumo global se disponível
     temperature_score = 70
     temperature_label = "good"
-
     open_alerts_total = sum(alerts_by_severity.values())
     critical = alerts_by_severity.get(AlertSeverity.CRITICAL, 0)
     if critical >= 3 or open_alerts_total >= 10:
@@ -125,7 +137,7 @@ async def get_dashboard_overview(
         opportunities_detected=opportunities,
         churn_signals=churn_signals,
         followups_pending=followups_pending,
-        avg_response_time_minutes=0.0,  # TODO: calcular
+        avg_response_time_minutes=0.0,
         sla_breaches_today=0,
         message_volume_trend=round(trend, 1),
     )
@@ -141,8 +153,8 @@ async def get_group_metrics(
     current_user: User = Depends(get_current_user),
 ):
     today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+    tid = current_user.id
 
-    # Agrega métricas por conversa para hoje
     result = await db.execute(
         select(
             Conversation.id,
@@ -154,7 +166,7 @@ async def get_group_metrics(
             func.avg(Message.opportunity_score).label("opportunity_score"),
         )
         .join(Message, Message.conversation_id == Conversation.id)
-        .where(Message.sent_at >= today_start)
+        .where(Message.sent_at >= today_start, Conversation.tenant_id == tid)
         .group_by(Conversation.id, Conversation.name, Conversation.custom_name)
         .order_by(func.avg(Message.risk_score).desc())
     )
@@ -165,7 +177,6 @@ async def get_group_metrics(
         risk = float(row.risk_score or 0.0)
         opp = float(row.opportunity_score or 0.0)
 
-        # Calcular sentimento label
         if avg_sent > 0.3:
             sent_label = "positive"
         elif avg_sent < -0.3:
@@ -173,10 +184,8 @@ async def get_group_metrics(
         else:
             sent_label = "neutral"
 
-        # Termômetro simples do grupo
         temp = max(0, min(100, int(100 - risk)))
 
-        # Alertas abertos para o grupo
         alerts_r = await db.execute(
             select(func.count(AlertEvent.id)).where(
                 and_(
@@ -187,7 +196,6 @@ async def get_group_metrics(
         )
         open_alerts = alerts_r.scalar() or 0
 
-        # Follow-ups pendentes do grupo
         fu_r = await db.execute(
             select(func.count(FollowUpItem.id)).where(
                 and_(
@@ -222,13 +230,13 @@ async def get_group_metrics(
 @router.get(
     "/dashboard/recent-messages",
     summary="Mensagens recentes",
-    description="Retorna as últimas mensagens recebidas, para feed em tempo real.",
 )
 async def get_recent_messages(
     limit: int = 20,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    tid = current_user.id
     result = await db.execute(
         select(
             Message.id,
@@ -243,6 +251,7 @@ async def get_recent_messages(
         )
         .join(Conversation, Message.conversation_id == Conversation.id)
         .join(Participant, Message.participant_id == Participant.id)
+        .where(Conversation.tenant_id == tid)
         .order_by(Message.sent_at.desc())
         .limit(min(limit, 50))
     )

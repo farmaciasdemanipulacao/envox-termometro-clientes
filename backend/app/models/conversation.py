@@ -24,6 +24,9 @@ class Conversation(Base, UUIDMixin, TimestampMixin):
     """
     __tablename__ = "conversations"
 
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
     source_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ingestion_sources.id"), nullable=False
     )

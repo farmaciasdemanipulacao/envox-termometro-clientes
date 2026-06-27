@@ -40,10 +40,11 @@ async def run_migrations():
 
 
 async def create_default_data():
-    """Cria dados iniciais: source padrão, usuário admin."""
-    from sqlalchemy import select
+    """Cria dados iniciais: source padrão, usuário admin, TenantConfig do admin, backfill tenant_id."""
+    from sqlalchemy import select, text as sqla_text, update
     from app.models.source import IngestionSource, SourceType
     from app.models.user import User
+    from app.models.tenant import TenantConfig
     from app.core.security import hash_password, generate_api_key, hash_api_key
 
     async with AsyncSessionLocal() as db:
@@ -52,7 +53,6 @@ async def create_default_data():
             select(IngestionSource).where(IngestionSource.name == "Development Default")
         )
         if not result.scalar_one_or_none():
-            # API key padrão de desenvolvimento
             api_key_hash = hash_api_key(settings.API_KEY_SECRET)
             dev_source = IngestionSource(
                 name="Development Default",
@@ -68,7 +68,8 @@ async def create_default_data():
         user_result = await db.execute(
             select(User).where(User.username == settings.ADMIN_USERNAME)
         )
-        if not user_result.scalar_one_or_none():
+        admin = user_result.scalar_one_or_none()
+        if not admin:
             admin = User(
                 username=settings.ADMIN_USERNAME,
                 full_name="Administrador ENVOX",
@@ -77,9 +78,58 @@ async def create_default_data():
                 is_admin=True,
             )
             db.add(admin)
+            await db.flush()
             logger.info("admin_user_created", username=settings.ADMIN_USERNAME)
 
+        # TenantConfig do admin (sessão WPP padrão = termonitor)
+        tc_result = await db.execute(
+            select(TenantConfig).where(TenantConfig.tenant_id == admin.id)
+        )
+        if not tc_result.scalar_one_or_none():
+            admin_tc = TenantConfig(
+                tenant_id=admin.id,
+                wpp_session=settings.WPP_SESSION,
+                wpp_secret=settings.WPP_SECRET,
+                wpp_url=settings.WPP_BASE_URL,
+            )
+            db.add(admin_tc)
+
+            # IngestionSource do WppConnect para o admin
+            wpp_src_r = await db.execute(
+                select(IngestionSource).where(IngestionSource.name == "WppConnect Monitor")
+            )
+            wpp_src = wpp_src_r.scalar_one_or_none()
+            if not wpp_src:
+                wpp_src = IngestionSource(
+                    tenant_id=admin.id,
+                    name="WppConnect Monitor",
+                    description="Ingestão automática via WppConnect (admin)",
+                    source_type=SourceType.WEBHOOK,
+                    api_key_hash=hash_api_key(settings.API_KEY_SECRET),
+                    is_active=True,
+                )
+                db.add(wpp_src)
+            else:
+                # Vincula ao admin se ainda não tem tenant_id
+                if not wpp_src.tenant_id:
+                    wpp_src.tenant_id = admin.id
+
+            logger.info("admin_tenant_config_created", session=settings.WPP_SESSION)
+
         await db.commit()
+
+        # Backfill: vincula dados sem tenant_id ao admin
+        await db.execute(sqla_text(
+            "UPDATE conversations SET tenant_id = :tid WHERE tenant_id IS NULL"
+        ), {"tid": admin.id})
+        await db.execute(sqla_text(
+            "UPDATE ingestion_sources SET tenant_id = :tid WHERE tenant_id IS NULL"
+        ), {"tid": admin.id})
+        await db.execute(sqla_text(
+            "UPDATE daily_summaries SET tenant_id = :tid WHERE tenant_id IS NULL"
+        ), {"tid": admin.id})
+        await db.commit()
+        logger.info("tenant_backfill_done")
 
 
 async def setup_scheduler():
@@ -117,12 +167,41 @@ async def lifespan(app: FastAPI):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             # Adiciona colunas novas em tabelas existentes (safe: IF NOT EXISTS)
+            _sqla_text = __import__("sqlalchemy").text
             for sql in [
                 "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS custom_name VARCHAR(500)",
                 "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS group_type VARCHAR(50)",
                 "ALTER TABLE participants ADD COLUMN IF NOT EXISTS custom_name VARCHAR(500)",
+                # Multi-tenant: tenant_id nas tabelas principais
+                "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES users(id)",
+                "ALTER TABLE ingestion_sources ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES users(id)",
+                "ALTER TABLE daily_summaries ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES users(id)",
+                "CREATE INDEX IF NOT EXISTS idx_conversations_tenant ON conversations(tenant_id)",
+                "CREATE INDEX IF NOT EXISTS idx_summaries_tenant ON daily_summaries(tenant_id)",
+                # Controle de acesso e auditoria de usuários
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE",
+                # Contas de e-mail monitoradas
+                """CREATE TABLE IF NOT EXISTS email_accounts (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id UUID NOT NULL REFERENCES users(id),
+                    label VARCHAR(200) NOT NULL,
+                    host VARCHAR(500) NOT NULL,
+                    port INTEGER NOT NULL DEFAULT 993,
+                    username VARCHAR(500) NOT NULL,
+                    password_enc TEXT NOT NULL,
+                    use_ssl BOOLEAN NOT NULL DEFAULT TRUE,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    last_sync_at TIMESTAMP WITH TIME ZONE,
+                    last_error TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+                )""",
+                "CREATE INDEX IF NOT EXISTS idx_email_accounts_tenant ON email_accounts(tenant_id)",
             ]:
-                await conn.execute(__import__("sqlalchemy").text(sql))
+                try:
+                    await conn.execute(_sqla_text(sql))
+                except Exception as e:
+                    logger.warning("migration_sql_skipped", error=str(e)[:120])
         logger.info("tables_created_or_verified")
 
     # Dados iniciais
@@ -188,18 +267,21 @@ app.add_middleware(
 
 # === ROTAS DA API ===
 
-from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence  # noqa: E501
+from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence, users, tenant, email  # noqa: E501
 
 API_PREFIX = "/api/v1"
 
 app.include_router(health.router, prefix=API_PREFIX, tags=["System"])
 app.include_router(auth.router, prefix=API_PREFIX, tags=["Auth"])
+app.include_router(users.router, prefix=API_PREFIX, tags=["Usuários"])
+app.include_router(tenant.router, prefix=API_PREFIX, tags=["Tenant/WPP"])
 app.include_router(ingest.router, prefix=API_PREFIX, tags=["Ingestão"])
 app.include_router(dashboard.router, prefix=API_PREFIX, tags=["Dashboard"])
 app.include_router(alerts.router, prefix=API_PREFIX, tags=["Alertas"])
 app.include_router(summaries.router, prefix=API_PREFIX, tags=["Resumos"])
 app.include_router(wppconnect.router, prefix=API_PREFIX, tags=["WhatsApp"])
 app.include_router(intelligence.router, prefix=API_PREFIX, tags=["Inteligência"])
+app.include_router(email.router, prefix=API_PREFIX, tags=["E-mail"])
 
 # === STATIC FILES (Frontend) ===
 # Serve o dashboard HTML estático

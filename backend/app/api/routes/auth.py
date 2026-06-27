@@ -1,5 +1,5 @@
 """Endpoints de autenticação."""
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +16,6 @@ router = APIRouter()
 
 @router.post("/auth/token", response_model=Token)
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """
-    Autentica usuário e retorna JWT.
-    Usar: POST /api/v1/auth/token com body {"username": "admin", "password": "..."}
-    """
     result = await db.execute(
         select(User).where(User.username == request.username, User.is_active == True)  # noqa
     )
@@ -31,6 +27,9 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             detail="Credenciais inválidas",
         )
 
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
+
     token = create_access_token(
         data={"sub": user.username},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
@@ -40,4 +39,8 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
         access_token=token,
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user_id=str(user.id),
+        username=user.username,
+        full_name=user.full_name,
+        is_admin=user.is_admin,
     )

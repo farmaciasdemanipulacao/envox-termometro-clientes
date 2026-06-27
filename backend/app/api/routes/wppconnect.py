@@ -1,16 +1,15 @@
 """
-Webhook do WppConnect Server.
-Recebe eventos de mensagens em tempo real e injeta no pipeline de ingestão.
-
+Webhook do WppConnect Server — recebe eventos e roteia para o tenant correto.
 URL: POST /api/v1/webhooks/wppconnect
-Configurada no WppConnect via start-session { "webhook": "<url>" }
 """
 from fastapi import APIRouter, Request, BackgroundTasks
 from sqlalchemy import select
 
 from app.core.logging import get_logger
+from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.source import IngestionSource, SourceType
+from app.models.tenant import TenantConfig
 from app.services.ingestion.processor import IngestionProcessor
 from app.services.ingestion.wpp_normalizer import normalize_wpp_payload
 
@@ -18,50 +17,49 @@ router = APIRouter()
 logger = get_logger(__name__)
 processor = IngestionProcessor()
 
-# Cache do source_id para não bater no banco a cada mensagem
-_wpp_source_id: str | None = None
 
+async def _get_source_for_session(db, session_name: str) -> IngestionSource | None:
+    """Localiza o IngestionSource do tenant dono daquela sessão WppConnect."""
+    tc_result = await db.execute(
+        select(TenantConfig).where(TenantConfig.wpp_session == session_name)
+    )
+    tc = tc_result.scalar_one_or_none()
+    if not tc:
+        return None
 
-async def _get_wpp_source(db) -> IngestionSource:
-    """Retorna (criando se necessário) a IngestionSource do WppConnect."""
-    global _wpp_source_id
-    if _wpp_source_id:
-        result = await db.execute(
-            select(IngestionSource).where(IngestionSource.id == _wpp_source_id)
+    src_result = await db.execute(
+        select(IngestionSource).where(
+            IngestionSource.tenant_id == tc.tenant_id,
+            IngestionSource.source_type == SourceType.WEBHOOK,
+            IngestionSource.is_active == True,  # noqa
         )
-        source = result.scalar_one_or_none()
-        if source:
-            return source
+    )
+    return src_result.scalar_one_or_none()
 
+
+async def _get_or_create_fallback_source(db) -> IngestionSource:
+    """Source fallback — usado quando o session_name não bate com nenhum tenant."""
     result = await db.execute(
         select(IngestionSource).where(IngestionSource.name == "WppConnect Monitor")
     )
     source = result.scalar_one_or_none()
-
     if not source:
         from app.core.security import hash_api_key
-        from app.core.config import settings
         source = IngestionSource(
             name="WppConnect Monitor",
-            description="Ingestão automática via WppConnect Server (número monitor)",
+            description="Ingestão automática via WppConnect (fallback)",
             source_type=SourceType.WEBHOOK,
             api_key_hash=hash_api_key(settings.API_KEY_SECRET),
             is_active=True,
         )
         db.add(source)
         await db.flush()
-        logger.info("wpp_source_created", source_id=str(source.id))
-
-    _wpp_source_id = str(source.id)
     return source
 
 
 @router.get("/wpp/status")
 async def get_wpp_status():
-    """
-    Retorna o status real da sessão WppConnect usando o token do backend (sempre fresco).
-    Não requer autenticação JWT — usado pelo painel para mostrar status de conexão.
-    """
+    """Status da sessão padrão (admin). Sem auth — compatibilidade com versão anterior."""
     from app.connectors.wppconnect_server import wpp_client
     try:
         token = await wpp_client.generate_token()
@@ -81,32 +79,30 @@ async def get_wpp_status():
 async def wppconnect_webhook(request: Request, background_tasks: BackgroundTasks):
     """
     Recebe eventos do WppConnect Server.
-    Responde 200 imediatamente e processa em background para não bloquear o WppConnect.
+    Roteia para o tenant correto pelo campo 'session' do payload.
     """
     try:
         payload = await request.json()
     except Exception:
-        # Retorna 200 mesmo em erro — WppConnect não tenta reenvio se receber 4xx/5xx
         logger.warning("wpp_webhook_invalid_json")
         return {"status": "ignored"}
 
     event = payload.get("event", "")
-    # WppConnect envia campos no nível raiz (não em sub-chave "data")
     data = payload.get("data") or payload
+    session_name = payload.get("session") or settings.WPP_SESSION
 
-    logger.debug("wpp_webhook_received", wpp_event=event)
+    logger.debug("wpp_webhook_received", wpp_event=event, session=session_name)
 
-    # chatId terminando em @g.us = grupo (WhatsApp multi-device usa @lid no campo "from")
     chat_id = str(data.get("chatId") or data.get("from") or "")
     is_group = data.get("isGroupMsg") or data.get("isGroup") or chat_id.endswith("@g.us")
     if event == "onmessage" and is_group and not data.get("fromMe"):
-        background_tasks.add_task(_process_message, payload)
+        background_tasks.add_task(_process_message, payload, session_name)
 
     return {"status": "ok"}
 
 
-async def _process_message(payload: dict):
-    """Processa e persiste uma mensagem de grupo."""
+async def _process_message(payload: dict, session_name: str):
+    """Processa e persiste uma mensagem de grupo, vinculada ao tenant correto."""
     normalized = normalize_wpp_payload(payload)
     if not normalized:
         return
@@ -115,9 +111,11 @@ async def _process_message(payload: dict):
 
     async with AsyncSessionLocal() as db:
         try:
-            source = await _get_wpp_source(db)
+            source = await _get_source_for_session(db, session_name)
+            if not source:
+                logger.warning("wpp_unknown_session_fallback", session=session_name)
+                source = await _get_or_create_fallback_source(db)
 
-            # Checa duplicata por external_id antes de processar
             from app.models.message import Message
             ext_id = normalized.get("external_id")
             if ext_id:
@@ -137,9 +135,9 @@ async def _process_message(payload: dict):
                 sender=normalized["participant_name"],
                 type=normalized["message_type"],
                 risk=msg.risk_score,
+                session=session_name,
             )
 
-            # Transcrição de áudio em background (não bloqueia o fluxo principal)
             if normalized["message_type"] == "audio":
                 audio_b64 = data.get("body") or ""
                 if audio_b64 and len(audio_b64) > 100:
@@ -152,10 +150,6 @@ async def _process_message(payload: dict):
 
 
 async def _transcribe_and_update(message_id: str, audio_b64: str):
-    """
-    Transcreve o áudio e atualiza o conteúdo da mensagem + re-roda análise.
-    Executado como task assíncrona para não bloquear o webhook.
-    """
     from app.services.transcription import transcribe_audio_b64
     from app.services.analysis.heuristics import HeuristicsEngine
     from app.models.message import Message
@@ -163,7 +157,7 @@ async def _transcribe_and_update(message_id: str, audio_b64: str):
 
     text = await transcribe_audio_b64(audio_b64)
     if not text:
-        return  # Nenhuma chave configurada ou falha
+        return
 
     async with AsyncSessionLocal() as db:
         try:
@@ -173,20 +167,16 @@ async def _transcribe_and_update(message_id: str, audio_b64: str):
             msg = result.scalar_one_or_none()
             if not msg:
                 return
-
             msg.content = text
-
-            # Re-roda análise heurística no texto transcrito
             engine = HeuristicsEngine()
             analysis = engine.analyze(text)
-            msg.risk_score        = analysis.risk_score
-            msg.is_churn_risk     = analysis.is_churn_risk
-            msg.is_opportunity    = analysis.is_opportunity
+            msg.risk_score = analysis.risk_score
+            msg.is_churn_risk = analysis.is_churn_risk
+            msg.is_opportunity = analysis.is_opportunity
             msg.is_followup_needed = analysis.is_followup_needed
-            msg.tags              = analysis.tags
-
+            msg.tags = analysis.tags
             await db.commit()
             logger.info("audio_transcribed", message_id=message_id, chars=len(text))
         except Exception as e:
             await db.rollback()
-            logger.error("audio_transcription_update_failed", error=str(e), message_id=message_id)
+            logger.error("audio_transcription_update_failed", error=str(e))

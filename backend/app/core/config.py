@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     LLM_ENABLED: bool = False
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o-mini"
+    GROQ_API_KEY: Optional[str] = None
+    VISION_MODEL_GROQ: str = "meta-llama/llama-4-scout-17b-16e-instruct"
+    VISION_MODEL_OPENAI: str = "gpt-4o-mini"
     LLM_SUMMARY_MAX_TOKENS: int = 500
 
     # === ADMIN PADRÃO (criado no startup se não existir) ===

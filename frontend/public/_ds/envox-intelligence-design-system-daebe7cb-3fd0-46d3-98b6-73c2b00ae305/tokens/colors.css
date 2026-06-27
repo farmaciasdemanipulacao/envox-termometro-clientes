@@ -4,31 +4,31 @@
 
 :root {
   /* =========================================
-     BRAND — Blue
+     BRAND — Teal (WhatsApp-inspired)
      Primary action color throughout the UI
   ========================================= */
-  --color-brand-50:  #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;   /* Primary CTA */
-  --color-brand-700: #1d4ed8;   /* Hover state */
-  --color-brand-800: #1e40af;   /* Pressed / dark text */
+  --color-brand-50:  #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;   /* Primary CTA */
+  --color-brand-700: #0f766e;   /* Hover state */
+  --color-brand-800: #115e59;   /* Pressed / dark text */
 
   /* =========================================
-     NEUTRAL — Gray
+     NEUTRAL — Dark (WhatsApp-inspired sidebar)
      Page chrome, text, borders, sidebar
   ========================================= */
-  --color-neutral-50:  #f9fafb;   /* Page background */
-  --color-neutral-100: #f3f4f6;   /* Card border, subtle fills */
-  --color-neutral-200: #e5e7eb;   /* Dividers, input borders (default) */
-  --color-neutral-300: #d1d5db;   /* Input borders, inactive nav */
-  --color-neutral-400: #9ca3af;   /* Placeholder text, scrollbar */
-  --color-neutral-500: #6b7280;   /* Muted text, captions */
-  --color-neutral-600: #4b5563;   /* Secondary text */
-  --color-neutral-700: #374151;   /* Sidebar hover, medium headings */
-  --color-neutral-800: #1f2937;   /* Section headings */
-  --color-neutral-900: #111827;   /* Sidebar background, primary text */
+  --color-neutral-50:  #f0f2f5;   /* Page background */
+  --color-neutral-100: #e9edef;   /* Card border, subtle fills */
+  --color-neutral-200: #d1d7db;   /* Dividers, input borders (default) */
+  --color-neutral-300: #aebac3;   /* Input borders, inactive nav */
+  --color-neutral-400: #8696a0;   /* Placeholder text, scrollbar */
+  --color-neutral-500: #54656f;   /* Muted text, captions */
+  --color-neutral-600: #3b4a54;   /* Secondary text */
+  --color-neutral-700: #2a3942;   /* Sidebar hover */
+  --color-neutral-800: #1f2c33;   /* Section headings */
+  --color-neutral-900: #111b21;   /* Sidebar background, primary text */
 
   /* =========================================
      SEVERITY — Alert Scale

@@ -1,7 +1,6 @@
 """
 Serviço de geração de resumo diário.
-MVP: geração heurística baseada em dados agregados.
-Fase 2: hook para LLM (OpenAI/Claude) para enriquecer o texto.
+Geração heurística por padrão; enriquecida por Claude Sonnet quando LLM_ENABLED=True.
 """
 from datetime import date, datetime, timezone
 from typing import Optional
@@ -42,8 +41,8 @@ class SummaryService:
         # Coleta dados do dia
         stats = await self._collect_day_stats(db, target_date)
 
-        # Gera texto executivo heurístico
-        executive_text = self._generate_executive_text(stats, target_date)
+        # Gera texto executivo (LLM se habilitado, heurístico como fallback)
+        executive_text = await self._generate_executive_text_llm(stats, target_date)
 
         # Calcula termômetro
         temperature_score, temperature_label = self._calculate_temperature(stats)
@@ -61,6 +60,8 @@ class SummaryService:
         summary = existing.scalar_one_or_none()
 
         now = datetime.now(timezone.utc)
+
+        gen_method = GenerationMethod.LLM if self._llm_available() else GenerationMethod.HEURISTIC
 
         if summary:
             # Atualiza existente
@@ -83,7 +84,7 @@ class SummaryService:
                 "temperature_score": temperature_score,
                 "temperature_label": temperature_label,
                 "generated_at": now,
-                "generation_method": GenerationMethod.HEURISTIC,
+                "generation_method": gen_method,
             }.items():
                 setattr(summary, key, value)
         else:
@@ -108,7 +109,7 @@ class SummaryService:
                 temperature_score=temperature_score,
                 temperature_label=temperature_label,
                 generated_at=now,
-                generation_method=GenerationMethod.HEURISTIC,
+                generation_method=gen_method,
             )
             db.add(summary)
 
@@ -383,6 +384,66 @@ class SummaryService:
         elif sentiment > 0.3:
             themes.append("Satisfação e engajamento positivo")
         return themes
+
+    def _llm_available(self) -> bool:
+        import os
+        from app.core.config import settings
+        return settings.LLM_ENABLED and bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+
+    async def _generate_executive_text_llm(self, stats: dict, target_date: date) -> str:
+        """Gera texto executivo com Claude se disponível, senão usa heurística."""
+        heuristic_text = self._generate_executive_text(stats, target_date)
+
+        if not self._llm_available():
+            return heuristic_text
+
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, self._call_claude_summary, stats, target_date, heuristic_text)
+            return result or heuristic_text
+        except Exception as e:
+            logger.warning("llm_summary_failed_fallback", error=str(e))
+            return heuristic_text
+
+    def _call_claude_summary(self, stats: dict, target_date: date, heuristic_text: str) -> str | None:
+        import os
+        import anthropic
+        from app.core.config import settings
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+        client = anthropic.Anthropic(api_key=api_key)
+        date_str = target_date.strftime("%d/%m/%Y")
+
+        prompt = f"""Você é um analista de operações de uma empresa de manipulação farmacêutica.
+Gere um resumo executivo em português para o dia {date_str} com base nos dados abaixo.
+Seja objetivo, direto e use tom profissional. Use markdown com negrito nos pontos importantes.
+Máximo 250 palavras.
+
+DADOS DO DIA:
+- Mensagens processadas: {stats['total_messages']}
+- Participantes únicos: {stats['total_participants']}
+- Score de sentimento médio: {stats['avg_sentiment']:.2f} (-1 negativo a +1 positivo)
+- Score de risco médio: {stats['avg_risk']:.0f}/100
+- Alertas abertos: {stats['open_alerts']}
+- Alertas críticos: {stats['critical_alerts']}
+- Riscos de churn detectados: {stats['churn_count']}
+- Reclamações: {stats['complaint_count']}
+- Oportunidades comerciais: {stats['opportunities_count']}
+- Follow-ups pendentes: {stats['followups_count']}
+- Temas recorrentes: {', '.join(stats['themes']) if stats['themes'] else 'nenhum'}
+
+Rascunho heurístico (melhore este texto):
+{heuristic_text}"""
+
+        resp = client.messages.create(
+            model=settings.ANTHROPIC_MODEL,
+            max_tokens=settings.LLM_SUMMARY_MAX_TOKENS,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = (resp.content[0].text or "").strip()
+        logger.info("llm_summary_ok", chars=len(text), model=settings.ANTHROPIC_MODEL)
+        return text
 
 
 # Instância global

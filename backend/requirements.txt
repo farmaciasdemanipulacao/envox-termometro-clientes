@@ -39,6 +39,7 @@ pytz==2024.2
 
 # === IA: WHISPER (transcrição de áudio) + LLM ===
 openai==1.56.0
+anthropic>=0.40.0
 
 # === EXTRAÇÃO DE CONTEÚDO DE ARQUIVOS ===
 pypdf>=4.3.0

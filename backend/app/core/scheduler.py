@@ -183,6 +183,16 @@ async def run_alert_scan_job():
             await db.commit()
             logger.warning("followup_overdue_alerts_created", count=len(overdue_followups))
 
+    # Enriquece alertas recentes com análise do Claude (se LLM_ENABLED)
+    async with AsyncSessionLocal() as db:
+        try:
+            from app.services.analysis.claude_analyzer import enrich_open_alerts
+            enriched = await enrich_open_alerts(db)
+            if enriched:
+                logger.info("alert_scan_claude_enriched", count=enriched)
+        except Exception as e:
+            logger.error("alert_scan_claude_failed", error=str(e))
+
 
 async def run_metrics_update_job():
     """

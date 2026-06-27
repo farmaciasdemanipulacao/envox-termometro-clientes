@@ -140,8 +140,8 @@ async def _process_message(payload: dict, session_name: str):
 
             msg_type = normalized["message_type"]
             body_b64 = data.get("body") or ""
+            import asyncio
             if body_b64 and len(body_b64) > 100:
-                import asyncio
                 if msg_type in ("audio", "ptt"):
                     asyncio.create_task(_transcribe_and_update(str(msg.id), body_b64))
                 elif msg_type in ("image", "video", "document"):
@@ -151,9 +151,19 @@ async def _process_message(payload: dict, session_name: str):
                         _extract_file_and_update(str(msg.id), body_b64, msg_type, mimetype, filename)
                     )
 
+            # Análise Claude para toda mensagem com conteúdo textual
+            content = normalized.get("content", "")
+            if content and not content.startswith("["):
+                asyncio.create_task(_analyze_with_claude(str(msg.id), content))
+
         except Exception as e:
             await db.rollback()
             logger.error("wpp_message_failed", error=str(e), payload=str(payload)[:200])
+
+
+async def _analyze_with_claude(message_id: str, content: str):
+    from app.services.analysis.claude_analyzer import analyze_single_message
+    await analyze_single_message(message_id, content)
 
 
 async def _extract_file_and_update(
@@ -190,6 +200,10 @@ async def _extract_file_and_update(
             await db.rollback()
             logger.error("file_extract_update_failed", error=str(e))
 
+    # Claude re-analisa após extração do conteúdo
+    import asyncio
+    asyncio.create_task(_analyze_with_claude(message_id, text))
+
 
 async def _transcribe_and_update(message_id: str, audio_b64: str):
     from app.services.transcription import transcribe_audio_b64
@@ -222,3 +236,7 @@ async def _transcribe_and_update(message_id: str, audio_b64: str):
         except Exception as e:
             await db.rollback()
             logger.error("audio_transcription_update_failed", error=str(e))
+
+    # Claude analisa o texto transcrito
+    import asyncio
+    asyncio.create_task(_analyze_with_claude(message_id, text))

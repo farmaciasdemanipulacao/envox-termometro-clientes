@@ -38,7 +38,8 @@ class BriefingService:
         action_items = await self._collect_action_items(db, start, end)
         group_summary = await self._collect_group_summary(db, start, end)
 
-        executive_text = self._generate_briefing_text(action_items, group_summary, target_date)
+        heuristic_text = self._generate_briefing_text(action_items, group_summary, target_date)
+        executive_text = await self._enrich_with_claude(heuristic_text, action_items, group_summary, target_date) or heuristic_text
         highlights = [f"{len(action_items)} ação(ões) identificada(s) para o time"]
         critical_points = [i["title"] for i in action_items if i.get("priority") == "high"][:5]
         pending_fus = [i["title"] for i in action_items if i.get("type") == "followup"][:10]
@@ -310,6 +311,59 @@ class BriefingService:
                 parts.append(line)
 
         return "\n\n".join(parts)
+
+    async def _enrich_with_claude(
+        self, heuristic_text: str, action_items: list, group_summary: list, target_date: date
+    ) -> Optional[str]:
+        import os
+        from app.core.config import settings
+
+        if not settings.LLM_ENABLED or not os.getenv("ANTHROPIC_API_KEY", "").strip():
+            return None
+
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, self._sync_claude_briefing, heuristic_text, action_items, group_summary, target_date
+        )
+
+    def _sync_claude_briefing(
+        self, heuristic_text: str, action_items: list, group_summary: list, target_date: date
+    ) -> Optional[str]:
+        import os
+        import anthropic
+        from app.core.config import settings
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+        client = anthropic.Anthropic(api_key=api_key)
+        date_str = target_date.strftime("%d/%m/%Y")
+
+        high_items = [i for i in action_items if i.get("priority") == "high"]
+        groups_at_risk = [g for g in group_summary if g.get("temperature", 100) < 50]
+
+        prompt = f"""Você é um analista de operações de uma empresa de manipulação farmacêutica.
+Reescreva o briefing de fim de dia abaixo de forma mais clara, executiva e acionável.
+Mantenha o markdown, os emojis e a estrutura por responsável.
+Adicione insights estratégicos se relevante. Máximo 400 palavras. Data: {date_str}.
+
+Ações de alta prioridade ({len(high_items)}): {[i['title'] for i in high_items[:5]]}
+Grupos em risco: {[g['group'] for g in groups_at_risk[:5]]}
+
+Rascunho a melhorar:
+{heuristic_text}"""
+
+        try:
+            resp = client.messages.create(
+                model=settings.ANTHROPIC_MODEL,
+                max_tokens=700,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = (resp.content[0].text or "").strip()
+            logger.info("claude_briefing_ok", chars=len(text))
+            return text
+        except Exception as e:
+            logger.error("claude_briefing_failed", error=str(e))
+            return None
 
 
 briefing_service = BriefingService()

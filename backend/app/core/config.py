@@ -80,8 +80,13 @@ class Settings(BaseSettings):
 
     # === IA (OPCIONAL) ===
     LLM_ENABLED: bool = False
+    # Anthropic (prioridade para análise e visão)
+    ANTHROPIC_API_KEY: Optional[str] = None
+    ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
+    # OpenAI (fallback / Whisper para áudio)
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o-mini"
+    # Groq (Whisper rápido e gratuito para áudio)
     GROQ_API_KEY: Optional[str] = None
     VISION_MODEL_GROQ: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     VISION_MODEL_OPENAI: str = "gpt-4o-mini"

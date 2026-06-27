@@ -138,15 +138,57 @@ async def _process_message(payload: dict, session_name: str):
                 session=session_name,
             )
 
-            if normalized["message_type"] == "audio":
-                audio_b64 = data.get("body") or ""
-                if audio_b64 and len(audio_b64) > 100:
-                    import asyncio
-                    asyncio.create_task(_transcribe_and_update(str(msg.id), audio_b64))
+            msg_type = normalized["message_type"]
+            body_b64 = data.get("body") or ""
+            if body_b64 and len(body_b64) > 100:
+                import asyncio
+                if msg_type in ("audio", "ptt"):
+                    asyncio.create_task(_transcribe_and_update(str(msg.id), body_b64))
+                elif msg_type in ("image", "video", "document"):
+                    mimetype = data.get("mimetype") or ""
+                    filename = data.get("filename") or ""
+                    asyncio.create_task(
+                        _extract_file_and_update(str(msg.id), body_b64, msg_type, mimetype, filename)
+                    )
 
         except Exception as e:
             await db.rollback()
             logger.error("wpp_message_failed", error=str(e), payload=str(payload)[:200])
+
+
+async def _extract_file_and_update(
+    message_id: str, b64: str, msg_type: str, mimetype: str, filename: str
+):
+    from app.services.file_extractor import extract_file_content
+    from app.services.analysis.heuristics import HeuristicsEngine
+    from app.models.message import Message
+    import uuid
+
+    text = await extract_file_content(b64, msg_type, mimetype, filename)
+    if not text:
+        return
+
+    async with AsyncSessionLocal() as db:
+        try:
+            result = await db.execute(
+                select(Message).where(Message.id == uuid.UUID(message_id))
+            )
+            msg = result.scalar_one_or_none()
+            if not msg:
+                return
+            msg.content = text
+            engine = HeuristicsEngine()
+            analysis = engine.analyze(text)
+            msg.risk_score = analysis.risk_score
+            msg.is_churn_risk = analysis.is_churn_risk
+            msg.is_opportunity = analysis.is_opportunity
+            msg.is_followup_needed = analysis.is_followup_needed
+            msg.tags = analysis.tags
+            await db.commit()
+            logger.info("file_content_extracted", message_id=message_id, type=msg_type, chars=len(text))
+        except Exception as e:
+            await db.rollback()
+            logger.error("file_extract_update_failed", error=str(e))
 
 
 async def _transcribe_and_update(message_id: str, audio_b64: str):

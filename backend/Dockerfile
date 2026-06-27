@@ -5,6 +5,7 @@ WORKDIR /app
 # Dependências do sistema (mínimas)
 RUN apt-get update && apt-get install -y \
     curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala dependências Python

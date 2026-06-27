@@ -43,6 +43,8 @@ openai==1.56.0
 # === EXTRAÇÃO DE CONTEÚDO DE ARQUIVOS ===
 pypdf>=4.3.0
 python-docx>=1.1.0
+openpyxl>=3.1.0
+pydub>=0.25.1
 
 # === TESTES ===
 pytest==8.3.4

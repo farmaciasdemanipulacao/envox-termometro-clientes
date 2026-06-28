@@ -2,14 +2,20 @@
 Webhook do WppConnect Server — recebe eventos e roteia para o tenant correto.
 URL: POST /api/v1/webhooks/wppconnect
 """
-from fastapi import APIRouter, Request, BackgroundTasks
+from fastapi import APIRouter, Request, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.core.config import settings
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, get_db
 from app.models.source import IngestionSource, SourceType
 from app.models.tenant import TenantConfig
+from app.models.conversation import Conversation, ConversationType
+from app.api.deps import get_current_user
+from app.models.user import User
+from app.connectors.wppconnect_server import wpp_client
 from app.services.ingestion.processor import IngestionProcessor
 from app.services.ingestion.wpp_normalizer import normalize_wpp_payload
 
@@ -60,7 +66,6 @@ async def _get_or_create_fallback_source(db) -> IngestionSource:
 @router.get("/wpp/status")
 async def get_wpp_status():
     """Status da sessão padrão (admin). Sem auth — compatibilidade com versão anterior."""
-    from app.connectors.wppconnect_server import wpp_client
     try:
         token = await wpp_client.generate_token()
         status = await wpp_client.get_status(token)
@@ -73,6 +78,168 @@ async def get_wpp_status():
         }
     except Exception as e:
         return {"connected": False, "status": "ERROR", "phone": "", "error": str(e)}
+
+
+class GroupToggleRequest(BaseModel):
+    wpp_id: str       # e.g. "120363425237161270@g.us"
+    name: str
+    participant_count: int = 0
+    enable: bool = True
+
+
+@router.get("/wpp/available-groups")
+async def get_available_groups(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Lista todos os grupos WhatsApp disponíveis no WppConnect
+    e indica quais estão sendo monitorados por este tenant.
+    """
+    try:
+        token = await wpp_client.generate_token()
+        wpp_groups = await wpp_client.get_all_groups(token)
+    except Exception as e:
+        logger.error("wpp_list_groups_failed", error=str(e))
+        raise HTTPException(status_code=503, detail="Não foi possível conectar ao WppConnect")
+
+    # Busca conversas monitoradas do tenant
+    result = await db.execute(
+        select(Conversation).where(Conversation.tenant_id == current_user.id)
+    )
+    conv_map: dict[str, Conversation] = {}
+    for c in result.scalars().all():
+        key = c.wpp_group_id or c.external_id or ""
+        if key:
+            conv_map[key] = c
+
+    out = []
+    for g in wpp_groups:
+        wpp_id = g["wpp_id"]
+        conv = conv_map.get(wpp_id)
+        out.append({
+            "wpp_id": wpp_id,
+            "name": g["name"],
+            "participant_count": g["participant_count"],
+            "last_message_ts": g["last_message_ts"],
+            "is_monitored": conv is not None and conv.is_active,
+            "conversation_id": str(conv.id) if conv else None,
+            "custom_name": conv.custom_name if conv else None,
+        })
+
+    # Ordena: monitorados primeiro, depois por número de participantes
+    out.sort(key=lambda x: (not x["is_monitored"], -x["participant_count"]))
+    return out
+
+
+@router.post("/wpp/groups/toggle")
+async def toggle_group_monitoring(
+    payload: GroupToggleRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Ativa ou desativa o monitoramento de um grupo WppConnect.
+    Ao ativar, pré-cria a Conversation para que as mensagens sejam vinculadas.
+    """
+    # Busca source WppConnect do tenant
+    src_result = await db.execute(
+        select(IngestionSource).where(
+            IngestionSource.tenant_id == current_user.id,
+            IngestionSource.source_type == SourceType.WEBHOOK,
+            IngestionSource.is_active == True,  # noqa
+        )
+    )
+    source = src_result.scalar_one_or_none()
+    if not source:
+        # Fallback: source padrão
+        src_result2 = await db.execute(
+            select(IngestionSource).where(IngestionSource.name == "WppConnect Monitor")
+        )
+        source = src_result2.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=400, detail="Nenhuma source WppConnect configurada")
+
+    # Procura conversa existente
+    result = await db.execute(
+        select(Conversation).where(
+            Conversation.tenant_id == current_user.id,
+            Conversation.wpp_group_id == payload.wpp_id,
+        )
+    )
+    conv = result.scalar_one_or_none()
+
+    # Também tenta pelo external_id para compatibilidade com conversas existentes
+    if not conv:
+        result2 = await db.execute(
+            select(Conversation).where(
+                Conversation.tenant_id == current_user.id,
+                Conversation.external_id == payload.wpp_id,
+            )
+        )
+        conv = result2.scalar_one_or_none()
+
+    if payload.enable:
+        if conv:
+            conv.is_active = True
+            conv.is_monitored = True
+            conv.wpp_group_id = payload.wpp_id
+            conv.participant_count = payload.participant_count
+        else:
+            conv = Conversation(
+                tenant_id=current_user.id,
+                source_id=source.id,
+                external_id=payload.wpp_id,
+                wpp_group_id=payload.wpp_id,
+                name=payload.name,
+                conversation_type=ConversationType.GROUP,
+                is_active=True,
+                is_monitored=True,
+                participant_count=payload.participant_count,
+                sla_response_minutes=settings.SLA_DEFAULT_MINUTES,
+            )
+            db.add(conv)
+        await db.commit()
+        await db.refresh(conv)
+        return {"status": "monitoring_enabled", "conversation_id": str(conv.id)}
+    else:
+        if conv:
+            conv.is_active = False
+            conv.is_monitored = False
+            await db.commit()
+        return {"status": "monitoring_disabled"}
+
+
+@router.patch("/wpp/groups/{wpp_id}/name")
+async def update_group_name(
+    wpp_id: str,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Atualiza o nome personalizado de um grupo monitorado."""
+    result = await db.execute(
+        select(Conversation).where(
+            Conversation.tenant_id == current_user.id,
+            Conversation.wpp_group_id == wpp_id,
+        )
+    )
+    conv = result.scalar_one_or_none()
+    if not conv:
+        result2 = await db.execute(
+            select(Conversation).where(
+                Conversation.tenant_id == current_user.id,
+                Conversation.external_id == wpp_id,
+            )
+        )
+        conv = result2.scalar_one_or_none()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Grupo não encontrado")
+
+    new_name = (payload.get("custom_name") or "").strip()
+    conv.custom_name = new_name or None
+    await db.commit()
+    return {"status": "updated", "custom_name": conv.custom_name}
 
 
 @router.post("/webhooks/wppconnect")

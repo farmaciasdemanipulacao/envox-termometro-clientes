@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     VISION_MODEL_OPENAI: str = "gpt-4o-mini"
     LLM_SUMMARY_MAX_TOKENS: int = 500
 
+    # === PUSH NOTIFICATIONS (VAPID) ===
+    VAPID_PUBLIC_KEY: Optional[str] = None
+    VAPID_PRIVATE_KEY: Optional[str] = None
+    VAPID_CLAIM_EMAIL: str = "admin@envox.com.br"
+
     # === ADMIN PADRÃO (criado no startup se não existir) ===
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = "admin123"  # TROCAR EM PRODUÇÃO

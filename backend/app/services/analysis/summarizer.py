@@ -28,6 +28,7 @@ class SummaryService:
         self,
         db: AsyncSession,
         target_date: Optional[date] = None,
+        agent_config: Optional[dict] = None,
     ) -> DailySummary:
         """
         Gera o resumo global do dia.
@@ -42,7 +43,14 @@ class SummaryService:
         stats = await self._collect_day_stats(db, target_date)
 
         # Gera texto executivo (LLM se habilitado, heurístico como fallback)
-        executive_text = await self._generate_executive_text_llm(stats, target_date)
+        executive_text = await self._generate_executive_text_llm(stats, target_date, agent_config)
+
+        # Injeta identidade do agente
+        if agent_config:
+            from app.services.agent import inject_agent_identity
+            temp_label = "critico" if stats.get("critical_alerts", 0) > 0 else \
+                         "alerta" if stats.get("open_alerts", 0) > 2 else "saudavel"
+            executive_text = inject_agent_identity(executive_text, agent_config, temp_label)
 
         # Calcula termômetro
         temperature_score, temperature_label = self._calculate_temperature(stats)
@@ -390,7 +398,8 @@ class SummaryService:
         from app.core.config import settings
         return settings.LLM_ENABLED and bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
 
-    async def _generate_executive_text_llm(self, stats: dict, target_date: date) -> str:
+    async def _generate_executive_text_llm(self, stats: dict, target_date: date,
+                                            agent_config: dict | None = None) -> str:
         """Gera texto executivo com Claude se disponível, senão usa heurística."""
         heuristic_text = self._generate_executive_text(stats, target_date)
 
@@ -400,24 +409,31 @@ class SummaryService:
         try:
             import asyncio
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, self._call_claude_summary, stats, target_date, heuristic_text)
+            result = await loop.run_in_executor(
+                None, self._call_claude_summary, stats, target_date, heuristic_text, agent_config
+            )
             return result or heuristic_text
         except Exception as e:
             logger.warning("llm_summary_failed_fallback", error=str(e))
             return heuristic_text
 
-    def _call_claude_summary(self, stats: dict, target_date: date, heuristic_text: str) -> str | None:
+    def _call_claude_summary(self, stats: dict, target_date: date, heuristic_text: str,
+                             agent_config: dict | None = None) -> str | None:
         import os
         import anthropic
         from app.core.config import settings
+        from app.services.agent import build_agent_personality_prompt
 
         api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
         client = anthropic.Anthropic(api_key=api_key)
         date_str = target_date.strftime("%d/%m/%Y")
 
-        prompt = f"""Você é um analista de operações de uma empresa de manipulação farmacêutica.
+        agent_context = build_agent_personality_prompt(agent_config) if agent_config else \
+            "Você é um analista de operações."
+
+        prompt = f"""{agent_context}
 Gere um resumo executivo em português para o dia {date_str} com base nos dados abaixo.
-Seja objetivo, direto e use tom profissional. Use markdown com negrito nos pontos importantes.
+Seja objetivo, direto. Use markdown com negrito nos pontos importantes.
 Máximo 250 palavras.
 
 DADOS DO DIA:

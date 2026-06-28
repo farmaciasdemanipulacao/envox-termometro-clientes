@@ -47,6 +47,9 @@ python-docx>=1.1.0
 openpyxl>=3.1.0
 pydub>=0.25.1
 
+# === WEB PUSH NOTIFICATIONS ===
+pywebpush>=2.0.0
+
 # === TESTES ===
 pytest==8.3.4
 pytest-asyncio==0.24.0

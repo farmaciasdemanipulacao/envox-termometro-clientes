@@ -2534,4 +2534,1000 @@ function EmailScreen({ onNavigateConfig }) {
   );
 }
 
-Object.assign(window, { IntelligenceScreen, GroupsScreen, ConversationScreen, TagsScreen, SummaryScreen, TeamScreen, ApiDocsScreen, ConfigScreen, UsersScreen, UserProfileModal, EmailAccountsSection, EmailScreen });
+// ─────────────────────────────────────────────────────────────
+// WppGroupsManagerScreen — Selecionar grupos para monitorar
+// ─────────────────────────────────────────────────────────────
+function WppGroupsManagerScreen() {
+  const [groups,  setGroups]  = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search,  setSearch]  = React.useState('');
+  const [filter,  setFilter]  = React.useState('all'); // all | monitored | unmonitored
+  const [toggling, setToggling] = React.useState({});  // wpp_id → bool
+  const [editingId, setEditingId] = React.useState(null);
+  const [editName,  setEditName]  = React.useState('');
+
+  const load = () => {
+    setLoading(true);
+    window.apiGet('/wpp/available-groups')
+      .then(d => setGroups(Array.isArray(d) ? d : []))
+      .catch(() => window.showToast('Erro ao carregar grupos. Verifique a conexão WhatsApp.', 'error'))
+      .finally(() => setLoading(false));
+  };
+
+  React.useEffect(load, []);
+
+  const filtered = groups.filter(g => {
+    const name = (g.custom_name || g.name || '').toLowerCase();
+    const matchSearch = !search || name.includes(search.toLowerCase());
+    const matchFilter = filter === 'all'
+      || (filter === 'monitored' && g.is_monitored)
+      || (filter === 'unmonitored' && !g.is_monitored);
+    return matchSearch && matchFilter;
+  });
+
+  const monitoredCount = groups.filter(g => g.is_monitored).length;
+
+  async function handleToggle(g) {
+    setToggling(t => ({ ...t, [g.wpp_id]: true }));
+    try {
+      await window.apiPost('/wpp/groups/toggle', {
+        wpp_id: g.wpp_id,
+        name: g.name,
+        participant_count: g.participant_count,
+        enable: !g.is_monitored,
+      });
+      setGroups(prev => prev.map(x =>
+        x.wpp_id === g.wpp_id ? { ...x, is_monitored: !x.is_monitored } : x
+      ));
+      window.showToast(g.is_monitored ? 'Monitoramento desativado.' : 'Grupo ativado para monitoramento!', g.is_monitored ? 'info' : 'success');
+    } catch {
+      window.showToast('Erro ao alterar monitoramento.', 'error');
+    } finally {
+      setToggling(t => ({ ...t, [g.wpp_id]: false }));
+    }
+  }
+
+  async function saveCustomName(g) {
+    try {
+      const encoded = encodeURIComponent(g.wpp_id);
+      await fetch(`/api/v1/wpp/groups/${encoded}/name`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + window.getToken(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ custom_name: editName }),
+      });
+      setGroups(prev => prev.map(x =>
+        x.wpp_id === g.wpp_id ? { ...x, custom_name: editName || null } : x
+      ));
+      window.showToast('Nome atualizado!', 'success');
+    } catch { window.showToast('Erro ao salvar nome.', 'error'); }
+    finally { setEditingId(null); }
+  }
+
+  const isMobile = useIsMobile();
+
+  function GroupCard({ g }) {
+    const isToggling = toggling[g.wpp_id];
+    const displayName = g.custom_name || g.name || g.wpp_id;
+    const initials = displayName.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
+    const isEditing = editingId === g.wpp_id;
+
+    return (
+      <div style={{
+        background: '#1e293b', border: `1px solid ${g.is_monitored ? '#0d9488' : '#334155'}`,
+        borderRadius: '12px', padding: '14px 16px',
+        display: 'flex', alignItems: 'center', gap: '14px',
+        transition: 'border-color 0.2s',
+      }}>
+        {/* Avatar */}
+        <div style={{
+          width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
+          background: g.is_monitored ? 'linear-gradient(135deg,#0d9488,#075e54)' : '#374151',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '15px', fontWeight: 700, color: 'white',
+        }}>
+          {initials}
+        </div>
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {isEditing ? (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                autoFocus
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveCustomName(g); if (e.key === 'Escape') setEditingId(null); }}
+                style={{
+                  flex: 1, background: '#0f172a', border: '1px solid #0d9488', borderRadius: '6px',
+                  color: '#f1f5f9', padding: '4px 8px', fontSize: '14px',
+                }}
+              />
+              <button onClick={() => saveCustomName(g)} style={{ background: '#0d9488', border: 'none', borderRadius: '6px', color: 'white', padding: '4px 10px', cursor: 'pointer', fontSize: '13px' }}>OK</button>
+              <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}>✕</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {displayName}
+              </span>
+              {g.is_monitored && (
+                <button
+                  onClick={() => { setEditingId(g.wpp_id); setEditName(g.custom_name || g.name || ''); }}
+                  title="Editar nome"
+                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px', fontSize: '11px', flexShrink: 0 }}
+                >
+                  <i className="fas fa-pen" />
+                </button>
+              )}
+            </div>
+          )}
+          {g.custom_name && !isEditing && (
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>Original: {g.name}</div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+              <i className="fas fa-users" style={{ marginRight: '4px' }}></i>{g.participant_count} participantes
+            </span>
+            {g.is_monitored && (
+              <span style={{ fontSize: '11px', background: 'rgba(13,148,136,0.15)', color: '#0d9488', padding: '1px 8px', borderRadius: '999px', fontWeight: 600 }}>
+                Monitorado
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Toggle */}
+        <button
+          onClick={() => handleToggle(g)}
+          disabled={isToggling}
+          style={{
+            background: g.is_monitored ? '#0d9488' : '#374151',
+            border: 'none', borderRadius: '8px', cursor: isToggling ? 'wait' : 'pointer',
+            color: 'white', padding: '8px 14px', fontSize: '12px', fontWeight: 600,
+            flexShrink: 0, opacity: isToggling ? 0.6 : 1, transition: 'background 0.2s',
+            minWidth: '90px', textAlign: 'center',
+          }}
+        >
+          {isToggling ? <i className="fas fa-spinner fa-spin" /> : g.is_monitored ? 'Desativar' : 'Monitorar'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <PageHeader
+        title="Gerenciar Grupos"
+        subtitle={`${monitoredCount} monitorado(s) de ${groups.length} disponíveis`}
+        action={
+          <button onClick={load} style={{ background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px' }}>
+            <i className="fas fa-sync-alt" style={{ marginRight: '6px' }}></i>Atualizar
+          </button>
+        }
+      />
+
+      {/* Filters */}
+      <div style={{ padding: '0 24px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap', flexShrink: 0 }}>
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar grupo..."
+          style={{
+            flex: 1, minWidth: '200px', background: '#1e293b', border: '1px solid #334155',
+            borderRadius: '8px', color: '#f1f5f9', padding: '9px 14px', fontSize: '14px',
+          }}
+        />
+        {['all', 'monitored', 'unmonitored'].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            background: filter === f ? '#0d9488' : '#1e293b',
+            border: `1px solid ${filter === f ? '#0d9488' : '#334155'}`,
+            borderRadius: '8px', color: filter === f ? 'white' : '#94a3b8',
+            padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: 500,
+          }}>
+            {f === 'all' ? 'Todos' : f === 'monitored' ? 'Monitorados' : 'Não monitorados'}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '80px', gap: '12px' }}>
+            <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: '#0d9488' }}></i>
+            <span style={{ color: '#94a3b8' }}>Carregando grupos...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
+            <i className="fas fa-users-slash" style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}></i>
+            Nenhum grupo encontrado.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {filtered.map(g => <GroupCard key={g.wpp_id} g={g} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// RangeSummaryScreen — Resumo por período customizado
+// ─────────────────────────────────────────────────────────────
+function RangeSummaryScreen() {
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+
+  const [conversations, setConversations] = React.useState([]);
+  const [convSearch,    setConvSearch]    = React.useState('');
+  const [selectedConv,  setSelectedConv]  = React.useState(null);
+  const [startDate,     setStartDate]     = React.useState(weekAgo);
+  const [endDate,       setEndDate]       = React.useState(today);
+  const [loading,       setLoading]       = React.useState(false);
+  const [loadingConvs,  setLoadingConvs]  = React.useState(false);
+  const [result,        setResult]        = React.useState(null);
+  const [showConvList,  setShowConvList]  = React.useState(false);
+
+  const isMobile = useIsMobile();
+
+  // Carrega conversas
+  React.useEffect(() => {
+    setLoadingConvs(true);
+    window.apiGet('/conversations?limit=200')
+      .then(d => setConversations(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setLoadingConvs(false));
+  }, []);
+
+  const filteredConvs = conversations.filter(c =>
+    !convSearch || c.name.toLowerCase().includes(convSearch.toLowerCase())
+  );
+
+  function setQuickRange(days) {
+    const end = new Date();
+    const start = new Date(end.getTime() - days * 86400000);
+    setStartDate(start.toISOString().slice(0, 10));
+    setEndDate(end.toISOString().slice(0, 10));
+  }
+
+  async function handleGenerate() {
+    if (!selectedConv) { window.showToast('Selecione um grupo.', 'warning'); return; }
+    if (!startDate || !endDate) { window.showToast('Informe o período.', 'warning'); return; }
+    if (startDate > endDate) { window.showToast('Data inicial deve ser anterior à final.', 'warning'); return; }
+
+    setLoading(true);
+    setResult(null);
+    try {
+      const data = await window.apiGet(
+        `/conversations/${selectedConv.id}/range-summary?start_date=${startDate}&end_date=${endDate}`
+      );
+      setResult(data);
+    } catch(e) {
+      window.showToast('Erro ao gerar resumo. Tente novamente.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const TEMP_COLORS = { critico: '#ef4444', alerta: '#f59e0b', moderado: '#3b82f6', saudavel: '#10b981' };
+  const TEMP_LABELS = { critico: 'Crítico', alerta: 'Em Alerta', moderado: 'Moderado', saudavel: 'Saudável' };
+
+  function StatBox({ label, value, color, icon }) {
+    return (
+      <div style={{ background: '#1e293b', borderRadius: '10px', padding: '14px 16px', border: '1px solid #334155' }}>
+        <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '6px' }}>
+          <i className={`fas fa-${icon}`} style={{ marginRight: '5px' }}></i>{label}
+        </div>
+        <div style={{ fontSize: '24px', fontWeight: 700, color: color || '#f1f5f9' }}>{value}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <PageHeader title="Resumo por Período" subtitle="Analise qualquer grupo em qualquer faixa de datas" />
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+
+        {/* ── Formulário ── */}
+        <div style={{
+          background: '#1e293b', border: '1px solid #334155', borderRadius: '14px',
+          padding: '20px', marginBottom: '24px',
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '16px',
+          alignItems: 'end',
+        }}>
+
+          {/* Seleção de grupo */}
+          <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+              <i className="fas fa-users" style={{ marginRight: '6px' }}></i>Grupo / Conversa
+            </label>
+            <div style={{ position: 'relative' }}>
+              <div
+                onClick={() => setShowConvList(v => !v)}
+                style={{
+                  background: '#0f172a', border: `1px solid ${showConvList ? '#0d9488' : '#475569'}`,
+                  borderRadius: '8px', padding: '10px 14px', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  color: selectedConv ? '#f1f5f9' : '#64748b', fontSize: '14px',
+                }}
+              >
+                <span>{selectedConv ? selectedConv.name : 'Selecionar grupo...'}</span>
+                <i className={`fas fa-chevron-${showConvList ? 'up' : 'down'}`} style={{ fontSize: '11px', color: '#64748b' }} />
+              </div>
+              {showConvList && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                  background: '#1e293b', border: '1px solid #334155', borderRadius: '8px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: '4px',
+                }}>
+                  <div style={{ padding: '8px' }}>
+                    <input
+                      autoFocus
+                      value={convSearch}
+                      onChange={e => setConvSearch(e.target.value)}
+                      placeholder="Buscar..."
+                      style={{
+                        width: '100%', background: '#0f172a', border: '1px solid #334155',
+                        borderRadius: '6px', color: '#f1f5f9', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                    {loadingConvs ? (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Carregando...</div>
+                    ) : filteredConvs.length === 0 ? (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
+                    ) : filteredConvs.map(c => (
+                      <div
+                        key={c.id}
+                        onClick={() => { setSelectedConv(c); setShowConvList(false); setConvSearch(''); }}
+                        style={{
+                          padding: '10px 14px', cursor: 'pointer', fontSize: '14px',
+                          color: selectedConv?.id === c.id ? '#0d9488' : '#d1d5db',
+                          background: selectedConv?.id === c.id ? 'rgba(13,148,136,0.1)' : 'transparent',
+                        }}
+                        onMouseEnter={e => { if (selectedConv?.id !== c.id) e.currentTarget.style.background = '#334155'; }}
+                        onMouseLeave={e => { if (selectedConv?.id !== c.id) e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        {c.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Data início */}
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+              <i className="fas fa-calendar-alt" style={{ marginRight: '6px' }}></i>Data Inicial
+            </label>
+            <input
+              type="date" value={startDate} max={endDate}
+              onChange={e => setStartDate(e.target.value)}
+              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Data fim */}
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+              <i className="fas fa-calendar-check" style={{ marginRight: '6px' }}></i>Data Final
+            </label>
+            <input
+              type="date" value={endDate} min={startDate} max={today}
+              onChange={e => setEndDate(e.target.value)}
+              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Atalhos + botão */}
+          <div style={{ gridColumn: isMobile ? '1' : '1 / -1', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Atalhos:</span>
+            {[[7,'7 dias'],[14,'14 dias'],[30,'30 dias'],[90,'3 meses']].map(([d, label]) => (
+              <button key={d} onClick={() => setQuickRange(d)} style={{
+                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
+                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+              }}>{label}</button>
+            ))}
+            <button
+              onClick={handleGenerate}
+              disabled={loading || !selectedConv}
+              style={{
+                marginLeft: 'auto', background: loading || !selectedConv ? '#334155' : '#0d9488',
+                border: 'none', borderRadius: '8px', color: 'white',
+                padding: '10px 24px', cursor: loading || !selectedConv ? 'not-allowed' : 'pointer',
+                fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+              }}
+            >
+              {loading ? <><i className="fas fa-spinner fa-spin" />Gerando...</> : <><i className="fas fa-chart-bar" />Gerar Resumo</>}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Resultado ── */}
+        {result && (
+          <div>
+            {/* Header do resultado */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9' }}>{result.conversation.name}</div>
+                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                  {result.period.start} → {result.period.end}
+                </div>
+              </div>
+              <div style={{
+                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px',
+                background: '#1e293b', border: `2px solid ${TEMP_COLORS[result.temperature_label] || '#94a3b8'}`,
+                borderRadius: '12px', padding: '10px 18px',
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: TEMP_COLORS[result.temperature_label] || '#94a3b8' }}>
+                  {result.temperature_score}
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Temperatura</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: TEMP_COLORS[result.temperature_label] }}>
+                    {TEMP_LABELS[result.temperature_label] || result.temperature_label}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* KPIs */}
+            {result.stats.total_messages > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                <StatBox label="Mensagens"   value={result.stats.total_messages}      icon="comment"         />
+                <StatBox label="Participantes" value={result.stats.unique_participants} icon="users"          />
+                <StatBox label="Risco Médio" value={`${result.stats.avg_risk_score}/100`} icon="exclamation-triangle" color={result.stats.avg_risk_score >= 60 ? '#ef4444' : result.stats.avg_risk_score >= 30 ? '#f59e0b' : '#10b981'} />
+                {result.stats.churn_risk_count > 0 && <StatBox label="Churn"  value={result.stats.churn_risk_count}    icon="user-minus"    color="#ef4444" />}
+                {result.stats.escalation_count > 0 && <StatBox label="Escaladas" value={result.stats.escalation_count} icon="fire"          color="#f59e0b" />}
+                {result.stats.opportunity_count > 0 && <StatBox label="Oportunidades" value={result.stats.opportunity_count} icon="lightbulb" color="#10b981" />}
+                {result.stats.complaint_count > 0 && <StatBox label="Reclamações"  value={result.stats.complaint_count} icon="thumbs-down"  color="#f97316" />}
+                {result.stats.critical_alerts > 0 && <StatBox label="Alertas Críticos" value={result.stats.critical_alerts} icon="bell"     color="#ef4444" />}
+              </div>
+            )}
+
+            {/* Grid: texto + tags */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 280px', gap: '16px', marginBottom: '20px' }}>
+
+              {/* Texto executivo */}
+              <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+                  <i className="fas fa-file-alt" style={{ marginRight: '6px' }}></i>Análise Executiva
+                </div>
+                <div
+                  style={{ fontSize: '14px', lineHeight: 1.7, color: '#d1d5db' }}
+                  dangerouslySetInnerHTML={{ __html: renderMd(result.executive_text) }}
+                />
+              </div>
+
+              {/* Distribuição de tags */}
+              {Object.keys(result.tag_distribution || {}).length > 0 && (
+                <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+                    <i className="fas fa-tags" style={{ marginRight: '6px' }}></i>Tags Detectadas
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {Object.entries(result.tag_distribution).map(([tag, count]) => {
+                      const max = Math.max(...Object.values(result.tag_distribution));
+                      const pct = (count / max * 100).toFixed(0);
+                      const TAG_COLORS = {
+                        risco_churn: '#ef4444', urgencia_critica: '#ef4444', escalada_emocional: '#f97316',
+                        reclamacao: '#f59e0b', followup_necessario: '#3b82f6', oportunidade_comercial: '#10b981',
+                        promessa_detectada: '#8b5cf6', atrito_interno: '#ec4899', urgencia_alta: '#f97316',
+                      };
+                      const color = TAG_COLORS[tag] || '#64748b';
+                      return (
+                        <div key={tag}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '3px' }}>
+                            <span style={{ color: '#d1d5db' }}>{tag.replace(/_/g, ' ')}</span>
+                            <span style={{ color: '#64748b' }}>{count}x</span>
+                          </div>
+                          <div style={{ height: '5px', background: '#334155', borderRadius: '3px' }}>
+                            <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: '3px', transition: 'width 0.4s' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mensagens de destaque */}
+            {result.top_messages?.length > 0 && (
+              <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+                  <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>Mensagens de Maior Risco
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {result.top_messages.map((m, i) => (
+                    <div key={m.id || i} style={{ background: '#0f172a', borderRadius: '8px', padding: '12px 14px', borderLeft: `3px solid ${m.risk_score >= 70 ? '#ef4444' : m.risk_score >= 40 ? '#f59e0b' : '#64748b'}` }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>{m.sent_at ? new Date(m.sent_at).toLocaleString('pt-BR') : ''}</span>
+                        <span style={{ fontSize: '11px', background: m.risk_score >= 70 ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)', color: m.risk_score >= 70 ? '#ef4444' : '#94a3b8', padding: '1px 7px', borderRadius: '999px' }}>
+                          Risco {m.risk_score}/100
+                        </span>
+                        {(m.tags || []).slice(0, 3).map(t => (
+                          <span key={t} style={{ fontSize: '10px', background: '#1e293b', color: '#94a3b8', padding: '1px 7px', borderRadius: '999px', border: '1px solid #334155' }}>{t.replace(/_/g,' ')}</span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#d1d5db', lineHeight: 1.5 }}>{m.content}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!result && !loading && (
+          <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
+            <i className="fas fa-chart-line" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Selecione um grupo e um período</div>
+            <div style={{ fontSize: '14px' }}>O resumo analítico será gerado com estatísticas, tags e análise executiva.</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// renderMd helper simples (compatível com os outros screens)
+function renderMd(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^>\s(.+)$/gm, '<blockquote style="border-left:3px solid #0d9488;margin:8px 0;padding:8px 12px;background:rgba(13,148,136,0.08);color:#94a3b8;border-radius:0 6px 6px 0">$1</blockquote>')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;color:#f1f5f9;margin:12px 0 6px">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:15px;color:#f1f5f9;margin:14px 0 8px">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size:16px;color:#f1f5f9;margin:14px 0 8px">$1</h1>')
+    .replace(/\n/g, '<br>');
+}
+
+// ─────────────────────────────────────────────────────────────
+// AgentConfigScreen — Configuração do Agente Virtual
+// ─────────────────────────────────────────────────────────────
+function AgentConfigScreen() {
+  const TONES = [
+    { value: 'formal',        label: 'Formal',        desc: 'Linguagem técnica e impessoal' },
+    { value: 'profissional',  label: 'Profissional',  desc: 'Objetivo e respeitoso' },
+    { value: 'amigavel',      label: 'Amigável',      desc: 'Próximo e acessível' },
+    { value: 'casual',        label: 'Casual',        desc: 'Direto e descontraído' },
+  ];
+  const EXPR_DEFAULTS = [
+    { type: 'neutral',  label: 'Neutro',     emoji: '🤖', desc: 'Estado padrão' },
+    { type: 'positive', label: 'Positivo',   emoji: '✅', desc: 'Boas notícias / oportunidades' },
+    { type: 'alert',    label: 'Em Alerta',  emoji: '⚠️', desc: 'Situações de atenção' },
+    { type: 'critical', label: 'Crítico',    emoji: '🚨', desc: 'Urgências e churn' },
+    { type: 'thinking', label: 'Analisando', emoji: '🧠', desc: 'Processando dados' },
+  ];
+
+  const [cfg,        setCfg]        = React.useState(null);
+  const [loading,    setLoading]    = React.useState(true);
+  const [saving,     setSaving]     = React.useState(false);
+  const [name,       setName]       = React.useState('Agente ENVOX');
+  const [roleLabel,  setRoleLabel]  = React.useState('');
+  const [personality,setPersonality]= React.useState('');
+  const [tone,       setTone]       = React.useState('profissional');
+  const [signature,  setSignature]  = React.useState('');
+  const [avatarUrl,  setAvatarUrl]  = React.useState(null);
+  const [expressions,setExpressions]= React.useState(EXPR_DEFAULTS.map(e => ({ ...e, image_url: null })));
+  const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
+  const [uploadingExpr, setUploadingExpr] = React.useState({});
+  const [newExprForm, setNewExprForm]     = React.useState({ open: false, label: '', emoji: '😊' });
+  const isMobile = useIsMobile();
+
+  React.useEffect(() => {
+    window.apiGet('/agent/config')
+      .then(d => {
+        setCfg(d);
+        setName(d.name || 'Agente ENVOX');
+        setRoleLabel(d.role_label || '');
+        setPersonality(d.personality || '');
+        setTone(d.tone || 'profissional');
+        setSignature(d.signature || '');
+        setAvatarUrl(d.avatar_url || null);
+        if (d.expressions?.length) {
+          setExpressions(d.expressions.map(e => ({
+            type: e.type,
+            label: e.label || e.type,
+            emoji: e.emoji || '🤖',
+            image_url: e.image_url || null,
+            desc: EXPR_DEFAULTS.find(def => def.type === e.type)?.desc || '',
+          })));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await fetch('/api/v1/agent/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + window.getToken() },
+        body: JSON.stringify({
+          name, role_label: roleLabel, personality, tone, signature,
+          expressions: expressions.map(e => ({ type: e.type, label: e.label, emoji: e.emoji })),
+        }),
+      });
+      window.showToast('Agente salvo com sucesso!', 'success');
+    } catch { window.showToast('Erro ao salvar.', 'error'); }
+    finally { setSaving(false); }
+  }
+
+  async function handleAvatarUpload(file) {
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const r = await fetch('/api/v1/agent/avatar', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + window.getToken() },
+        body: fd,
+      });
+      if (!r.ok) { window.showToast('Erro ao enviar avatar.', 'error'); return; }
+      const d = await r.json();
+      setAvatarUrl(d.avatar_url);
+      window.showToast('Avatar atualizado!', 'success');
+    } catch { window.showToast('Erro ao enviar imagem.', 'error'); }
+    finally { setUploadingAvatar(false); }
+  }
+
+  async function handleRemoveAvatar() {
+    await fetch('/api/v1/agent/avatar', { method: 'DELETE', headers: { Authorization: 'Bearer ' + window.getToken() } });
+    setAvatarUrl(null);
+    window.showToast('Avatar removido.', 'info');
+  }
+
+  async function handleExprUpload(type, file) {
+    if (!file) return;
+    setUploadingExpr(prev => ({ ...prev, [type]: true }));
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const r = await fetch(`/api/v1/agent/expression/${type}`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + window.getToken() },
+        body: fd,
+      });
+      if (!r.ok) { window.showToast('Erro ao enviar imagem.', 'error'); return; }
+      const d = await r.json();
+      setExpressions(prev => prev.map(e => e.type === type ? { ...e, image_url: d.image_url } : e));
+      window.showToast('Expressão atualizada!', 'success');
+    } catch { window.showToast('Erro.', 'error'); }
+    finally { setUploadingExpr(prev => ({ ...prev, [type]: false })); }
+  }
+
+  async function handleExprRemove(type) {
+    await fetch(`/api/v1/agent/expression/${type}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + window.getToken() } });
+    setExpressions(prev => prev.map(e => e.type === type ? { ...e, image_url: null } : e));
+  }
+
+  function removeExpression(type) {
+    setExpressions(prev => prev.filter(e => e.type !== type));
+  }
+
+  function addExpression() {
+    const label = newExprForm.label.trim();
+    if (!label) return;
+    const slug = label.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30) || 'expr';
+    const type = `c_${slug}_${Date.now().toString(36)}`;
+    setExpressions(prev => [...prev, { type, label, emoji: newExprForm.emoji || '🤖', image_url: null, desc: '' }]);
+    setNewExprForm({ open: false, label: '', emoji: '😊' });
+  }
+
+  // Componente auxiliar: card de expressão
+  function ExprCard({ expr }) {
+    const inputRef = React.useRef();
+    const busy = uploadingExpr[expr.type];
+    return (
+      <div style={{
+        background: '#1e293b', border: '1px solid #334155', borderRadius: '12px',
+        padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center',
+        position: 'relative',
+      }}>
+        {/* Botão deletar expressão */}
+        <button onClick={() => removeExpression(expr.type)} title="Remover expressão"
+          style={{ position: 'absolute', top: '8px', right: '8px', width: '20px', height: '20px',
+            background: '#374151', border: 'none', borderRadius: '50%', color: '#94a3b8',
+            cursor: 'pointer', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#ef4444'}
+          onMouseLeave={e => e.currentTarget.style.background = '#374151'}>
+          <i className="fas fa-trash" />
+        </button>
+        {/* Imagem ou emoji */}
+        <div style={{ position: 'relative', width: '72px', height: '72px' }}>
+          {expr.image_url ? (
+            <img src={expr.image_url} alt={expr.label}
+              style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155' }} />
+          ) : (
+            <div style={{
+              width: '72px', height: '72px', borderRadius: '50%', background: '#0f172a',
+              border: '2px dashed #475569', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '28px',
+            }}>{expr.emoji}</div>
+          )}
+          {expr.image_url && (
+            <button onClick={() => handleExprRemove(expr.type)}
+              style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px',
+                background: '#ef4444', border: 'none', borderRadius: '50%', color: 'white',
+                cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ✕
+            </button>
+          )}
+        </div>
+        {/* Label editável */}
+        <input
+          value={expr.label}
+          onChange={e => setExpressions(prev => prev.map(x => x.type === expr.type ? { ...x, label: e.target.value } : x))}
+          maxLength={30}
+          style={{
+            width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px',
+            color: '#f1f5f9', padding: '5px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 600,
+            boxSizing: 'border-box',
+          }}
+          placeholder="Rótulo"
+        />
+        {/* Emoji input */}
+        <input
+          value={expr.emoji}
+          onChange={e => setExpressions(prev => prev.map(x => x.type === expr.type ? { ...x, emoji: e.target.value.slice(-2) } : x))}
+          maxLength={2}
+          style={{
+            width: '52px', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px',
+            color: '#f1f5f9', padding: '6px', textAlign: 'center', fontSize: '20px',
+          }}
+          title="Emoji padrão"
+        />
+        {/* Upload imagem */}
+        <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+          onChange={e => handleExprUpload(expr.type, e.target.files[0])} />
+        <button onClick={() => inputRef.current.click()} disabled={busy}
+          style={{
+            background: '#0f172a', border: '1px solid #475569', borderRadius: '8px',
+            color: '#94a3b8', padding: '5px 10px', cursor: busy ? 'wait' : 'pointer',
+            fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px',
+          }}>
+          {busy ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-image" />}
+          {expr.image_url ? 'Trocar' : 'Upload'}
+        </button>
+      </div>
+    );
+  }
+
+  // Preview de como ficará a mensagem
+  const previewExpr = expressions.find(e => e.type === 'alert') || expressions[0];
+  const previewEmoji = previewExpr?.emoji || '⚠️';
+  const previewName = name || 'Agente ENVOX';
+  const previewRole = roleLabel ? ` — ${roleLabel}` : '';
+  const previewSig = signature ? `\n_${signature}_` : '';
+  const previewMsg = `${previewEmoji} *${previewName}${previewRole}*\n━━━━━━━━━━━━━━━━━\n_Aqui virá o conteúdo do resumo gerado automaticamente..._\n━━━━━━━━━━━━━━━━━\n📝 _Gerado por ${previewName} · ENVOX Intelligence_${previewSig}`;
+
+  const S = { // shared styles
+    label: { display: 'block', fontSize: '12px', color: '#94a3b8', fontWeight: 500, marginBottom: '6px' },
+    input: { width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 14px', fontSize: '14px', boxSizing: 'border-box', fontFamily: 'var(--font-sans)' },
+    card: { background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
+    sectionTitle: { fontSize: '15px', fontWeight: 700, color: '#f1f5f9', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' },
+  };
+
+  if (loading) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+      <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: '#0d9488' }} />
+      <span style={{ color: '#94a3b8' }}>Carregando configurações...</span>
+    </div>
+  );
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <PageHeader
+        title="Configuração do Agente"
+        subtitle="Defina identidade, personalidade e expressões do agente automático"
+        action={
+          <button onClick={handleSave} disabled={saving} style={{
+            background: saving ? '#334155' : '#0d9488', border: 'none', borderRadius: '8px',
+            color: 'white', padding: '8px 20px', cursor: saving ? 'not-allowed' : 'pointer',
+            fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            {saving ? <><i className="fas fa-spinner fa-spin" />Salvando...</> : <><i className="fas fa-save" />Salvar</>}
+          </button>
+        }
+      />
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 40px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: '20px', maxWidth: '1100px' }}>
+
+          {/* Coluna esquerda */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            {/* ── Identidade ── */}
+            <div style={S.card}>
+              <div style={S.sectionTitle}><i className="fas fa-id-badge" style={{ color: '#0d9488' }} />Identidade do Agente</div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={S.label}>Nome do Agente *</label>
+                  <input value={name} onChange={e => setName(e.target.value)} style={S.input} placeholder="ex: EVA, ARIA, Max..." />
+                </div>
+                <div>
+                  <label style={S.label}>Cargo / Papel</label>
+                  <input value={roleLabel} onChange={e => setRoleLabel(e.target.value)} style={S.input} placeholder="ex: Analista de CRM" />
+                </div>
+              </div>
+
+              <div>
+                <label style={S.label}>Personalidade <span style={{ color: '#64748b', fontWeight: 400 }}>(usado nos prompts de IA)</span></label>
+                <textarea value={personality} onChange={e => setPersonality(e.target.value)}
+                  rows={4} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }}
+                  placeholder="Ex: Sou analítico, objetivo e empático. Priorizo clareza nas informações e destaco pontos críticos com urgência adequada. Evito linguagem técnica desnecessária." />
+              </div>
+
+              <div>
+                <label style={S.label}>Tom de Comunicação</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                  {TONES.map(t => (
+                    <div key={t.value} onClick={() => setTone(t.value)} style={{
+                      border: `2px solid ${tone === t.value ? '#0d9488' : '#334155'}`,
+                      background: tone === t.value ? 'rgba(13,148,136,0.12)' : '#0f172a',
+                      borderRadius: '10px', padding: '10px 8px', cursor: 'pointer', textAlign: 'center',
+                      transition: 'all 0.15s',
+                    }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: tone === t.value ? '#0d9488' : '#f1f5f9' }}>{t.label}</div>
+                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>{t.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={S.label}>Assinatura <span style={{ color: '#64748b', fontWeight: 400 }}>(texto no rodapé das mensagens automáticas)</span></label>
+                <input value={signature} onChange={e => setSignature(e.target.value)} style={S.input}
+                  placeholder="ex: Este relatório foi gerado automaticamente. Dúvidas? Contate seu gestor." />
+              </div>
+            </div>
+
+            {/* ── Expressões ── */}
+            <div style={S.card}>
+              <div>
+                <div style={S.sectionTitle}><i className="fas fa-theater-masks" style={{ color: '#0d9488' }} />Expressões</div>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>Crie, edite e remova expressões. Alterações são salvas pelo botão <strong style={{ color: '#94a3b8' }}>Salvar</strong> no topo.</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+                {expressions.map(expr => <ExprCard key={expr.type} expr={expr} />)}
+              </div>
+              {/* Nova expressão */}
+              {newExprForm.open ? (
+                <div style={{ background: '#0f172a', border: '1px dashed #475569', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Nova Expressão</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input value={newExprForm.emoji}
+                      onChange={e => setNewExprForm(f => ({ ...f, emoji: e.target.value.slice(-2) }))}
+                      maxLength={2}
+                      style={{ width: '48px', background: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '6px', textAlign: 'center', fontSize: '18px' }}
+                      placeholder="😊" />
+                    <input value={newExprForm.label}
+                      onChange={e => setNewExprForm(f => ({ ...f, label: e.target.value }))}
+                      maxLength={30}
+                      onKeyDown={e => e.key === 'Enter' && addExpression()}
+                      style={{ flex: 1, background: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '7px 10px', fontSize: '13px' }}
+                      placeholder="Nome da expressão (ex: Animado)"
+                      autoFocus />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button onClick={() => setNewExprForm({ open: false, label: '', emoji: '😊' })}
+                      style={{ background: 'transparent', border: '1px solid #475569', borderRadius: '8px', color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px' }}>
+                      Cancelar
+                    </button>
+                    <button onClick={addExpression} disabled={!newExprForm.label.trim()}
+                      style={{ background: newExprForm.label.trim() ? '#0d9488' : '#334155', border: 'none', borderRadius: '8px', color: 'white', padding: '5px 12px', cursor: newExprForm.label.trim() ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 600 }}>
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setNewExprForm(f => ({ ...f, open: true }))}
+                  style={{ background: 'transparent', border: '1px dashed #475569', borderRadius: '10px', color: '#64748b', padding: '10px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', transition: 'border-color 0.15s' }}>
+                  <i className="fas fa-plus" /> Nova Expressão
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Coluna direita */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            {/* ── Avatar ── */}
+            <div style={{ ...S.card, alignItems: 'center' }}>
+              <div style={S.sectionTitle}><i className="fas fa-user-circle" style={{ color: '#0d9488' }} />Avatar</div>
+
+              {/* Círculo de avatar */}
+              <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar"
+                    style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0d9488' }} />
+                ) : (
+                  <div style={{
+                    width: '120px', height: '120px', borderRadius: '50%',
+                    background: 'linear-gradient(135deg,#0d9488,#075e54)',
+                    border: '3px solid #0d9488', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  }}>
+                    <span style={{ fontSize: '36px', fontWeight: 800, color: 'white', lineHeight: 1 }}>
+                      {(name || 'A').slice(0, 1).toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)' }}>sem foto</span>
+                  </div>
+                )}
+                {uploadingAvatar && (
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fas fa-spinner fa-spin" style={{ color: 'white', fontSize: '24px' }} />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <label style={{
+                  background: '#0d9488', border: 'none', borderRadius: '8px', color: 'white',
+                  padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}>
+                  <i className="fas fa-upload" />Upload
+                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => handleAvatarUpload(e.target.files[0])} />
+                </label>
+                {avatarUrl && (
+                  <button onClick={handleRemoveAvatar} style={{
+                    background: '#0f172a', border: '1px solid #ef4444', borderRadius: '8px',
+                    color: '#ef4444', padding: '8px 14px', cursor: 'pointer', fontSize: '13px',
+                  }}>
+                    <i className="fas fa-trash" />
+                  </button>
+                )}
+              </div>
+              <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center' }}>PNG, JPEG ou WebP · máx. 3MB</div>
+            </div>
+
+            {/* ── Preview ── */}
+            <div style={{ ...S.card, gap: '12px' }}>
+              <div style={S.sectionTitle}><i className="fas fa-eye" style={{ color: '#0d9488' }} />Preview da Mensagem</div>
+              <div style={{ fontSize: '11px', color: '#64748b' }}>Como o agente se identificará nos resumos enviados:</div>
+
+              {/* Mock WhatsApp-style bubble */}
+              <div style={{ background: '#0f172a', borderRadius: '10px', padding: '14px', border: '1px solid #1e293b' }}>
+                {/* Avatar + nome */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg,#0d9488,#075e54)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: 'white' }}>
+                      {(name || 'A').slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#0d9488' }}>{name || 'Agente ENVOX'}</span>
+                </div>
+                {/* Balão */}
+                <div style={{
+                  background: '#1e293b', borderRadius: '0 10px 10px 10px',
+                  padding: '12px 14px', fontSize: '12px', color: '#d1d5db', lineHeight: 1.7,
+                  whiteSpace: 'pre-line',
+                }}>
+                  {previewMsg}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { IntelligenceScreen, GroupsScreen, ConversationScreen, TagsScreen, SummaryScreen, TeamScreen, ApiDocsScreen, ConfigScreen, UsersScreen, UserProfileModal, EmailAccountsSection, EmailScreen, WppGroupsManagerScreen, RangeSummaryScreen, AgentConfigScreen });

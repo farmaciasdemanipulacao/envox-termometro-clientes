@@ -99,6 +99,37 @@ class WppConnectClient:
             logger.error("wpp_ensure_active_failed", error=str(e), session=self.session)
             return False
 
+    async def get_all_groups(self, token: str) -> list[dict]:
+        """Retorna todos os grupos do WhatsApp com metadados."""
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(
+                f"{self.base}/api/{self.session}/all-chats",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            r.raise_for_status()
+            data = r.json()
+            chats = data.get("response", data) if isinstance(data, dict) else data
+            groups = []
+            for c in chats:
+                gid = c.get("id", {})
+                if not isinstance(gid, dict):
+                    continue
+                if gid.get("server") != "g.us":
+                    continue
+                serialized = gid.get("_serialized", "")
+                if not serialized:
+                    continue
+                meta = c.get("groupMetadata") or {}
+                participants = meta.get("participants") or []
+                groups.append({
+                    "wpp_id": serialized,
+                    "raw_id": gid.get("user", ""),
+                    "name": c.get("name") or c.get("pushname") or gid.get("user", ""),
+                    "participant_count": len(participants),
+                    "last_message_ts": c.get("t") or c.get("timestamp") or 0,
+                })
+            return groups
+
     async def get_cached_token(self) -> str:
         return await self.generate_token()
 

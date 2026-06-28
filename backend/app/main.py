@@ -197,6 +197,33 @@ async def lifespan(app: FastAPI):
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
                 )""",
                 "CREATE INDEX IF NOT EXISTS idx_email_accounts_tenant ON email_accounts(tenant_id)",
+                """CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    endpoint TEXT NOT NULL UNIQUE,
+                    p256dh TEXT NOT NULL,
+                    auth TEXT NOT NULL,
+                    user_agent VARCHAR(500),
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+                )""",
+                "CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id)",
+                "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS is_monitored BOOLEAN DEFAULT FALSE",
+                "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS wpp_group_id VARCHAR(100)",
+                "CREATE INDEX IF NOT EXISTS idx_conversations_wpp_group ON conversations(wpp_group_id)",
+                """CREATE TABLE IF NOT EXISTS agent_configs (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                    name VARCHAR(100) NOT NULL DEFAULT 'Agente ENVOX',
+                    role_label VARCHAR(200),
+                    personality TEXT,
+                    tone VARCHAR(50) NOT NULL DEFAULT 'profissional',
+                    signature VARCHAR(500),
+                    avatar_b64 TEXT,
+                    avatar_mime VARCHAR(50),
+                    expressions JSONB NOT NULL DEFAULT '[]',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+                )""",
             ]:
                 try:
                     await conn.execute(_sqla_text(sql))
@@ -267,7 +294,7 @@ app.add_middleware(
 
 # === ROTAS DA API ===
 
-from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence, users, tenant, email  # noqa: E501
+from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence, users, tenant, email, push, agent_config  # noqa: E501
 
 API_PREFIX = "/api/v1"
 
@@ -282,6 +309,8 @@ app.include_router(summaries.router, prefix=API_PREFIX, tags=["Resumos"])
 app.include_router(wppconnect.router, prefix=API_PREFIX, tags=["WhatsApp"])
 app.include_router(intelligence.router, prefix=API_PREFIX, tags=["Inteligência"])
 app.include_router(email.router, prefix=API_PREFIX, tags=["E-mail"])
+app.include_router(push.router, prefix=API_PREFIX)
+app.include_router(agent_config.router, prefix=API_PREFIX)
 
 # === STATIC FILES (Frontend) ===
 # Serve o dashboard HTML estático

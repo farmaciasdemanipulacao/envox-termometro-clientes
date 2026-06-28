@@ -520,6 +520,364 @@ async def update_conversation(
             "name": conv.name, "group_type": extra.get("group_type")}
 
 
+@router.get("/conversations/{conversation_id}/range-summary")
+async def get_conversation_range_summary(
+    conversation_id: str,
+    start_date: str = Query(..., description="ISO date: 2026-06-01"),
+    end_date: str = Query(..., description="ISO date: 2026-06-27"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Gera resumo analítico de uma conversa para um período customizado.
+    Retorna estatísticas, distribuição de tags, temperatura e texto executivo.
+    """
+    conv = await _get_conv_for_tenant(conversation_id, db, current_user)
+
+    try:
+        start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+        end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc) + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        raise HTTPException(400, "Datas inválidas. Use o formato YYYY-MM-DD.")
+
+    if (end_dt - start_dt).days > 366:
+        raise HTTPException(400, "Período máximo: 366 dias.")
+
+    conv_id = conv.id
+
+    # ── Mensagens no período ─────────────────────────────────────
+    msg_result = await db.execute(
+        select(Message).where(
+            and_(
+                Message.conversation_id == conv_id,
+                Message.sent_at >= start_dt,
+                Message.sent_at <= end_dt,
+            )
+        ).order_by(Message.sent_at)
+    )
+    messages = msg_result.scalars().all()
+    total_messages = len(messages)
+
+    # ── Nomes dos participantes ───────────────────────────────────
+    participant_ids = list({m.participant_id for m in messages if m.participant_id})
+    participant_names: dict = {}
+    if participant_ids:
+        part_result = await db.execute(
+            select(Participant).where(Participant.id.in_(participant_ids))
+        )
+        for p in part_result.scalars().all():
+            participant_names[p.id] = p.custom_name or p.name or str(p.id)[:8]
+
+    # ── Transcrição amostrada ─────────────────────────────────────
+    def _msg_to_line(m) -> str:
+        ts = m.sent_at.strftime("%d/%m %H:%M") if m.sent_at else "??"
+        author = participant_names.get(m.participant_id, "Desconhecido")
+        content = (m.content or "").strip()[:300]
+        return f"[{ts}] {author}: {content}"
+
+    if total_messages == 0:
+        return {
+            "conversation": {"id": str(conv.id), "name": _conv_display(conv)},
+            "period": {"start": start_date, "end": end_date},
+            "stats": {"total_messages": 0},
+            "executive_text": "Nenhuma mensagem encontrada no período selecionado.",
+            "temperature_score": 0,
+            "temperature_label": "neutro",
+            "top_messages": [],
+            "tag_distribution": {},
+        }
+
+    # ── Estatísticas ─────────────────────────────────────────────
+    unique_participants = len({m.participant_id for m in messages if m.participant_id})
+    avg_risk = sum(m.risk_score or 0 for m in messages) / total_messages
+    avg_sentiment = sum(m.sentiment_score or 0.0 for m in messages) / total_messages
+
+    churn_count = sum(1 for m in messages if m.is_churn_risk)
+    escalation_count = sum(1 for m in messages if m.is_escalation)
+    opportunity_count = sum(1 for m in messages if m.is_opportunity)
+    complaint_count = sum(1 for m in messages if m.is_complaint)
+    followup_count = sum(1 for m in messages if m.is_followup_needed)
+
+    # Distribuição de tags
+    tag_dist: dict = {}
+    for m in messages:
+        for tag in (m.tags or []):
+            tag_dist[tag] = tag_dist.get(tag, 0) + 1
+
+    # Alertas no período
+    alert_result = await db.execute(
+        select(AlertEvent).where(
+            and_(
+                AlertEvent.conversation_id == conv_id,
+                AlertEvent.triggered_at >= start_dt,
+                AlertEvent.triggered_at <= end_dt,
+            )
+        )
+    )
+    alerts = alert_result.scalars().all()
+    critical_alerts = sum(1 for a in alerts if a.severity == AlertSeverity.CRITICAL)
+
+    # ── Temperatura ───────────────────────────────────────────────
+    risk_norm = min(avg_risk / 100, 1.0)
+    churn_norm = min(churn_count / max(total_messages, 1) * 10, 1.0)
+    sentiment_neg = max(-avg_sentiment, 0)
+    temperature_score = int((risk_norm * 0.5 + churn_norm * 0.3 + sentiment_neg * 0.2) * 100)
+    temperature_score = max(0, min(100, temperature_score))
+
+    if temperature_score >= 70:
+        temperature_label = "critico"
+    elif temperature_score >= 40:
+        temperature_label = "alerta"
+    elif temperature_score >= 20:
+        temperature_label = "moderado"
+    else:
+        temperature_label = "saudavel"
+
+    # ── Mensagens de destaque (maior risco) ───────────────────────
+    top = sorted(messages, key=lambda m: (m.risk_score or 0), reverse=True)[:5]
+
+    # ── Transcrição amostrada para LLM ────────────────────────────
+    # Estratégia: primeiras 25 + últimas 25 + top-25 por risco (sem duplicatas, até 60 total)
+    if total_messages <= 80:
+        sample = messages
+    else:
+        first25 = messages[:25]
+        last25 = messages[-25:]
+        by_risk = sorted(messages, key=lambda m: (m.risk_score or 0), reverse=True)[:25]
+        seen_ids = set()
+        sample = []
+        for m in first25 + by_risk + last25:
+            if m.id not in seen_ids:
+                seen_ids.add(m.id)
+                sample.append(m)
+        sample.sort(key=lambda m: m.sent_at or datetime.min.replace(tzinfo=timezone.utc))
+
+    transcript_lines = [_msg_to_line(m) for m in sample]
+
+    # ── Texto executivo ───────────────────────────────────────────
+    from app.services.agent import get_agent_config, inject_agent_identity
+    agent_cfg = await get_agent_config(db, current_user.id)
+
+    executive_text = await _generate_range_text(
+        conv_name=_conv_display(conv),
+        start_date=start_date,
+        end_date=end_date,
+        total_messages=total_messages,
+        unique_participants=unique_participants,
+        avg_risk=avg_risk,
+        churn_count=churn_count,
+        escalation_count=escalation_count,
+        opportunity_count=opportunity_count,
+        complaint_count=complaint_count,
+        followup_count=followup_count,
+        critical_alerts=critical_alerts,
+        tag_dist=tag_dist,
+        temperature_score=temperature_score,
+        top_messages=top,
+        transcript_lines=transcript_lines,
+        db=db,
+        agent_config=agent_cfg,
+    )
+    executive_text = inject_agent_identity(executive_text, agent_cfg, temperature_label)
+
+    return {
+        "conversation": {"id": str(conv.id), "name": _conv_display(conv)},
+        "period": {"start": start_date, "end": end_date},
+        "stats": {
+            "total_messages": total_messages,
+            "unique_participants": unique_participants,
+            "avg_risk_score": round(avg_risk, 1),
+            "avg_sentiment_score": round(avg_sentiment, 3),
+            "churn_risk_count": churn_count,
+            "escalation_count": escalation_count,
+            "opportunity_count": opportunity_count,
+            "complaint_count": complaint_count,
+            "followup_count": followup_count,
+            "critical_alerts": critical_alerts,
+            "total_alerts": len(alerts),
+        },
+        "tag_distribution": dict(sorted(tag_dist.items(), key=lambda x: -x[1])[:12]),
+        "executive_text": executive_text,
+        "temperature_score": temperature_score,
+        "temperature_label": temperature_label,
+        "top_messages": [
+            {
+                "id": str(m.id),
+                "content": m.content[:300] if m.content else "",
+                "sent_at": m.sent_at.isoformat() if m.sent_at else None,
+                "risk_score": m.risk_score,
+                "tags": m.tags or [],
+            }
+            for m in top
+        ],
+    }
+
+
+@router.get("/conversations")
+async def list_conversations(
+    search: Optional[str] = Query(None),
+    limit: int = Query(50, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Lista conversas do tenant para selecionar no range-summary."""
+    query = select(Conversation).where(
+        and_(Conversation.tenant_id == current_user.id, Conversation.is_active == True)  # noqa
+    ).order_by(Conversation.name)
+
+    if search:
+        ilike = f"%{search}%"
+        query = query.where(
+            (Conversation.name.ilike(ilike)) | (Conversation.custom_name.ilike(ilike))
+        )
+
+    query = query.limit(limit)
+    result = await db.execute(query)
+    convs = result.scalars().all()
+    return [{"id": str(c.id), "name": _conv_display(c)} for c in convs]
+
+
+async def _generate_range_text(
+    conv_name, start_date, end_date, total_messages, unique_participants,
+    avg_risk, churn_count, escalation_count, opportunity_count, complaint_count,
+    followup_count, critical_alerts, tag_dist, temperature_score, top_messages,
+    transcript_lines, db, agent_config=None,
+) -> str:
+    """Gera texto executivo para o período — usa Claude se LLM_ENABLED, heurístico como fallback."""
+    from app.core.config import settings
+
+    if settings.LLM_ENABLED and settings.ANTHROPIC_API_KEY:
+        try:
+            return await _range_text_claude(
+                conv_name, start_date, end_date, total_messages, unique_participants,
+                avg_risk, churn_count, escalation_count, opportunity_count, complaint_count,
+                followup_count, critical_alerts, tag_dist, top_messages, transcript_lines,
+                agent_config=agent_config,
+            )
+        except Exception:
+            pass
+
+    return _range_text_heuristic(
+        conv_name, start_date, end_date, total_messages, unique_participants,
+        avg_risk, churn_count, escalation_count, opportunity_count, complaint_count,
+        followup_count, critical_alerts, tag_dist, temperature_score, top_messages,
+    )
+
+
+def _range_text_heuristic(
+    conv_name, start_date, end_date, total_messages, unique_participants,
+    avg_risk, churn_count, escalation_count, opportunity_count, complaint_count,
+    followup_count, critical_alerts, tag_dist, temperature_score, top_messages=None,
+) -> str:
+    lines = []
+    lines.append(
+        f"**{conv_name}** — período de {start_date} a {end_date}: "
+        f"{total_messages} mensagens de {unique_participants} participante(s)."
+    )
+
+    if churn_count > 0:
+        lines.append(
+            f"\n**Risco de Cancelamento:** {churn_count} sinal(is) de churn detectado(s). "
+            "Atenção imediata recomendada."
+        )
+    if escalation_count > 0:
+        lines.append(
+            f"\n**Escaladas Emocionais:** {escalation_count} situação(ões) de tensão elevada identificada(s)."
+        )
+    if complaint_count > 0:
+        lines.append(f"\n**Reclamações:** {complaint_count} mensagem(ns) com sinal de insatisfação.")
+    if opportunity_count > 0:
+        lines.append(f"\n**Oportunidades Comerciais:** {opportunity_count} sinal(is) de oportunidade detectado(s).")
+    if followup_count > 0:
+        lines.append(f"\n**Follow-ups Pendentes:** {followup_count} mensagem(ns) requerem retorno.")
+    if critical_alerts > 0:
+        lines.append(f"\n**Alertas Críticos:** {critical_alerts} alerta(s) crítico(s) gerado(s) no período.")
+
+    if avg_risk >= 60:
+        lines.append(f"\n**Score de Risco Médio:** {avg_risk:.0f}/100 — nível elevado.")
+    elif avg_risk >= 30:
+        lines.append(f"\n**Score de Risco Médio:** {avg_risk:.0f}/100 — nível moderado.")
+    else:
+        lines.append(f"\n**Score de Risco Médio:** {avg_risk:.0f}/100 — nível baixo.")
+
+    if tag_dist:
+        top_tags = sorted(tag_dist.items(), key=lambda x: -x[1])[:3]
+        tags_str = ", ".join(f"{t} ({n}x)" for t, n in top_tags)
+        lines.append(f"\n**Temas Mais Frequentes:** {tags_str}.")
+
+    if top_messages:
+        notable = [m for m in top_messages if m.content and (m.risk_score or 0) >= 30][:3]
+        if notable:
+            lines.append("\n**Mensagens de Destaque:**")
+            for m in notable:
+                ts = m.sent_at.strftime("%d/%m") if m.sent_at else ""
+                snippet = (m.content or "").strip()[:200]
+                tags_str = ", ".join(m.tags or [])
+                lines.append(f"> [{ts}] {snippet}" + (f" _({tags_str})_" if tags_str else ""))
+
+    if temperature_score >= 70:
+        lines.append("\n> Operação em **estado crítico** no período. Revisão prioritária necessária.")
+    elif temperature_score >= 40:
+        lines.append("\n> Operação em **estado de alerta**. Monitoramento reforçado recomendado.")
+    else:
+        lines.append("\n> Operação dentro do **padrão saudável** no período.")
+
+    return "\n".join(lines)
+
+
+async def _range_text_claude(
+    conv_name, start_date, end_date, total_messages, unique_participants,
+    avg_risk, churn_count, escalation_count, opportunity_count, complaint_count,
+    followup_count, critical_alerts, tag_dist, top_messages, transcript_lines,
+    agent_config=None,
+) -> str:
+    import anthropic
+    from app.core.config import settings
+    from app.services.agent import build_agent_personality_prompt
+
+    agent_intro = build_agent_personality_prompt(agent_config) if agent_config else \
+        "Você é um analista de relacionamento e CRM."
+
+    transcript_block = "\n".join(transcript_lines) if transcript_lines else "Sem mensagens disponíveis."
+
+    top_tags_str = ", ".join(
+        f"{t}({n}x)" for t, n in sorted(tag_dist.items(), key=lambda x: -x[1])[:6]
+    ) if tag_dist else "nenhuma"
+
+    stats_block = (
+        f"- Mensagens analisadas: {total_messages} (de {unique_participants} participante(s))\n"
+        f"- Risco médio: {avg_risk:.1f}/100 | Churn: {churn_count} | Escaladas: {escalation_count}\n"
+        f"- Oportunidades: {opportunity_count} | Reclamações: {complaint_count} | Follow-ups: {followup_count}\n"
+        f"- Alertas críticos: {critical_alerts} | Tags: {top_tags_str}"
+    )
+
+    prompt = f"""{agent_intro}
+
+Analise a conversa do grupo **{conv_name}** no período de {start_date} a {end_date} e produza um resumo executivo em markdown (4-6 parágrafos).
+
+**Estatísticas do período:**
+{stats_block}
+
+**Transcrição das mensagens ({len(transcript_lines)} de {total_messages}):**
+{transcript_block}
+
+**Instruções:**
+- Foque no CONTEÚDO: o que foi discutido, problemas levantados, decisões tomadas, temas recorrentes
+- Identifique o tom geral da conversa (colaborativo, tenso, neutro, etc.)
+- Destaque pontos de ação concretos para o gestor
+- Se houver sinais de insatisfação, churn ou urgência, cite o contexto exato
+- Use **negrito** para pontos críticos; não use listas longas — prefira parágrafos fluídos
+- Responda em português brasileiro"""
+
+    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    resp = await client.messages.create(
+        model=settings.ANTHROPIC_MODEL,
+        max_tokens=800,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return resp.content[0].text
+
+
 @router.patch("/participants/{participant_id}")
 async def update_participant(
     participant_id: str,

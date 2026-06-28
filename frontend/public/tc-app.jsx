@@ -1,5 +1,111 @@
 // tc-app.jsx — Main App com API real
 
+// ── Push Notification banner ───────────────────────────────────
+function PushPermissionBanner({ onDismiss }) {
+  const [loading, setLoading] = React.useState(false);
+  const ph = window.pushHelpers;
+
+  if (!ph || !ph.isSupported() || ph.getPermission() !== 'default') return null;
+
+  async function handleEnable() {
+    setLoading(true);
+    try {
+      const result = await ph.subscribe();
+      if (result) {
+        window.showToast && window.showToast('Notificações ativadas!', 'success');
+      } else {
+        window.showToast && window.showToast('Permissão negada ou não suportada.', 'warning');
+      }
+    } catch (e) {
+      window.showToast && window.showToast('Erro ao ativar notificações.', 'error');
+    } finally {
+      setLoading(false);
+      onDismiss();
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
+      background: '#1e293b', border: '1px solid #0d9488', borderRadius: '12px',
+      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+      zIndex: 8000, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      maxWidth: '420px', width: 'calc(100% - 32px)',
+    }}>
+      <i className="fas fa-bell" style={{ color: '#0d9488', fontSize: '20px', flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 600 }}>Ativar alertas no celular</div>
+        <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>Receba notificações de churn e urgência mesmo com o app fechado.</div>
+      </div>
+      <button
+        onClick={handleEnable}
+        disabled={loading}
+        style={{
+          background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px',
+          padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          flexShrink: 0, opacity: loading ? 0.6 : 1,
+        }}
+      >
+        {loading ? '...' : 'Ativar'}
+      </button>
+      <button
+        onClick={onDismiss}
+        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', fontSize: '16px' }}
+      >
+        <i className="fas fa-times" />
+      </button>
+    </div>
+  );
+}
+
+function InstallBanner({ onDismiss }) {
+  const [loading, setLoading] = React.useState(false);
+
+  async function handleInstall() {
+    const prompt = window._installPrompt;
+    if (!prompt) return;
+    setLoading(true);
+    prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    window._installPrompt = null;
+    setLoading(false);
+    onDismiss();
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
+      background: '#1e293b', border: '1px solid #0d9488', borderRadius: '12px',
+      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+      zIndex: 8001, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      maxWidth: '420px', width: 'calc(100% - 32px)',
+    }}>
+      <i className="fas fa-download" style={{ color: '#0d9488', fontSize: '20px', flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 600 }}>Instalar app</div>
+        <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>Adicione o ENVOX à tela inicial para acesso rápido em tela cheia.</div>
+      </div>
+      <button
+        onClick={handleInstall}
+        disabled={loading}
+        style={{
+          background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px',
+          padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          flexShrink: 0, opacity: loading ? 0.6 : 1,
+        }}
+      >
+        {loading ? '...' : 'Instalar'}
+      </button>
+      <button
+        onClick={onDismiss}
+        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', fontSize: '16px' }}
+      >
+        <i className="fas fa-times" />
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const [loggedIn,      setLoggedIn]      = React.useState(!!localStorage.getItem('envox_token'));
   const [userName,      setUserName]      = React.useState(localStorage.getItem('envox_user') || 'Admin');
@@ -11,12 +117,17 @@ function App() {
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const [drawerOpen,    setDrawerOpen]    = React.useState(false);
   const [profileOpen,   setProfileOpen]   = React.useState(false);
+  const [pushBanner,    setPushBanner]    = React.useState(false);
+  const [installBanner, setInstallBanner] = React.useState(false);
 
   const isMobile = useIsMobile();
   const company = 'ENVOX';
 
   // Registra logout global
   window.doLogout = handleLogout;
+
+  // Expõe navegação para o Service Worker
+  window.envoxNavigate = (url) => { if (url === '/' || url.includes('alert')) handleNavigate('alerts'); };
 
   // Carrega perfil do usuário atual após login
   React.useEffect(() => {
@@ -31,6 +142,29 @@ function App() {
         localStorage.setItem('envox_full_name', me.full_name || '');
       })
       .catch(() => {});
+  }, [loggedIn]);
+
+  // Mostra banner de push 3s após login (só se ainda não concedeu permissão)
+  React.useEffect(() => {
+    if (!loggedIn) return;
+    const ph = window.pushHelpers;
+    if (!ph || !ph.isSupported()) return;
+    if (ph.getPermission() === 'default' && !sessionStorage.getItem('push_banner_dismissed')) {
+      const t = setTimeout(() => setPushBanner(true), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [loggedIn]);
+
+  // Mostra banner de instalação PWA quando o browser disparar o evento
+  React.useEffect(() => {
+    if (!loggedIn) return;
+    if (sessionStorage.getItem('install_banner_dismissed')) return;
+    // Evento pode ter chegado antes do React montar
+    if (window._installPrompt) { setInstallBanner(true); return; }
+    window._onInstallPromptReady = () => {
+      if (!sessionStorage.getItem('install_banner_dismissed')) setInstallBanner(true);
+    };
+    return () => { window._onInstallPromptReady = null; };
   }, [loggedIn]);
 
   // Carrega contagem de alertas periodicamente
@@ -87,6 +221,9 @@ function App() {
       case 'conversation': return selectedGroup
         ? <ConversationScreen group={selectedGroup} onBack={() => setPage('groups')} />
         : <GroupsScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
+      case 'wpp-groups':   return <WppGroupsManagerScreen />;
+      case 'range-summary': return <RangeSummaryScreen />;
+      case 'agent':        return <AgentConfigScreen />;
       case 'team':         return <TeamScreen />;
       case 'email':        return <EmailScreen onNavigateConfig={() => handleNavigate('config')} />;
       case 'wpp':          return <WppConnectionScreen />;
@@ -99,10 +236,22 @@ function App() {
 
   const displayName = userFullName || userName;
 
+  function handlePushDismiss() {
+    sessionStorage.setItem('push_banner_dismissed', '1');
+    setPushBanner(false);
+  }
+
+  function handleInstallDismiss() {
+    sessionStorage.setItem('install_banner_dismissed', '1');
+    setInstallBanner(false);
+  }
+
   if (isMobile) {
     return (
       <div style={{ height: '100vh', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: 'var(--color-bg-page)' }}>
         <MobileTopBar company={company} onMenuOpen={() => setDrawerOpen(true)} />
+        {installBanner && <InstallBanner onDismiss={handleInstallDismiss} />}
+        {pushBanner && !installBanner && <PushPermissionBanner onDismiss={handlePushDismiss} />}
         <MobileDrawer
           open={drawerOpen}
           activePage={page}
@@ -146,6 +295,8 @@ function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: 'var(--font-sans)' }}>
+      {installBanner && <InstallBanner onDismiss={handleInstallDismiss} />}
+      {pushBanner && !installBanner && <PushPermissionBanner onDismiss={handlePushDismiss} />}
       <Sidebar
         activePage={page}
         onNavigate={handleNavigate}

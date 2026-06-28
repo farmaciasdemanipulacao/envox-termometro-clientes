@@ -105,6 +105,9 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
     { id: 'summary',       icon: 'file-alt',       label: 'Resumo Executivo' },
     { id: 'alerts',        icon: 'bell',            label: 'Alertas', badge: alertsCount },
     { id: 'groups',        icon: 'users',           label: 'Grupos WhatsApp' },
+    { id: 'wpp-groups',    icon: 'tasks',           label: 'Selecionar Grupos' },
+    { id: 'range-summary', icon: 'calendar-alt',   label: 'Resumo por Período' },
+    { id: 'agent',         icon: 'robot',          label: 'Agente Virtual' },
     { id: 'email',         icon: 'envelope',        label: 'E-mails' },
     { id: 'team',          icon: 'user-tie',        label: 'Time' },
   ];
@@ -340,7 +343,10 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
     { id: 'tags',         icon: 'tags',           label: 'Relatório de Tags' },
     { id: 'summary',      icon: 'file-alt',       label: 'Resumo Executivo' },
     { id: 'alerts',       icon: 'bell',           label: 'Alertas', badge: alertsCount },
-    { id: 'groups',       icon: 'users',          label: 'Grupos WhatsApp' },
+    { id: 'groups',        icon: 'users',          label: 'Grupos WhatsApp' },
+    { id: 'wpp-groups',   icon: 'list-check',     label: 'Selecionar Grupos' },
+    { id: 'range-summary', icon: 'calendar-week', label: 'Resumo por Período' },
+    { id: 'agent',        icon: 'robot',          label: 'Agente Virtual' },
     { id: 'email',        icon: 'envelope',       label: 'E-mails' },
     { id: 'team',         icon: 'user-tie',       label: 'Time' },
   ];

@@ -38,6 +38,8 @@ class Conversation(Base, UUIDMixin, TimestampMixin):
     )
     custom_name: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_monitored: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    wpp_group_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     participant_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     sla_response_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
     extra_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

@@ -121,7 +121,15 @@ async def run_daily_summary_job():
         await db.flush()
 
         try:
-            summary = await summary_service.generate_daily_summary(db, date.today())
+            # Tenta carregar agent config do admin
+            from app.services.agent import get_agent_config
+            from app.models.user import User
+            from sqlalchemy import select as _sel
+            admin_r = await db.execute(_sel(User).where(User.username == "admin", User.is_active == True))  # noqa
+            admin = admin_r.scalar_one_or_none()
+            agent_cfg = await get_agent_config(db, admin.id) if admin else None
+
+            summary = await summary_service.generate_daily_summary(db, date.today(), agent_config=agent_cfg)
             run.status = RunStatus.SUCCESS
             run.items_processed = 1
             run.finished_at = datetime.now(timezone.utc)

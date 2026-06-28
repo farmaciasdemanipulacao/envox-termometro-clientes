@@ -155,6 +155,16 @@ async def get_group_metrics(
     today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
     tid = current_user.id
 
+    # Última atividade de cada conversa (all-time) para ordenação
+    last_activity_sq = (
+        select(
+            Message.conversation_id,
+            func.max(Message.sent_at).label("last_activity"),
+        )
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+
     result = await db.execute(
         select(
             Conversation.id,
@@ -164,11 +174,18 @@ async def get_group_metrics(
             func.avg(Message.sentiment_score).label("avg_sentiment"),
             func.avg(Message.risk_score).label("risk_score"),
             func.avg(Message.opportunity_score).label("opportunity_score"),
+            last_activity_sq.c.last_activity,
         )
-        .join(Message, Message.conversation_id == Conversation.id)
-        .where(Message.sent_at >= today_start, Conversation.tenant_id == tid)
-        .group_by(Conversation.id, Conversation.name, Conversation.custom_name)
-        .order_by(func.avg(Message.risk_score).desc())
+        # LEFT JOIN: stats de hoje (grupos sem msg hoje ainda aparecem com zeros)
+        .outerjoin(Message, and_(
+            Message.conversation_id == Conversation.id,
+            Message.sent_at >= today_start,
+        ))
+        # LEFT JOIN: última atividade all-time para ordenação
+        .outerjoin(last_activity_sq, last_activity_sq.c.conversation_id == Conversation.id)
+        .where(Conversation.tenant_id == tid)
+        .group_by(Conversation.id, Conversation.name, Conversation.custom_name, last_activity_sq.c.last_activity)
+        .order_by(last_activity_sq.c.last_activity.desc().nullslast())
     )
 
     groups = []

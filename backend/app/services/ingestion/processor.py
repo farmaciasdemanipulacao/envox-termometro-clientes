@@ -318,6 +318,57 @@ class IngestionProcessor:
         for alert in alerts_to_create:
             db.add(alert)
 
+        # Dispara push notification para alertas críticos/altos
+        await self._dispatch_push_for_alerts(db, alerts_to_create, conversation)
+
+    async def _dispatch_push_for_alerts(
+        self,
+        db: AsyncSession,
+        alerts: list,
+        conversation,
+    ) -> None:
+        """Envia push notification para todos os usuários do tenant quando há alertas críticos/altos."""
+        from app.models.alert import AlertSeverity
+        from app.models.user import User
+        from app.services.push import broadcast_push
+        from sqlalchemy import select as sa_select
+
+        critical_alerts = [
+            a for a in alerts
+            if a.severity in (AlertSeverity.CRITICAL, AlertSeverity.HIGH)
+        ]
+        if not critical_alerts:
+            return
+
+        alert = critical_alerts[0]
+        conv_name = conversation.custom_name or conversation.name
+
+        # Busca todos os usuários com tenant_id = conversation.tenant_id
+        if not conversation.tenant_id:
+            return
+
+        result = await db.execute(
+            sa_select(User).where(User.id == conversation.tenant_id, User.is_active == True)
+        )
+        users = result.scalars().all()
+
+        is_critical = alert.severity == AlertSeverity.CRITICAL
+        body = f"{conv_name}: {alert.description[:120]}" if alert.description else conv_name
+
+        for user in users:
+            try:
+                await broadcast_push(
+                    db=db,
+                    user_id=user.id,
+                    title=alert.title,
+                    body=body,
+                    url="/",
+                    critical=is_critical,
+                    tag=f"alert-{alert.alert_type}",
+                )
+            except Exception as exc:
+                logger.error("push_dispatch_failed", user_id=str(user.id), error=str(exc))
+
     async def _create_followup(
         self,
         db: AsyncSession,

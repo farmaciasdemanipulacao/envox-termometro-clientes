@@ -86,18 +86,14 @@ async def extract_file_content(
 # ── Imagens: Vision API ───────────────────────────────────────────────────────
 
 async def _describe_image(b64: str, mimetype: str) -> str | None:
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
 
-    if not anthropic_key and not openai_key and not groq_key:
+    if not openai_key and not groq_key:
         logger.debug("vision_skipped", reason="no_api_key")
         return None
 
     loop = asyncio.get_event_loop()
-
-    if anthropic_key:
-        return await loop.run_in_executor(None, _sync_vision_claude, b64, mimetype, anthropic_key)
     return await loop.run_in_executor(None, _sync_vision_openai, b64, mimetype, openai_key, groq_key)
 
 

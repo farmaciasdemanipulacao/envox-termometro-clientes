@@ -9,6 +9,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    email: str
+    company_name: Optional[str] = None
+    phone: Optional[str] = None
+    plan_slug: str = "starter"
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -17,6 +27,10 @@ class Token(BaseModel):
     username: str
     full_name: Optional[str] = None
     is_admin: bool
+    subscription_status: Optional[str] = None
+    plan_name: Optional[str] = None
+    max_history_days: Optional[int] = 90  # None = ilimitado
+    max_groups: int = 5  # -1 = ilimitado
 
 
 class UserCreate(BaseModel):

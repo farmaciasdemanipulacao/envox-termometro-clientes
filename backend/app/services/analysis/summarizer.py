@@ -29,18 +29,19 @@ class SummaryService:
         db: AsyncSession,
         target_date: Optional[date] = None,
         agent_config: Optional[dict] = None,
+        tenant_id=None,
     ) -> DailySummary:
         """
-        Gera o resumo global do dia.
-        Se já existe resumo para a data, sobrescreve.
+        Gera o resumo do dia PARA UM TENANT (dados e resumo isolados por conta).
+        Se já existe resumo para a data + tenant, sobrescreve.
         """
         if target_date is None:
             target_date = date.today()
 
-        logger.info("generating_daily_summary", date=str(target_date))
+        logger.info("generating_daily_summary", date=str(target_date), tenant_id=str(tenant_id) if tenant_id else None)
 
-        # Coleta dados do dia
-        stats = await self._collect_day_stats(db, target_date)
+        # Coleta dados do dia (escopados ao tenant)
+        stats = await self._collect_day_stats(db, target_date, tenant_id)
 
         # Gera texto executivo (LLM se habilitado, heurístico como fallback)
         executive_text = await self._generate_executive_text_llm(stats, target_date, agent_config)
@@ -55,13 +56,14 @@ class SummaryService:
         # Calcula termômetro
         temperature_score, temperature_label = self._calculate_temperature(stats)
 
-        # Verifica se já existe resumo para o dia
+        # Verifica se já existe resumo para o dia (escopado ao tenant)
         existing = await db.execute(
             select(DailySummary).where(
                 and_(
                     DailySummary.summary_date == target_date,
                     DailySummary.summary_type == SummaryType.GLOBAL,
                     DailySummary.conversation_id.is_(None),
+                    DailySummary.tenant_id == tenant_id,
                 )
             )
         )
@@ -97,6 +99,7 @@ class SummaryService:
                 setattr(summary, key, value)
         else:
             summary = DailySummary(
+                tenant_id=tenant_id,
                 summary_date=target_date,
                 summary_type=SummaryType.GLOBAL,
                 executive_text=executive_text,
@@ -128,110 +131,136 @@ class SummaryService:
                     total_messages=stats["total_messages"])
         return summary
 
-    async def _collect_day_stats(self, db: AsyncSession, target_date: date) -> dict:
-        """Coleta estatísticas do dia para compor o resumo."""
+    async def _collect_day_stats(self, db: AsyncSession, target_date: date, tenant_id=None) -> dict:
+        """
+        Coleta estatísticas do dia para compor o resumo.
+        Se `tenant_id` for informado, escopa tudo (mensagens/alertas/follow-ups) às
+        conversas daquele tenant via join com Conversation — cada conta só vê seus
+        próprios dados no resumo diário.
+        """
         from datetime import timedelta
 
         start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
         end = start + timedelta(days=1)
 
+        def _scope_messages(q):
+            if tenant_id is None:
+                return q
+            return q.join(Conversation, Message.conversation_id == Conversation.id).where(
+                Conversation.tenant_id == tenant_id
+            )
+
+        def _scope_alerts(q):
+            if tenant_id is None:
+                return q
+            return q.join(Conversation, AlertEvent.conversation_id == Conversation.id).where(
+                Conversation.tenant_id == tenant_id
+            )
+
+        def _scope_followups(q):
+            if tenant_id is None:
+                return q
+            return q.join(Conversation, FollowUpItem.conversation_id == Conversation.id).where(
+                Conversation.tenant_id == tenant_id
+            )
+
         # Total de mensagens do dia
         msg_result = await db.execute(
-            select(func.count(Message.id)).where(
+            _scope_messages(select(func.count(Message.id)).where(
                 and_(Message.sent_at >= start, Message.sent_at < end)
-            )
+            ))
         )
         total_messages = msg_result.scalar() or 0
 
         # Participantes únicos
         part_result = await db.execute(
-            select(func.count(func.distinct(Message.participant_id))).where(
+            _scope_messages(select(func.count(func.distinct(Message.participant_id))).where(
                 and_(Message.sent_at >= start, Message.sent_at < end)
-            )
+            ))
         )
         total_participants = part_result.scalar() or 0
 
         # Sentimento médio
         sent_result = await db.execute(
-            select(func.avg(Message.sentiment_score)).where(
+            _scope_messages(select(func.avg(Message.sentiment_score)).where(
                 and_(Message.sent_at >= start, Message.sent_at < end)
-            )
+            ))
         )
         avg_sentiment = float(sent_result.scalar() or 0.0)
 
         # Risco médio
         risk_result = await db.execute(
-            select(func.avg(Message.risk_score)).where(
+            _scope_messages(select(func.avg(Message.risk_score)).where(
                 and_(Message.sent_at >= start, Message.sent_at < end)
-            )
+            ))
         )
         avg_risk = float(risk_result.scalar() or 0.0)
 
         # Alertas abertos
         alerts_result = await db.execute(
-            select(func.count(AlertEvent.id)).where(
+            _scope_alerts(select(func.count(AlertEvent.id)).where(
                 and_(
                     AlertEvent.triggered_at >= start,
                     AlertEvent.triggered_at < end,
                     AlertEvent.status == AlertStatus.OPEN,
                 )
-            )
+            ))
         )
         open_alerts = alerts_result.scalar() or 0
 
         # Alertas críticos
         crit_alerts_result = await db.execute(
-            select(func.count(AlertEvent.id)).where(
+            _scope_alerts(select(func.count(AlertEvent.id)).where(
                 and_(
                     AlertEvent.triggered_at >= start,
                     AlertEvent.triggered_at < end,
                     AlertEvent.severity == AlertSeverity.CRITICAL,
                 )
-            )
+            ))
         )
         critical_alerts = crit_alerts_result.scalar() or 0
 
         # Follow-ups pendentes
         followup_result = await db.execute(
-            select(func.count(FollowUpItem.id)).where(
+            _scope_followups(select(func.count(FollowUpItem.id)).where(
                 FollowUpItem.status == FollowUpStatus.PENDING
-            )
+            ))
         )
         followups_count = followup_result.scalar() or 0
 
         # Oportunidades detectadas no dia
         opp_result = await db.execute(
-            select(func.count(Message.id)).where(
+            _scope_messages(select(func.count(Message.id)).where(
                 and_(
                     Message.sent_at >= start,
                     Message.sent_at < end,
                     Message.is_opportunity == True,  # noqa
                 )
-            )
+            ))
         )
         opportunities_count = opp_result.scalar() or 0
 
         # Mensagens de churn
         churn_result = await db.execute(
-            select(func.count(Message.id)).where(
+            _scope_messages(select(func.count(Message.id)).where(
                 and_(
                     Message.sent_at >= start,
                     Message.sent_at < end,
                     Message.is_churn_risk == True,  # noqa
                 )
-            )
+            ))
         )
         churn_count = churn_result.scalar() or 0
 
         # Mensagens de reclamação
         complaint_result = await db.execute(
-            select(func.count(Message.id)).where(
+            _scope_messages(select(func.count(Message.id)).where(
                 and_(
                     Message.sent_at >= start,
                     Message.sent_at < end,
                     Message.is_complaint == True,  # noqa
                 )
-            )
+            ))
         )
         complaint_count = complaint_result.scalar() or 0
 

@@ -72,17 +72,31 @@ FOLLOWUP_KEYWORDS = [
     "cadê", "cadê a resposta", "cadê o retorno",
 ]
 
-# Oportunidade Comercial / Upsell
-OPPORTUNITY_KEYWORDS = [
-    "quero contratar", "tenho interesse", "interessado", "interessada",
-    "me manda proposta", "manda orçamento", "preciso de orçamento",
+# Oportunidade Comercial / Upsell — keywords FORTES disparam sozinhas (inequívocas)
+OPPORTUNITY_STRONG_KEYWORDS = [
+    "quero contratar", "me manda proposta", "manda orçamento", "preciso de orçamento",
     "quanto custa", "qual o valor", "qual o preço", "me passa o preço",
-    "expandir", "ampliar", "posso contratar mais", "quero expandir", "quero ampliar",
-    "quero mais", "precisamos de mais", "vamos aumentar",
+    "quero expandir", "quero ampliar", "posso contratar mais",
     "novo projeto", "nova demanda", "nova necessidade",
+    "podemos fechar", "vamos fechar", "quero fechar",
+]
+
+# Oportunidade Comercial — keywords FRACAS, ambíguas fora de contexto comercial
+# (ex.: "aprovado"/"topei" também aparecem em aprovação de material/arte, não só em negócio).
+# Só viram tag se houver COMMERCIAL_CONTEXT_KEYWORDS na mensagem ou nas mensagens recentes da conversa.
+OPPORTUNITY_WEAK_KEYWORDS = [
+    "tenho interesse", "interessado", "interessada",
+    "expandir", "ampliar", "quero mais", "precisamos de mais", "vamos aumentar",
     "indicação", "indiquei", "vou indicar", "conhece alguém",
-    "podemos fechar", "vamos fechar", "quero fechar", "topei",
-    "aprovado", "aprovamos", "pode ir em frente",
+    "topei", "aprovado", "aprovamos", "pode ir em frente",
+]
+
+# Termos que confirmam que o contexto da conversa é de fato comercial — usados para
+# corroborar uma keyword fraca de oportunidade (na própria mensagem ou no contexto recente).
+COMMERCIAL_CONTEXT_KEYWORDS = [
+    "orçamento", "proposta", "contrato", "contratar", "mensalidade",
+    "valor", "preço", "plano", "investimento", "fechamento", "negócio",
+    "comercial", "cobrança", "pacote", "upsell", "upgrade",
 ]
 
 # Atrito Interno (entre colaboradores)
@@ -164,13 +178,20 @@ class HeuristicsEngine:
         result = engine.analyze("Quero cancelar, estou muito insatisfeito!")
     """
 
-    def analyze(self, text: str, participant_role: str = "unknown") -> AnalyzerResult:
+    def analyze(
+        self,
+        text: str,
+        participant_role: str = "unknown",
+        context_texts: Optional[list[str]] = None,
+    ) -> AnalyzerResult:
         """
         Analisa um texto e retorna o resultado de classificação.
 
         Args:
             text: conteúdo da mensagem
             participant_role: papel do autor (customer/collaborator/manager/unknown)
+            context_texts: mensagens recentes da mesma conversa (mais antiga → mais nova),
+                usadas só para corroborar sinais ambíguos (ex.: oportunidade comercial)
 
         Returns:
             AnalyzerResult com todos os campos preenchidos
@@ -220,11 +241,24 @@ class HeuristicsEngine:
             result.is_followup_needed = True
             tags.append("followup_necessario")
 
-        # Oportunidade
-        opportunity_hits = self._count_hits(normalized, OPPORTUNITY_KEYWORDS)
-        if opportunity_hits > 0:
+        # Oportunidade — forte dispara sozinha; fraca só com corroboração de contexto comercial
+        strong_opportunity_hits = self._count_hits(normalized, OPPORTUNITY_STRONG_KEYWORDS)
+        weak_opportunity_hits = self._count_hits(normalized, OPPORTUNITY_WEAK_KEYWORDS)
+        opportunity_hits = strong_opportunity_hits
+
+        if strong_opportunity_hits > 0:
             result.is_opportunity = True
             tags.append("oportunidade_comercial")
+        elif weak_opportunity_hits > 0:
+            context_normalized = " ".join(self._normalize(t) for t in (context_texts or []) if t)
+            has_commercial_context = (
+                self._count_hits(normalized, COMMERCIAL_CONTEXT_KEYWORDS) > 0
+                or self._count_hits(context_normalized, COMMERCIAL_CONTEXT_KEYWORDS) > 0
+            )
+            if has_commercial_context:
+                result.is_opportunity = True
+                tags.append("oportunidade_comercial")
+                opportunity_hits += weak_opportunity_hits
 
         # Atrito interno (só para colaboradores)
         if participant_role in ("collaborator", "manager", "unknown"):

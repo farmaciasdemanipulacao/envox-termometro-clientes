@@ -81,14 +81,17 @@ async def get_ingest_source(
         )
 
     # Busca source com este hash de API Key
+    # .limit(1) + first() em vez de scalar_one_or_none(): defesa extra contra
+    # colisão de api_key_hash (já corrigida na raiz em D-027, mas isso evita
+    # que a rota derrube com 500 caso um dado duplicado volte a aparecer.
     key_hash = hash_api_key(x_api_key)
     result = await db.execute(
         select(IngestionSource).where(
             IngestionSource.api_key_hash == key_hash,
             IngestionSource.is_active == True,  # noqa
-        )
+        ).order_by(IngestionSource.created_at.asc()).limit(1)
     )
-    source = result.scalar_one_or_none()
+    source = result.scalars().first()
 
     if not source:
         # Em desenvolvimento, aceita API key da config

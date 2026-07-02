@@ -21,6 +21,7 @@ class AlertType(str, enum.Enum):
     COMPLAINT = "complaint"           # Reclamação
     ESCALATION = "escalation"         # Escalada de tensão
     PROMISE_UNMET = "promise_unmet"   # Promessa sem retorno
+    CUSTOM = "custom"                 # Regra de alerta customizada (CustomAlertRule)
 
 
 class AlertSeverity(str, enum.Enum):

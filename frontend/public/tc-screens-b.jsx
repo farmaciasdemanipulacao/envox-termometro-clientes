@@ -681,17 +681,243 @@ function SummaryScreen({ onNavigateAlerts }) {
 // TeamScreen
 // ─────────────────────────────────────────────────────────────
 function TeamScreen() {
+  const [tab, setTab]             = React.useState('members');   // 'members' | 'add'
+  const [members, setMembers]     = React.useState([]);
+  const [candidates, setCandidates] = React.useState([]);
+  const [loading, setLoading]     = React.useState(true);
+  const [loadCand, setLoadCand]   = React.useState(false);
+  const [search, setSearch]       = React.useState('');
+  const [toggling, setToggling]   = React.useState({});
+  const [editingId, setEditingId] = React.useState(null);
+  const [editName, setEditName]   = React.useState('');
+
+  const loadMembers = () => {
+    setLoading(true);
+    window.apiGet('/team/members')
+      .then(d => setMembers(Array.isArray(d) ? d : []))
+      .catch(() => setMembers([]))
+      .finally(() => setLoading(false));
+  };
+
+  const loadCandidates = () => {
+    setLoadCand(true);
+    window.apiGet('/team/candidates')
+      .then(d => setCandidates(Array.isArray(d) ? d : []))
+      .catch(() => setCandidates([]))
+      .finally(() => setLoadCand(false));
+  };
+
+  React.useEffect(() => { loadMembers(); }, []);
+  React.useEffect(() => { if (tab === 'add') loadCandidates(); }, [tab]);
+
+  const toggleMember = async (p, makeInternal) => {
+    setToggling(t => ({ ...t, [p.id]: true }));
+    try {
+      await window.apiPatch(`/team/members/${p.id}`, {
+        is_internal: makeInternal,
+        role: makeInternal ? 'collaborator' : 'unknown',
+      });
+      if (makeInternal) {
+        window.showToast(`${p.display_name} adicionado ao time!`, 'success');
+        setCandidates(c => c.filter(x => x.id !== p.id));
+        loadMembers();
+      } else {
+        window.showToast(`${p.display_name} removido do time.`, 'info');
+        setMembers(m => m.filter(x => x.id !== p.id));
+      }
+    } catch { window.showToast('Erro ao atualizar colaborador.', 'error'); }
+    finally { setToggling(t => ({ ...t, [p.id]: false })); }
+  };
+
+  const saveName = async (p) => {
+    try {
+      await window.apiPatch(`/team/members/${p.id}`, { custom_name: editName });
+      setMembers(m => m.map(x => x.id === p.id ? { ...x, display_name: editName || x.name, custom_name: editName || null } : x));
+      window.showToast('Nome atualizado!', 'success');
+    } catch { window.showToast('Erro ao salvar.', 'error'); }
+    finally { setEditingId(null); }
+  };
+
+  const fmtMinutes = (m) => {
+    if (m === null || m === undefined) return '—';
+    if (m < 60) return `${Math.round(m)}min`;
+    return `${(m / 60).toFixed(1)}h`;
+  };
+
+  const filteredMembers = members.filter(m =>
+    !search || m.display_name?.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredCandidates = candidates.filter(c =>
+    !search || c.display_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const tabStyle = (id) => ({
+    padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 500,
+    cursor: 'pointer', border: 'none', fontFamily: 'var(--font-sans)',
+    background: tab === id ? '#0d9488' : 'transparent',
+    color: tab === id ? 'white' : '#64748b',
+  });
+
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <PageHeader title="Time" subtitle="Performance dos colaboradores" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-        <DsCard style={{ textAlign: 'center', padding: '64px 32px' }}>
-          <i className="fas fa-chart-line" style={{ fontSize: '48px', color: '#cbd5e1', display: 'block', marginBottom: '16px' }}></i>
-          <h3 style={{ margin: '0 0 8px 0', fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-text-primary)' }}>Em breve</h3>
-          <p style={{ margin: '0 auto', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', maxWidth: '400px' }}>
-            Dados de performance do time serão exibidos aqui conforme as métricas forem acumuladas via WhatsApp.
-          </p>
-        </DsCard>
+      <PageHeader
+        title="Time"
+        subtitle={`${members.length} colaborador${members.length !== 1 ? 'es' : ''} cadastrado${members.length !== 1 ? 's' : ''}`}
+        actions={
+          <button onClick={() => { setTab(tab === 'add' ? 'members' : 'add'); setSearch(''); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: tab === 'add' ? '#334155' : '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+            <i className={`fas fa-${tab === 'add' ? 'times' : 'plus'}`}></i>
+            {tab === 'add' ? 'Cancelar' : 'Adicionar colaborador'}
+          </button>
+        }
+      />
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+
+        {/* Tabs + search */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', borderRadius: '24px', padding: '3px' }}>
+            <button style={tabStyle('members')} onClick={() => { setTab('members'); setSearch(''); }}>
+              <i className="fas fa-users" style={{ marginRight: '6px', fontSize: '12px' }}></i>Colaboradores ({members.length})
+            </button>
+            <button style={tabStyle('add')} onClick={() => { setTab('add'); setSearch(''); }}>
+              <i className="fas fa-user-plus" style={{ marginRight: '6px', fontSize: '12px' }}></i>Buscar nos grupos
+            </button>
+          </div>
+          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+            <i className="fas fa-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '13px' }}></i>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome..."
+              style={{ width: '100%', paddingLeft: '32px', padding: '8px 12px 8px 32px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+        </div>
+
+        {/* ── ABA: Colaboradores ── */}
+        {tab === 'members' && (
+          <>
+            {loading
+              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>
+              : filteredMembers.length === 0
+              ? (
+                <div style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
+                  <i className="fas fa-users" style={{ fontSize: '40px', display: 'block', marginBottom: '12px', opacity: 0.4 }}></i>
+                  <div style={{ fontWeight: 600, marginBottom: '6px', color: '#64748b' }}>
+                    {search ? 'Nenhum colaborador encontrado.' : 'Nenhum colaborador cadastrado ainda.'}
+                  </div>
+                  {!search && <div style={{ fontSize: '13px' }}>Use "Buscar nos grupos" para adicionar colaboradores.</div>}
+                </div>
+              )
+              : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Header da tabela */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px 80px', gap: '12px', padding: '6px 16px', fontSize: '11px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                    <span>Colaborador</span>
+                    <span style={{ textAlign: 'center' }}>Grupos</span>
+                    <span style={{ textAlign: 'center' }}>Mensagens</span>
+                    <span style={{ textAlign: 'center' }}>Resp. média</span>
+                    <span></span>
+                  </div>
+                  {filteredMembers.map(m => (
+                    <div key={m.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px 80px', gap: '12px', alignItems: 'center' }}>
+                      {/* Nome */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg,#0d9488,#0f766e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '14px', flexShrink: 0 }}>
+                          {(m.display_name || '?')[0].toUpperCase()}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          {editingId === m.id ? (
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <input autoFocus value={editName} onChange={e => setEditName(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveName(m); if (e.key === 'Escape') setEditingId(null); }}
+                                style={{ padding: '4px 8px', border: '1px solid #0d9488', borderRadius: '6px', fontSize: '13px', outline: 'none', width: '140px' }} />
+                              <button onClick={() => saveName(m)} style={{ padding: '4px 8px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✓</button>
+                              <button onClick={() => setEditingId(null)} style={{ padding: '4px 8px', background: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                            </div>
+                          ) : (
+                            <>
+                              <div style={{ fontWeight: 600, fontSize: '14px', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {m.display_name}
+                                <button onClick={() => { setEditingId(m.id); setEditName(m.custom_name || m.name || ''); }}
+                                  style={{ marginLeft: '6px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '11px' }}>
+                                  <i className="fas fa-pen"></i>
+                                </button>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {m.groups?.slice(0, 2).join(', ')}{(m.groups?.length || 0) > 2 ? ` +${m.groups.length - 2}` : ''}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {/* Grupos */}
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ background: '#f0fdf4', color: '#16a34a', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px' }}>{m.group_count}</span>
+                      </div>
+                      {/* Mensagens */}
+                      <div style={{ textAlign: 'center', fontSize: '13px', color: '#475569', fontWeight: 500 }}>{m.message_count}</div>
+                      {/* Resp. média */}
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: m.avg_response_minutes !== null ? (m.avg_response_minutes <= 30 ? '#16a34a' : m.avg_response_minutes <= 120 ? '#ca8a04' : '#dc2626') : '#94a3b8' }}>
+                          {fmtMinutes(m.avg_response_minutes)}
+                        </span>
+                        {m.response_count > 0 && <div style={{ fontSize: '10px', color: '#94a3b8' }}>{m.response_count} resp.</div>}
+                      </div>
+                      {/* Remover */}
+                      <div style={{ textAlign: 'center' }}>
+                        <button onClick={() => toggleMember(m, false)} disabled={toggling[m.id]}
+                          style={{ padding: '5px 10px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                          title="Remover do time">
+                          {toggling[m.id] ? <Spinner size={12} color="#dc2626" /> : <i className="fas fa-user-minus"></i>}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+          </>
+        )}
+
+        {/* ── ABA: Buscar nos grupos ── */}
+        {tab === 'add' && (
+          <>
+            {loadCand
+              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>
+              : filteredCandidates.length === 0
+              ? (
+                <div style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
+                  <i className="fas fa-search" style={{ fontSize: '40px', display: 'block', marginBottom: '12px', opacity: 0.4 }}></i>
+                  <div style={{ fontWeight: 600, color: '#64748b' }}>
+                    {search ? 'Nenhum participante encontrado.' : 'Nenhum candidato encontrado nos grupos monitorados.'}
+                  </div>
+                </div>
+              )
+              : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>
+                    {filteredCandidates.length} participante{filteredCandidates.length !== 1 ? 's' : ''} encontrado{filteredCandidates.length !== 1 ? 's' : ''} nos grupos — clique em "Adicionar ao time" para marcar como colaborador interno.
+                  </div>
+                  {filteredCandidates.map(c => (
+                    <div key={c.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>
+                        {(c.display_name || '?')[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>{c.display_name}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          {c.message_count} msgs · {c.groups?.slice(0, 2).join(', ')}{(c.groups?.length || 0) > 2 ? ` +${c.groups.length - 2}` : ''}
+                        </div>
+                      </div>
+                      <button onClick={() => toggleMember(c, true)} disabled={toggling[c.id]}
+                        style={{ padding: '6px 12px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {toggling[c.id] ? <Spinner size={12} color="white" /> : <><i className="fas fa-user-plus"></i> Adicionar ao time</>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+          </>
+        )}
       </div>
     </div>
   );
@@ -1175,6 +1401,15 @@ function ConvMessagesTab({ convId, group }) {
   const severityColor = { critical: '#dc2626', high: '#f97316', medium: '#eab308', low: '#22c55e' };
   const hasMore = data ? (data.offset + data.limit) < data.total : false;
 
+  const handleSent = (msg) => {
+    if (filter === 'all') {
+      setData(prev => prev ? { ...prev, messages: [...prev.messages, msg], total: (prev.total || 0) + 1 } : prev);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    } else {
+      window.showToast('Mensagem enviada!', 'success');
+    }
+  };
+
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Filter pills */}
@@ -1273,6 +1508,186 @@ function ConvMessagesTab({ convId, group }) {
                 <div ref={bottomRef} />
               </>
         }
+      </div>
+      {!loading && data && (
+        <MessageComposer convId={convId} wppGroupId={data.conversation?.wpp_group_id} onSent={handleSent} />
+      )}
+    </div>
+  );
+}
+
+// ── Caixa de composição estilo WhatsApp (texto / anexo / áudio) ──
+function MessageComposer({ convId, wppGroupId, onSent }) {
+  const [text, setText]           = React.useState('');
+  const [attachment, setAtt]      = React.useState(null); // { base64, mime, name, kind, previewUrl, duration }
+  const [sending, setSending]     = React.useState(false);
+  const [recording, setRecording] = React.useState(false);
+  const [recSeconds, setRecSeconds] = React.useState(0);
+  const fileInputRef      = React.useRef(null);
+  const textareaRef       = React.useRef(null);
+  const mediaRecorderRef  = React.useRef(null);
+  const chunksRef         = React.useRef([]);
+  const timerRef          = React.useRef(null);
+
+  React.useEffect(() => () => { clearInterval(timerRef.current); }, []);
+
+  const handleTextChange = (e) => {
+    setText(e.target.value);
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  };
+
+  const handleFilePick = (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) { window.showToast('Arquivo maior que 15MB', 'error'); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const base64 = String(dataUrl).split(',')[1];
+      const kind = file.type.startsWith('image/') ? 'image' : 'document';
+      setAtt({ base64, mime: file.type || 'application/octet-stream', name: file.name, kind, previewUrl: kind === 'image' ? dataUrl : null });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const base64 = String(dataUrl).split(',')[1];
+          setAtt({ base64, mime: blob.type || 'audio/webm', name: 'audio.webm', kind: 'audio', previewUrl: dataUrl, duration: recSeconds });
+        };
+        reader.readAsDataURL(blob);
+      };
+      mediaRecorderRef.current = mr;
+      mr.start();
+      setRecording(true);
+      setRecSeconds(0);
+      timerRef.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
+    } catch (e) {
+      window.showToast('Não foi possível acessar o microfone', 'error');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+    clearInterval(timerRef.current);
+    setRecording(false);
+  };
+
+  const canSend = !sending && (text.trim() || attachment);
+
+  const handleSend = async () => {
+    if (!canSend) return;
+    setSending(true);
+    try {
+      const msg = await window.apiPost(`/conversations/${convId}/send-message`, {
+        text: text.trim(),
+        kind: attachment ? attachment.kind : 'text',
+        file_base64: attachment ? attachment.base64 : null,
+        file_mime: attachment ? attachment.mime : null,
+        file_name: attachment ? attachment.name : null,
+      });
+      onSent(msg);
+      setText('');
+      setAtt(null);
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao enviar mensagem', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  if (!wppGroupId) {
+    return (
+      <div style={{ padding: '10px 16px', background: '#f0f2f5', borderTop: '1px solid #d1d7db', flexShrink: 0, textAlign: 'center' }}>
+        <span style={{ fontSize: '12px', color: '#8696a0' }}>
+          <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
+          Este grupo não está vinculado a um grupo do WhatsApp — associe o <strong>wpp_group_id</strong> na tela de Seleção de Grupos para enviar mensagens por aqui.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flexShrink: 0, background: '#f0f2f5', borderTop: '1px solid #d1d7db' }}>
+      {attachment && (
+        <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #e9edef', background: 'white' }}>
+          {attachment.kind === 'image' && <img src={attachment.previewUrl} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} alt="preview" />}
+          {attachment.kind === 'document' && (
+            <div style={{ width: 40, height: 40, borderRadius: 6, background: '#eef2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#54656f', flexShrink: 0 }}>
+              <i className="fas fa-file-alt"></i>
+            </div>
+          )}
+          {attachment.kind === 'audio' && <audio controls src={attachment.previewUrl} style={{ height: 32, maxWidth: '220px' }} />}
+          <div style={{ flex: 1, fontSize: '12px', color: '#54656f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {attachment.kind === 'audio' ? `Nota de voz (${attachment.duration || 0}s)` : attachment.name}
+          </div>
+          <button onClick={() => setAtt(null)} title="Remover anexo"
+            style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer', fontSize: '14px' }}>
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      )}
+      <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+        <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFilePick}
+          accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
+        <button onClick={() => fileInputRef.current?.click()} disabled={recording || sending} title="Anexar arquivo"
+          style={{ background: 'none', border: 'none', color: '#54656f', fontSize: '20px', cursor: recording ? 'not-allowed' : 'pointer', padding: '6px', flexShrink: 0 }}>
+          <i className="fas fa-paperclip"></i>
+        </button>
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={handleTextChange}
+          onKeyDown={handleKeyDown}
+          disabled={recording || sending}
+          placeholder={recording ? 'Gravando áudio...' : 'Digite uma mensagem'}
+          rows={1}
+          style={{
+            flex: 1, resize: 'none', border: 'none', outline: 'none', borderRadius: '20px',
+            padding: '9px 14px', fontSize: '14px', fontFamily: 'var(--font-sans)', maxHeight: '120px',
+            background: 'white', lineHeight: 1.4,
+          }}
+        />
+        {recording && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontSize: '13px', fontWeight: 600, flexShrink: 0 }}>
+            <i className="fas fa-circle" style={{ fontSize: '8px' }}></i>
+            {String(Math.floor(recSeconds / 60)).padStart(2, '0')}:{String(recSeconds % 60).padStart(2, '0')}
+          </div>
+        )}
+        {recording ? (
+          <button onClick={stopRecording} title="Parar gravação"
+            style={{ background: '#dc2626', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', flexShrink: 0 }}>
+            <i className="fas fa-stop"></i>
+          </button>
+        ) : canSend ? (
+          <button onClick={handleSend} disabled={sending} title="Enviar"
+            style={{ background: '#25d366', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '50%', cursor: sending ? 'not-allowed' : 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {sending ? <Spinner size={14} color="white" /> : <i className="fas fa-paper-plane"></i>}
+          </button>
+        ) : (
+          <button onClick={startRecording} title="Gravar áudio"
+            style={{ background: '#25d366', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', flexShrink: 0 }}>
+            <i className="fas fa-microphone"></i>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1441,11 +1856,14 @@ function ConvProfileTab({ convId, onNameChange }) {
 
 // ── Aba: Participantes ────────────────────────────────────────
 function ConvParticipantsTab({ convId }) {
-  const [profile, setProfile] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const [editId, setEditId]   = React.useState(null);
-  const [editForm, setEditForm] = React.useState({});
-  const [saving, setSaving]   = React.useState(false);
+  const [profile, setProfile]       = React.useState(null);
+  const [loading, setLoading]       = React.useState(true);
+  const [editId, setEditId]         = React.useState(null);
+  const [editForm, setEditForm]     = React.useState({});
+  const [saving, setSaving]         = React.useState(false);
+  const [analyzing, setAnalyzing]   = React.useState({});   // {pid: true}
+  const [analyzingAll, setAnalyzingAll] = React.useState(false);
+  const [expanded, setExpanded]     = React.useState({});   // {pid: true} — painel IA aberto
 
   const load = () => {
     setLoading(true);
@@ -1478,6 +1896,44 @@ function ConvParticipantsTab({ convId }) {
     finally { setSaving(false); }
   };
 
+  const analyzeParticipant = async (p) => {
+    setAnalyzing(a => ({ ...a, [p.id]: true }));
+    try {
+      const result = await window.apiPost('/participants/' + p.id + '/analyze', {
+        conversation_id: convId,
+        group_name: profile?.name || 'Grupo',
+      });
+      setProfile(prev => ({
+        ...prev,
+        participants: prev.participants.map(x =>
+          x.id === p.id ? { ...x, ai_profile: result.profile } : x
+        ),
+      }));
+      setExpanded(e => ({ ...e, [p.id]: true }));
+      window.showToast('Perfil gerado com sucesso!', 'success');
+    } catch(e) {
+      window.showToast('Erro ao gerar perfil: ' + (e?.message || 'tente novamente'), 'error');
+    } finally {
+      setAnalyzing(a => ({ ...a, [p.id]: false }));
+    }
+  };
+
+  const analyzeAll = async () => {
+    setAnalyzingAll(true);
+    try {
+      const result = await window.apiPost('/conversations/' + convId + '/analyze-participants', {
+        group_name: profile?.name || 'Grupo',
+        force: false,
+      });
+      window.showToast(`Análise concluída: ${result.analyzed} perfis gerados, ${result.skipped} ignorados.`, 'success');
+      await load(); // recarrega com novos perfis
+    } catch(e) {
+      window.showToast('Erro na análise em massa.', 'error');
+    } finally {
+      setAnalyzingAll(false);
+    }
+  };
+
   const roles = [
     { value: 'customer',     label: '🧑‍💼 Cliente' },
     { value: 'collaborator', label: '👨‍💻 Colaborador' },
@@ -1496,6 +1952,20 @@ function ConvParticipantsTab({ convId }) {
     <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
         <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{parts.length} participante{parts.length !== 1 ? 's' : ''} identificado{parts.length !== 1 ? 's' : ''}</div>
+        {parts.length > 0 && (
+          <button onClick={analyzeAll} disabled={analyzingAll} style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: analyzingAll ? '#334155' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+            color: 'white', border: 'none', borderRadius: '8px',
+            padding: '6px 14px', cursor: analyzingAll ? 'not-allowed' : 'pointer',
+            fontSize: '12px', fontWeight: 600,
+          }}>
+            {analyzingAll
+              ? <><i className="fas fa-spinner fa-spin" />Analisando...</>
+              : <><i className="fas fa-robot" />Analisar todos com IA</>
+            }
+          </button>
+        )}
       </div>
 
       {parts.length === 0
@@ -1535,33 +2005,109 @@ function ConvParticipantsTab({ convId }) {
                 </div>
               )
               : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '18px' }}>
-                    {p.is_internal ? '👨‍💻' : p.role === 'customer' ? '🧑‍💼' : '👤'}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                      <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>{p.name}</span>
-                      {p.custom_name && <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>(orig: {p.original_name})</span>}
-                      <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: (roleColors[p.role] || '#94a3b8') + '20', color: roleColors[p.role] || '#94a3b8', fontWeight: 600 }}>
-                        {roleLabels[p.role] || p.role}
-                      </span>
-                      {p.is_internal && <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: '#f0fdf4', color: '#16a34a', fontWeight: 600 }}>Interno</span>}
+                <div>
+                  {/* Header do participante */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '18px' }}>
+                      {p.is_internal ? '👨‍💻' : p.role === 'customer' ? '🧑‍💼' : '👤'}
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                      <span><i className="fas fa-comment" style={{ marginRight: '3px' }}></i>{p.message_count} msg</span>
-                      {p.last_seen && <span><i className="fas fa-clock" style={{ marginRight: '3px' }}></i>{new Date(p.last_seen).toLocaleDateString('pt-BR')}</span>}
-                      {p.group_count > 1 && (
-                        <span style={{ color: '#7c3aed' }}>
-                          <i className="fas fa-layer-group" style={{ marginRight: '3px' }}></i>em {p.group_count} grupos
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>{p.name}</span>
+                        {p.custom_name && <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>(orig: {p.original_name})</span>}
+                        <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: (roleColors[p.role] || '#94a3b8') + '20', color: roleColors[p.role] || '#94a3b8', fontWeight: 600 }}>
+                          {roleLabels[p.role] || p.role}
                         </span>
-                      )}
-                      {p.external_id && <span style={{ fontFamily: 'monospace', opacity: 0.6 }}>{p.external_id.split('@')[0]}</span>}
+                        {p.is_internal && <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: '#f0fdf4', color: '#16a34a', fontWeight: 600 }}>Interno</span>}
+                        {p.ai_profile && (
+                          <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: '#ede9fe', color: '#7c3aed', fontWeight: 600, cursor: 'pointer' }}
+                            onClick={() => setExpanded(e => ({ ...e, [p.id]: !e[p.id] }))}>
+                            <i className="fas fa-robot" style={{ marginRight: '4px' }}></i>Perfil IA
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        <span><i className="fas fa-comment" style={{ marginRight: '3px' }}></i>{p.message_count} msg</span>
+                        {p.last_seen && <span><i className="fas fa-clock" style={{ marginRight: '3px' }}></i>{new Date(p.last_seen).toLocaleDateString('pt-BR')}</span>}
+                        {p.group_count > 1 && (
+                          <span style={{ color: '#7c3aed' }}>
+                            <i className="fas fa-layer-group" style={{ marginRight: '3px' }}></i>em {p.group_count} grupos
+                          </span>
+                        )}
+                        {p.external_id && <span style={{ fontFamily: 'monospace', opacity: 0.6 }}>{p.external_id.split('@')[0]}</span>}
+                        {p.ai_profile?.analyzed_at && (
+                          <span style={{ color: '#7c3aed', opacity: 0.8 }}>
+                            analisado {new Date(p.ai_profile.analyzed_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      <button onClick={() => analyzeParticipant(p)} disabled={analyzing[p.id]} title="Gerar/atualizar perfil IA" style={{
+                        padding: '7px 12px', background: analyzing[p.id] ? '#334155' : '#ede9fe',
+                        color: analyzing[p.id] ? 'white' : '#7c3aed', border: 'none',
+                        borderRadius: 'var(--radius-lg)', cursor: analyzing[p.id] ? 'not-allowed' : 'pointer',
+                        fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px',
+                      }}>
+                        {analyzing[p.id] ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-robot" />}
+                        {analyzing[p.id] ? '' : 'IA'}
+                      </button>
+                      <button onClick={() => startEdit(p)} style={{ padding: '7px 14px', background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <i className="fas fa-pencil-alt"></i> Editar
+                      </button>
                     </div>
                   </div>
-                  <button onClick={() => startEdit(p)} style={{ padding: '7px 14px', background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <i className="fas fa-pencil-alt"></i> Editar
-                  </button>
+
+                  {/* Painel de Perfil IA — expansível */}
+                  {p.ai_profile && expanded[p.id] && (() => {
+                    const ap = p.ai_profile;
+                    const sections = [
+                      { key: 'communication_style', icon: 'comments', label: 'Estilo de Comunicação', color: '#0d9488' },
+                      { key: 'behavior_patterns',   icon: 'chart-bar', label: 'Padrões de Comportamento', color: '#2563eb' },
+                      { key: 'engagement_level',    icon: 'signal',    label: 'Nível de Engajamento', color: '#16a34a' },
+                      { key: 'attention_points',    icon: 'exclamation-triangle', label: 'Pontos de Atenção', color: '#dc2626' },
+                      { key: 'approach_strategies', icon: 'lightbulb', label: 'Estratégias de Abordagem', color: '#7c3aed' },
+                      { key: 'missing_info',        icon: 'question-circle', label: 'Informações que Faltam', color: '#ea580c' },
+                    ];
+                    return (
+                      <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                            <i className="fas fa-robot" style={{ marginRight: '6px' }}></i>Perfil Gerado por IA
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{ap.message_count} msgs analisadas</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {sections.map(s => ap[s.key] ? (
+                            <div key={s.key} style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px 14px', borderLeft: `3px solid ${s.color}` }}>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: s.color, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                <i className={`fas fa-${s.icon}`} style={{ marginRight: '5px' }}></i>{s.label}
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.55 }}>{ap[s.key]}</div>
+                            </div>
+                          ) : null)}
+                        </div>
+                        <button onClick={() => setExpanded(e => ({ ...e, [p.id]: false }))} style={{
+                          marginTop: '10px', width: '100%', padding: '6px', background: 'transparent',
+                          border: '1px solid #e2e8f0', borderRadius: '6px', color: '#94a3b8',
+                          cursor: 'pointer', fontSize: '12px',
+                        }}>
+                          <i className="fas fa-chevron-up" style={{ marginRight: '5px' }}></i>Recolher
+                        </button>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Clica no badge para expandir */}
+                  {p.ai_profile && !expanded[p.id] && (
+                    <button onClick={() => setExpanded(e => ({ ...e, [p.id]: true }))} style={{
+                      marginTop: '10px', width: '100%', padding: '6px', background: '#faf5ff',
+                      border: '1px solid #ddd6fe', borderRadius: '6px', color: '#7c3aed',
+                      cursor: 'pointer', fontSize: '12px',
+                    }}>
+                      <i className="fas fa-chevron-down" style={{ marginRight: '5px' }}></i>Ver Perfil IA
+                    </button>
+                  )}
                 </div>
               )
             }
@@ -2537,28 +3083,56 @@ function EmailScreen({ onNavigateConfig }) {
 // ─────────────────────────────────────────────────────────────
 // WppGroupsManagerScreen — Selecionar grupos para monitorar
 // ─────────────────────────────────────────────────────────────
-function WppGroupsManagerScreen() {
-  const [groups,  setGroups]  = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [search,  setSearch]  = React.useState('');
-  const [filter,  setFilter]  = React.useState('all'); // all | monitored | unmonitored
-  const [toggling, setToggling] = React.useState({});  // wpp_id → bool
-  const [editingId, setEditingId] = React.useState(null);
-  const [editName,  setEditName]  = React.useState('');
+function WppGroupsManagerScreen({ onSelectGroup }) {
+  const [groups,        setGroups]        = React.useState([]);
+  const [statsMap,      setStatsMap]      = React.useState({});
+  const [hoveredId,     setHoveredId]     = React.useState(null);
+  const [loading,       setLoading]       = React.useState(true);
+  const [search,        setSearch]        = React.useState('');
+  const [filter,        setFilter]        = React.useState('all'); // all | monitored | unmonitored
+  const [toggling,      setToggling]      = React.useState({});   // wpp_id → bool
+  const [editingId,     setEditingId]     = React.useState(null);
+  const [editName,      setEditName]      = React.useState('');
+  const [pendingToggle, setPendingToggle] = React.useState(null);  // grupo aguardando escolha de período
+
+  // null = ilimitado; número = limite em dias
+  const _mhdRaw = localStorage.getItem('envox_max_history_days');
+  const maxHistoryDays = (_mhdRaw === '' || _mhdRaw === null) ? null : parseInt(_mhdRaw, 10);
+
+  // -1 = ilimitado; número = limite de grupos
+  const _mgRaw = localStorage.getItem('envox_max_groups');
+  const maxGroups = (_mgRaw === null || _mgRaw === '-1') ? -1 : parseInt(_mgRaw, 10);
 
   const load = () => {
     setLoading(true);
-    window.apiGet('/wpp/available-groups')
-      .then(d => setGroups(Array.isArray(d) ? d : []))
-      .catch(() => window.showToast('Erro ao carregar grupos. Verifique a conexão WhatsApp.', 'error'))
-      .finally(() => setLoading(false));
+    Promise.all([
+      window.apiGet('/wpp/available-groups'),
+      window.apiGet('/dashboard/groups').catch(() => []),
+    ]).then(([wppGroups, dashGroups]) => {
+      setGroups(Array.isArray(wppGroups) ? wppGroups : []);
+      const sm = {};
+      (Array.isArray(dashGroups) ? dashGroups : []).forEach(dg => {
+        if (dg.conversation_id) {
+          sm[dg.conversation_id] = {
+            temperature_score: dg.temperature_score || 0,
+            open_alerts: dg.open_alerts || 0,
+            followups_pending: dg.followups_pending || 0,
+            conversation_name: dg.conversation_name || '',
+          };
+        }
+      });
+      setStatsMap(sm);
+    })
+    .catch(() => window.showToast('Erro ao carregar grupos. Verifique a conexão WhatsApp.', 'error'))
+    .finally(() => setLoading(false));
   };
 
   React.useEffect(load, []);
 
   const filtered = groups.filter(g => {
-    const name = (g.custom_name || g.name || '').toLowerCase();
-    const matchSearch = !search || name.includes(search.toLowerCase());
+    const name = (g.name || g.custom_name || '').toLowerCase();
+    const matchSearch = !search || name.includes(search.toLowerCase())
+      || (g.custom_name || '').toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === 'all'
       || (filter === 'monitored' && g.is_monitored)
       || (filter === 'unmonitored' && !g.is_monitored);
@@ -2567,7 +3141,18 @@ function WppGroupsManagerScreen() {
 
   const monitoredCount = groups.filter(g => g.is_monitored).length;
 
-  async function handleToggle(g) {
+  function handleToggle(g) {
+    if (!g.is_monitored) {
+      // Ativar → abre modal de escolha de período
+      setPendingToggle(g);
+      return;
+    }
+    // Desativar → direto
+    confirmToggle(g, null);
+  }
+
+  async function confirmToggle(g, days_back) {
+    setPendingToggle(null);
     setToggling(t => ({ ...t, [g.wpp_id]: true }));
     try {
       await window.apiPost('/wpp/groups/toggle', {
@@ -2575,13 +3160,26 @@ function WppGroupsManagerScreen() {
         name: g.name,
         participant_count: g.participant_count,
         enable: !g.is_monitored,
+        days_back,
       });
       setGroups(prev => prev.map(x =>
         x.wpp_id === g.wpp_id ? { ...x, is_monitored: !x.is_monitored } : x
       ));
-      window.showToast(g.is_monitored ? 'Monitoramento desativado.' : 'Grupo ativado para monitoramento!', g.is_monitored ? 'info' : 'success');
-    } catch {
-      window.showToast('Erro ao alterar monitoramento.', 'error');
+      if (g.is_monitored) {
+        window.showToast('Monitoramento desativado.', 'info');
+      } else if (days_back === 0) {
+        window.showToast('Grupo ativado! Monitorando a partir de agora.', 'success');
+      } else {
+        const label = days_back === null ? 'todo o histórico disponível' : `os últimos ${days_back} dias`;
+        window.showToast(`Grupo ativado! Importando ${label}...`, 'success');
+      }
+    } catch(err) {
+      const msg = err?.message || '';
+      if (msg.includes('403') || msg.includes('Limite')) {
+        window.showToast(msg.replace(/^[^:]+:\s*/, '') || 'Limite de grupos do plano atingido. Faça upgrade.', 'error');
+      } else {
+        window.showToast('Erro ao alterar monitoramento.', 'error');
+      }
     } finally {
       setToggling(t => ({ ...t, [g.wpp_id]: false }));
     }
@@ -2607,17 +3205,44 @@ function WppGroupsManagerScreen() {
 
   function GroupCard({ g }) {
     const isToggling = toggling[g.wpp_id];
-    const displayName = g.custom_name || g.name || g.wpp_id;
-    const initials = displayName.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
+    const wppName = g.name || g.wpp_id;
+    const initials = wppName.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
     const isEditing = editingId === g.wpp_id;
+    const knownParticipants = (g.participants || []);
+    const showParticipants = knownParticipants.slice(0, 5);
+    const extraCount = knownParticipants.length - showParticipants.length;
+    const stats = (g.conversation_id && statsMap[g.conversation_id]) || {};
+    const tempScore = stats.temperature_score || 0;
+    const openAlerts = stats.open_alerts || 0;
+    const followups = stats.followups_pending || 0;
+    const canNavigate = g.is_monitored && !!g.conversation_id && !!onSelectGroup;
+    const isHovered = hoveredId === g.wpp_id;
+
+    function handleGroupDetail() {
+      if (!canNavigate) return;
+      onSelectGroup({
+        conversation_id: g.conversation_id,
+        conversation_name: g.custom_name || stats.conversation_name || g.name || g.wpp_id,
+        temperature_score: tempScore,
+        open_alerts: openAlerts,
+        followups_pending: followups,
+      });
+    }
 
     return (
-      <div style={{
-        background: '#1e293b', border: `1px solid ${g.is_monitored ? '#0d9488' : '#334155'}`,
-        borderRadius: '12px', padding: '14px 16px',
-        display: 'flex', alignItems: 'center', gap: '14px',
-        transition: 'border-color 0.2s',
-      }}>
+      <div
+        onClick={canNavigate ? handleGroupDetail : undefined}
+        onMouseEnter={canNavigate ? () => setHoveredId(g.wpp_id) : undefined}
+        onMouseLeave={canNavigate ? () => setHoveredId(null) : undefined}
+        style={{
+          background: isHovered ? '#243447' : '#1e293b',
+          border: `1px solid ${g.is_monitored ? '#0d9488' : '#334155'}`,
+          borderRadius: '12px', padding: '14px 16px',
+          display: 'flex', alignItems: 'center', gap: '14px',
+          transition: 'border-color 0.2s, background 0.12s',
+          cursor: canNavigate ? 'pointer' : 'default',
+        }}
+      >
         {/* Avatar */}
         <div style={{
           width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
@@ -2631,7 +3256,7 @@ function WppGroupsManagerScreen() {
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
           {isEditing ? (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
               <input
                 autoFocus
                 value={editName}
@@ -2648,12 +3273,12 @@ function WppGroupsManagerScreen() {
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {displayName}
+                {wppName}
               </span>
               {g.is_monitored && (
                 <button
-                  onClick={() => { setEditingId(g.wpp_id); setEditName(g.custom_name || g.name || ''); }}
-                  title="Editar nome"
+                  onClick={e => { e.stopPropagation(); setEditingId(g.wpp_id); setEditName(g.custom_name || g.name || ''); }}
+                  title="Editar apelido"
                   style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px', fontSize: '11px', flexShrink: 0 }}
                 >
                   <i className="fas fa-pen" />
@@ -2662,7 +3287,9 @@ function WppGroupsManagerScreen() {
             </div>
           )}
           {g.custom_name && !isEditing && (
-            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>Original: {g.name}</div>
+            <div style={{ fontSize: '11px', color: '#0d9488', marginTop: '1px', fontStyle: 'italic' }}>
+              Apelido: {g.custom_name}
+            </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '12px', color: '#94a3b8' }}>
@@ -2674,11 +3301,48 @@ function WppGroupsManagerScreen() {
               </span>
             )}
           </div>
+          {/* Stats row — temperatura, alertas, follow-ups (apenas grupos monitorados) */}
+          {g.is_monitored && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: tempScore >= 60 ? '#10b981' : tempScore >= 40 ? '#f59e0b' : '#ef4444' }}>
+                🌡 {tempScore}°
+              </span>
+              {openAlerts > 0 && (
+                <span style={{ fontSize: '11px', color: '#ef4444', background: 'rgba(239,68,68,0.12)', padding: '1px 7px', borderRadius: '999px' }}>
+                  🔔 {openAlerts} alerta{openAlerts > 1 ? 's' : ''}
+                </span>
+              )}
+              {followups > 0 && (
+                <span style={{ fontSize: '11px', color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '1px 7px', borderRadius: '999px' }}>
+                  ⏰ {followups} follow-up
+                </span>
+              )}
+              {canNavigate && (
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: isHovered ? '#0d9488' : '#475569', transition: 'color 0.15s' }}>
+                  Ver detalhes <i className="fas fa-chevron-right" style={{ fontSize: '9px' }} />
+                </span>
+              )}
+            </div>
+          )}
+          {showParticipants.length > 0 && (
+            <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {showParticipants.map((name, i) => (
+                <span key={i} style={{
+                  fontSize: '11px', background: '#0f172a', color: '#94a3b8',
+                  padding: '2px 8px', borderRadius: '999px', border: '1px solid #334155',
+                  maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{name}</span>
+              ))}
+              {extraCount > 0 && (
+                <span style={{ fontSize: '11px', color: '#64748b', padding: '2px 4px' }}>+{extraCount}</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Toggle */}
         <button
-          onClick={() => handleToggle(g)}
+          onClick={e => { e.stopPropagation(); handleToggle(g); }}
           disabled={isToggling}
           style={{
             background: g.is_monitored ? '#0d9488' : '#374151',
@@ -2697,9 +3361,11 @@ function WppGroupsManagerScreen() {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader
-        title="Gerenciar Grupos"
-        subtitle={`${monitoredCount} monitorado(s) de ${groups.length} disponíveis`}
-        action={
+        title="Grupos WhatsApp"
+        subtitle={maxGroups === -1
+          ? `${monitoredCount} monitorado(s) de ${groups.length} disponíveis · Grupos ilimitados`
+          : `${monitoredCount} / ${maxGroups} grupos do plano · ${groups.length} disponíveis`}
+        actions={
           <button onClick={load} style={{ background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px' }}>
             <i className="fas fa-sync-alt" style={{ marginRight: '6px' }}></i>Atualizar
           </button>
@@ -2746,6 +3412,89 @@ function WppGroupsManagerScreen() {
           </div>
         )}
       </div>
+
+      {/* Modal de escolha de período de backfill */}
+      {pendingToggle && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={() => setPendingToggle(null)}>
+          <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '28px', width: 'min(460px, 100%)', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '20px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(20,184,166,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="fas fa-clock" style={{ color: '#14b8a6', fontSize: '18px' }}></i>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '16px', color: '#f1f5f9', marginBottom: '4px' }}>Recuperar histórico</div>
+                <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.4 }}>
+                  Quanto tempo de histórico deseja importar para <strong style={{ color: '#94a3b8' }}>{pendingToggle.name || pendingToggle.wpp_id}</strong>?
+                </div>
+              </div>
+            </div>
+
+            {/* Opções */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+              {[
+                { label: 'A partir de agora', sub: 'Sem histórico — só novas mensagens', days: 0    },
+                { label: 'Últimos 3 meses',   sub: '90 dias de histórico',              days: 90   },
+                { label: 'Últimos 6 meses',   sub: '180 dias de histórico',             days: 180  },
+                { label: 'Último ano',         sub: '365 dias de histórico',             days: 365  },
+                { label: 'Desde o começo',     sub: 'Todo o histórico disponível',       days: null },
+              ].map(opt => {
+                // Bloqueado quando o plano tem limite e a opção ultrapassa esse limite
+                const locked = opt.days !== 0 && maxHistoryDays !== null && (opt.days === null || opt.days > maxHistoryDays);
+                return (
+                <button key={String(opt.days)} disabled={locked}
+                  onClick={() => !locked && confirmToggle(pendingToggle, opt.days)}
+                  style={{
+                    background: locked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
+                    border: '1px solid ' + (locked ? '#1e293b' : '#334155'),
+                    borderRadius: '10px', padding: '12px 16px', cursor: locked ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    transition: 'background 0.15s, border-color 0.15s',
+                    opacity: locked ? 0.5 : 1,
+                  }}
+                  onMouseEnter={e => { if (!locked) { e.currentTarget.style.background = 'rgba(20,184,166,0.1)'; e.currentTarget.style.borderColor = '#14b8a6'; } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = locked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = locked ? '#1e293b' : '#334155'; }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: locked ? '#475569' : '#f1f5f9' }}>{opt.label}</div>
+                    <div style={{ fontSize: '12px', color: locked ? '#334155' : '#64748b', marginTop: '2px' }}>{opt.sub}</div>
+                  </div>
+                  {locked ? (
+                    <div style={{ position: 'relative', display: 'inline-block' }}
+                      onMouseEnter={e => { const t = e.currentTarget.querySelector('.hist-tip'); if (t) t.style.opacity = '1'; }}
+                      onMouseLeave={e => { const t = e.currentTarget.querySelector('.hist-tip'); if (t) t.style.opacity = '0'; }}>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: '#7c3aed', background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '6px', padding: '3px 8px', whiteSpace: 'nowrap', cursor: 'not-allowed' }}>
+                        <i className="fas fa-lock" style={{ marginRight: '4px', fontSize: '10px' }}></i>Upgrade necessário
+                      </span>
+                      <div className="hist-tip" style={{
+                        position: 'absolute', bottom: 'calc(100% + 6px)', right: 0,
+                        background: '#0f172a', border: '1px solid #334155', borderRadius: '8px',
+                        padding: '6px 10px', fontSize: '11px', color: '#94a3b8',
+                        whiteSpace: 'nowrap', pointerEvents: 'none',
+                        opacity: 0, transition: 'opacity 0.15s', zIndex: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                      }}>
+                        Faça upgrade do seu plano para desbloquear
+                        <div style={{ position: 'absolute', bottom: '-5px', right: '14px', width: '8px', height: '8px', background: '#0f172a', border: '1px solid #334155', borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg)' }}></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <i className="fas fa-chevron-right" style={{ color: '#475569', fontSize: '12px' }}></i>
+                  )}
+                </button>
+                );
+              })}
+            </div>
+
+            <button onClick={() => setPendingToggle(null)}
+              style={{ width: '100%', background: 'transparent', border: '1px solid #334155', borderRadius: '10px', padding: '10px', color: '#64748b', cursor: 'pointer', fontSize: '13px' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2758,15 +3507,18 @@ function RangeSummaryScreen() {
   const today = new Date().toISOString().slice(0, 10);
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
 
-  const [conversations, setConversations] = React.useState([]);
-  const [convSearch,    setConvSearch]    = React.useState('');
-  const [selectedConv,  setSelectedConv]  = React.useState(null);
-  const [startDate,     setStartDate]     = React.useState(weekAgo);
-  const [endDate,       setEndDate]       = React.useState(today);
-  const [loading,       setLoading]       = React.useState(false);
-  const [loadingConvs,  setLoadingConvs]  = React.useState(false);
-  const [result,        setResult]        = React.useState(null);
-  const [showConvList,  setShowConvList]  = React.useState(false);
+  const [conversations,  setConversations]  = React.useState([]);
+  const [convSearch,     setConvSearch]     = React.useState('');
+  const [selectedConv,   setSelectedConv]   = React.useState(null);
+  const [startDate,      setStartDate]      = React.useState(weekAgo);
+  const [endDate,        setEndDate]        = React.useState(today);
+  const [loading,        setLoading]        = React.useState(false);
+  const [loadingConvs,   setLoadingConvs]   = React.useState(false);
+  const [result,         setResult]         = React.useState(null);
+  const [showConvList,   setShowConvList]   = React.useState(false);
+  const [summaryType,    setSummaryType]    = React.useState('executive'); // 'executive' | 'general'
+  const [sending,        setSending]        = React.useState(false);
+  const [editingText,    setEditingText]    = React.useState(null); // null = não editando; string = texto editado
 
   const isMobile = useIsMobile();
 
@@ -2779,6 +3531,12 @@ function RangeSummaryScreen() {
       .finally(() => setLoadingConvs(false));
   }, []);
 
+  // Ao trocar o tipo de resumo, sincroniza o texto de edição com o resultado atual
+  React.useEffect(() => {
+    if (result && summaryType === 'general') setEditingText(result.general_text || '');
+    else setEditingText(null);
+  }, [summaryType, result]);
+
   const filteredConvs = conversations.filter(c =>
     !convSearch || c.name.toLowerCase().includes(convSearch.toLowerCase())
   );
@@ -2790,6 +3548,16 @@ function RangeSummaryScreen() {
     setEndDate(end.toISOString().slice(0, 10));
   }
 
+  function setTodayRange() {
+    const d = new Date().toISOString().slice(0, 10);
+    setStartDate(d); setEndDate(d);
+  }
+
+  function setYesterdayRange() {
+    const d = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    setStartDate(d); setEndDate(d);
+  }
+
   async function handleGenerate() {
     if (!selectedConv) { window.showToast('Selecione um grupo.', 'warning'); return; }
     if (!startDate || !endDate) { window.showToast('Informe o período.', 'warning'); return; }
@@ -2797,15 +3565,48 @@ function RangeSummaryScreen() {
 
     setLoading(true);
     setResult(null);
+    setEditingText(null);
     try {
       const data = await window.apiGet(
         `/conversations/${selectedConv.id}/range-summary?start_date=${startDate}&end_date=${endDate}`
       );
       setResult(data);
+      if (summaryType === 'general') setEditingText(data.general_text || '');
     } catch(e) {
       window.showToast('Erro ao gerar resumo. Tente novamente.', 'error');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSendToGroup() {
+    if (!result || !selectedConv) return;
+    const textToSend = (editingText !== null ? editingText : result.general_text || '').trim();
+    if (!textToSend) { window.showToast('Texto do resumo está vazio.', 'warning'); return; }
+
+    if (!result.conversation.wpp_group_id) {
+      window.showToast('Este grupo não tem ID WhatsApp configurado. Associe-o na tela de Grupos WhatsApp.', 'error');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const r = await fetch(`/api/v1/conversations/${selectedConv.id}/send-general-summary`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + window.getToken(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToSend }),
+      });
+      if (!r.ok) {
+        let detail = 'Falha ao enviar. Verifique a conexão WhatsApp.';
+        try { const j = await r.json(); detail = j.detail || detail; } catch(_) {}
+        window.showToast(detail, 'error');
+        return;
+      }
+      window.showToast('Resumo enviado com sucesso para o grupo!', 'success');
+    } catch(e) {
+      window.showToast('Erro de rede ao enviar. Verifique sua conexão.', 'error');
+    } finally {
+      setSending(false);
     }
   }
 
@@ -2923,9 +3724,45 @@ function RangeSummaryScreen() {
             />
           </div>
 
+          {/* Tipo de resumo */}
+          <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: 500 }}>
+              <i className="fas fa-file-alt" style={{ marginRight: '6px' }}></i>Tipo de Resumo
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {[
+                { key: 'executive', icon: 'chart-line', label: 'Executivo Estratégico', desc: 'KPIs, tags, alertas — uso interno' },
+                { key: 'general',   icon: 'comments',   label: 'Resumo Geral',           desc: 'Texto descritivo — envio no grupo' },
+              ].map(({ key, icon, label, desc }) => (
+                <button
+                  key={key}
+                  onClick={() => { setSummaryType(key); setResult(null); setEditingText(null); }}
+                  style={{
+                    flex: 1, background: summaryType === key ? 'rgba(13,148,136,0.15)' : '#0f172a',
+                    border: `2px solid ${summaryType === key ? '#0d9488' : '#334155'}`,
+                    borderRadius: '10px', padding: '10px 14px', cursor: 'pointer',
+                    textAlign: 'left', transition: 'all .15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
+                    <i className={`fas fa-${icon}`} style={{ color: summaryType === key ? '#0d9488' : '#64748b', fontSize: '13px' }} />
+                    <span style={{ fontWeight: 600, fontSize: '13px', color: summaryType === key ? '#0d9488' : '#d1d5db' }}>{label}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>{desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Atalhos + botão */}
           <div style={{ gridColumn: isMobile ? '1' : '1 / -1', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', color: '#64748b' }}>Atalhos:</span>
+            {[['hoje', 'Hoje', setTodayRange], ['ontem', 'Ontem', setYesterdayRange]].map(([k, label, fn]) => (
+              <button key={k} onClick={fn} style={{
+                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
+                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+              }}>{label}</button>
+            ))}
             {[[7,'7 dias'],[14,'14 dias'],[30,'30 dias'],[90,'3 meses']].map(([d, label]) => (
               <button key={d} onClick={() => setQuickRange(d)} style={{
                 background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
@@ -2942,13 +3779,92 @@ function RangeSummaryScreen() {
                 fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
               }}
             >
-              {loading ? <><i className="fas fa-spinner fa-spin" />Gerando...</> : <><i className="fas fa-chart-bar" />Gerar Resumo</>}
+              {loading
+                ? <><i className="fas fa-spinner fa-spin" />Gerando...</>
+                : summaryType === 'general'
+                  ? <><i className="fas fa-file-alt" />Gerar Resumo Geral</>
+                  : <><i className="fas fa-chart-bar" />Gerar Resumo Executivo</>
+              }
             </button>
           </div>
         </div>
 
         {/* ── Resultado ── */}
-        {result && (
+        {result && summaryType === 'general' && (
+          /* ── RESUMO GERAL ─────────────────────────────────────── */
+          <div>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9' }}>{result.conversation.name}</div>
+                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                  {result.period.start} → {result.period.end}
+                  {!result.conversation.wpp_group_id && (
+                    <span style={{ marginLeft: '10px', color: '#f59e0b', fontSize: '12px' }}>
+                      <i className="fas fa-exclamation-triangle" style={{ marginRight: '4px' }} />
+                      Sem WhatsApp vinculado
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* Botão Enviar no Grupo */}
+              <button
+                onClick={handleSendToGroup}
+                disabled={sending || !result.conversation.wpp_group_id}
+                title={!result.conversation.wpp_group_id ? 'Configure o wpp_group_id na tela de Grupos WhatsApp' : 'Enviar este resumo para o grupo WhatsApp'}
+                style={{
+                  marginLeft: 'auto',
+                  background: sending || !result.conversation.wpp_group_id ? '#334155' : '#25d366',
+                  border: 'none', borderRadius: '10px', color: 'white',
+                  padding: '10px 22px', cursor: sending || !result.conversation.wpp_group_id ? 'not-allowed' : 'pointer',
+                  fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+                  transition: 'background .15s',
+                }}
+              >
+                {sending
+                  ? <><i className="fas fa-spinner fa-spin" />Enviando...</>
+                  : <><i className="fab fa-whatsapp" style={{ fontSize: '16px' }} />Enviar no Grupo</>
+                }
+              </button>
+            </div>
+
+            {/* Card de texto editável */}
+            <div style={{ background: '#1e293b', borderRadius: '14px', border: '1px solid #334155', overflow: 'hidden', marginBottom: '16px' }}>
+              <div style={{
+                padding: '14px 18px', borderBottom: '1px solid #334155',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                  <i className="fas fa-comments" style={{ marginRight: '6px', color: '#0d9488' }}></i>Resumo Geral
+                </div>
+                <div style={{ fontSize: '11px', color: '#475569' }}>
+                  <i className="fas fa-edit" style={{ marginRight: '4px' }} />Editável antes de enviar
+                </div>
+              </div>
+              <textarea
+                value={editingText !== null ? editingText : (result.general_text || '')}
+                onChange={e => setEditingText(e.target.value)}
+                rows={18}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'transparent', border: 'none', outline: 'none',
+                  color: '#d1d5db', fontSize: '14px', lineHeight: 1.75,
+                  padding: '18px', resize: 'vertical', fontFamily: 'inherit',
+                }}
+              />
+            </div>
+
+            <div style={{ fontSize: '12px', color: '#475569', textAlign: 'right' }}>
+              {result.conversation.wpp_group_id
+                ? <><i className="fas fa-check-circle" style={{ color: '#10b981', marginRight: '4px' }} />Grupo vinculado — pronto para envio</>
+                : <><i className="fas fa-info-circle" style={{ marginRight: '4px' }} />Para enviar, vincule este grupo na tela de Grupos WhatsApp</>
+              }
+            </div>
+          </div>
+        )}
+
+        {result && summaryType === 'executive' && (
+          /* ── RESUMO EXECUTIVO ESTRATÉGICO ─────────────────────── */
           <div>
             {/* Header do resultado */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -3065,9 +3981,13 @@ function RangeSummaryScreen() {
 
         {!result && !loading && (
           <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
-            <i className="fas fa-chart-line" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
+            <i className={`fas fa-${summaryType === 'general' ? 'comments' : 'chart-line'}`} style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
             <div style={{ fontSize: '16px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Selecione um grupo e um período</div>
-            <div style={{ fontSize: '14px' }}>O resumo analítico será gerado com estatísticas, tags e análise executiva.</div>
+            <div style={{ fontSize: '14px' }}>
+              {summaryType === 'general'
+                ? 'O Resumo Geral será gerado como uma ata de reunião, pronto para envio no grupo.'
+                : 'O Resumo Executivo será gerado com estatísticas, tags e análise estratégica.'}
+            </div>
           </div>
         )}
       </div>
@@ -3087,6 +4007,112 @@ function renderMd(text) {
     .replace(/^## (.+)$/gm, '<h2 style="font-size:15px;color:#f1f5f9;margin:14px 0 8px">$1</h2>')
     .replace(/^# (.+)$/gm, '<h1 style="font-size:16px;color:#f1f5f9;margin:14px 0 8px">$1</h1>')
     .replace(/\n/g, '<br>');
+}
+
+// ─────────────────────────────────────────────────────────────
+// ExprCard — card de expressão do agente (fora do AgentConfigScreen
+// para evitar remount em cada re-render do pai e preservar inputRef)
+// ─────────────────────────────────────────────────────────────
+function ExprCard({ expr, uploadingExpr, onUpload, onRemoveImage, onRemove, onChangeField }) {
+  const inputRef = React.useRef();
+  const [imgError, setImgError] = React.useState(false);
+  React.useEffect(() => { setImgError(false); }, [expr.image_url]);
+  const busy = uploadingExpr[expr.type];
+  const showImg = expr.image_url && !imgError;
+  return (
+    <div style={{
+      background: '#1e293b', border: '1px solid #334155', borderRadius: '12px',
+      padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center',
+      position: 'relative',
+    }}>
+      {/* Botão deletar expressão */}
+      <button onClick={() => onRemove(expr.type)} title="Remover expressão"
+        style={{ position: 'absolute', top: '8px', right: '8px', width: '20px', height: '20px',
+          background: '#374151', border: 'none', borderRadius: '50%', color: '#94a3b8',
+          cursor: 'pointer', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = '#ef4444'}
+        onMouseLeave={e => e.currentTarget.style.background = '#374151'}>
+        <i className="fas fa-trash" />
+      </button>
+
+      {/* Imagem ou emoji */}
+      <div style={{ position: 'relative', width: '72px', height: '72px' }}>
+        {showImg ? (
+          <img src={expr.image_url} alt={expr.label}
+            onError={() => setImgError(true)}
+            style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0d9488' }} />
+        ) : (
+          <div style={{
+            width: '72px', height: '72px', borderRadius: '50%', background: '#0f172a',
+            border: '2px dashed #475569', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '28px',
+          }}>{expr.emoji}</div>
+        )}
+        {showImg && (
+          <button onClick={() => onRemoveImage(expr.type)}
+            style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px',
+              background: '#ef4444', border: 'none', borderRadius: '50%', color: 'white',
+              cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Label editável */}
+      <input
+        value={expr.label}
+        onChange={e => onChangeField(expr.type, 'label', e.target.value)}
+        maxLength={30}
+        style={{
+          width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px',
+          color: '#f1f5f9', padding: '5px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 600,
+          boxSizing: 'border-box',
+        }}
+        placeholder="Rótulo"
+      />
+
+      {/* Emoji padrão (usado quando não há imagem) */}
+      <input
+        value={expr.emoji}
+        onChange={e => onChangeField(expr.type, 'emoji', e.target.value.slice(-2))}
+        maxLength={2}
+        style={{
+          width: '52px', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px',
+          color: '#f1f5f9', padding: '6px', textAlign: 'center', fontSize: '20px',
+        }}
+        title="Emoji padrão (quando sem imagem)"
+      />
+
+      {/* Upload de imagem da expressão */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/*"
+        style={{ display: 'none' }}
+        onChange={e => { if (e.target.files[0]) onUpload(expr.type, e.target.files[0]); e.target.value = ''; }}
+      />
+      <button
+        onClick={() => inputRef.current && inputRef.current.click()}
+        disabled={busy}
+        style={{
+          background: busy ? '#0d9488' : '#0f172a',
+          border: '1px solid ' + (busy ? '#0d9488' : '#475569'),
+          borderRadius: '8px', color: busy ? 'white' : '#94a3b8',
+          padding: '5px 10px', cursor: busy ? 'wait' : 'pointer',
+          fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px',
+          transition: 'all 0.15s',
+        }}>
+        {busy ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-image" />}
+        {busy ? 'Enviando...' : showImg ? 'Trocar imagem' : 'Adicionar foto'}
+      </button>
+      {!showImg && (
+        <div style={{ fontSize: '10px', color: '#475569', textAlign: 'center', lineHeight: 1.3 }}>
+          PNG, JPG, GIF, WebP<br/>Sticker do WhatsApp (.webp)
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3149,7 +4175,7 @@ function AgentConfigScreen() {
   async function handleSave() {
     setSaving(true);
     try {
-      await fetch('/api/v1/agent/config', {
+      const r = await fetch('/api/v1/agent/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + window.getToken() },
         body: JSON.stringify({
@@ -3157,6 +4183,7 @@ function AgentConfigScreen() {
           expressions: expressions.map(e => ({ type: e.type, label: e.label, emoji: e.emoji })),
         }),
       });
+      if (!r.ok) { window.showToast('Erro ao salvar agente.', 'error'); return; }
       window.showToast('Agente salvo com sucesso!', 'success');
     } catch { window.showToast('Erro ao salvar.', 'error'); }
     finally { setSaving(false); }
@@ -3196,11 +4223,16 @@ function AgentConfigScreen() {
         headers: { Authorization: 'Bearer ' + window.getToken() },
         body: fd,
       });
-      if (!r.ok) { window.showToast('Erro ao enviar imagem.', 'error'); return; }
+      if (!r.ok) {
+        let msg = 'Erro ao enviar imagem.';
+        try { const err = await r.json(); msg = err.detail || msg; } catch {}
+        window.showToast(msg, 'error');
+        return;
+      }
       const d = await r.json();
       setExpressions(prev => prev.map(e => e.type === type ? { ...e, image_url: d.image_url } : e));
       window.showToast('Expressão atualizada!', 'success');
-    } catch { window.showToast('Erro.', 'error'); }
+    } catch (e) { window.showToast('Erro de rede: ' + e.message, 'error'); }
     finally { setUploadingExpr(prev => ({ ...prev, [type]: false })); }
   }
 
@@ -3222,86 +4254,6 @@ function AgentConfigScreen() {
     const type = `c_${slug}_${Date.now().toString(36)}`;
     setExpressions(prev => [...prev, { type, label, emoji: newExprForm.emoji || '🤖', image_url: null, desc: '' }]);
     setNewExprForm({ open: false, label: '', emoji: '😊' });
-  }
-
-  // Componente auxiliar: card de expressão
-  function ExprCard({ expr }) {
-    const inputRef = React.useRef();
-    const busy = uploadingExpr[expr.type];
-    return (
-      <div style={{
-        background: '#1e293b', border: '1px solid #334155', borderRadius: '12px',
-        padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center',
-        position: 'relative',
-      }}>
-        {/* Botão deletar expressão */}
-        <button onClick={() => removeExpression(expr.type)} title="Remover expressão"
-          style={{ position: 'absolute', top: '8px', right: '8px', width: '20px', height: '20px',
-            background: '#374151', border: 'none', borderRadius: '50%', color: '#94a3b8',
-            cursor: 'pointer', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.15s' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#ef4444'}
-          onMouseLeave={e => e.currentTarget.style.background = '#374151'}>
-          <i className="fas fa-trash" />
-        </button>
-        {/* Imagem ou emoji */}
-        <div style={{ position: 'relative', width: '72px', height: '72px' }}>
-          {expr.image_url ? (
-            <img src={expr.image_url} alt={expr.label}
-              style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155' }} />
-          ) : (
-            <div style={{
-              width: '72px', height: '72px', borderRadius: '50%', background: '#0f172a',
-              border: '2px dashed #475569', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '28px',
-            }}>{expr.emoji}</div>
-          )}
-          {expr.image_url && (
-            <button onClick={() => handleExprRemove(expr.type)}
-              style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px',
-                background: '#ef4444', border: 'none', borderRadius: '50%', color: 'white',
-                cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ✕
-            </button>
-          )}
-        </div>
-        {/* Label editável */}
-        <input
-          value={expr.label}
-          onChange={e => setExpressions(prev => prev.map(x => x.type === expr.type ? { ...x, label: e.target.value } : x))}
-          maxLength={30}
-          style={{
-            width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px',
-            color: '#f1f5f9', padding: '5px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 600,
-            boxSizing: 'border-box',
-          }}
-          placeholder="Rótulo"
-        />
-        {/* Emoji input */}
-        <input
-          value={expr.emoji}
-          onChange={e => setExpressions(prev => prev.map(x => x.type === expr.type ? { ...x, emoji: e.target.value.slice(-2) } : x))}
-          maxLength={2}
-          style={{
-            width: '52px', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px',
-            color: '#f1f5f9', padding: '6px', textAlign: 'center', fontSize: '20px',
-          }}
-          title="Emoji padrão"
-        />
-        {/* Upload imagem */}
-        <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
-          onChange={e => handleExprUpload(expr.type, e.target.files[0])} />
-        <button onClick={() => inputRef.current.click()} disabled={busy}
-          style={{
-            background: '#0f172a', border: '1px solid #475569', borderRadius: '8px',
-            color: '#94a3b8', padding: '5px 10px', cursor: busy ? 'wait' : 'pointer',
-            fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px',
-          }}>
-          {busy ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-image" />}
-          {expr.image_url ? 'Trocar' : 'Upload'}
-        </button>
-      </div>
-    );
   }
 
   // Preview de como ficará a mensagem
@@ -3331,7 +4283,7 @@ function AgentConfigScreen() {
       <PageHeader
         title="Configuração do Agente"
         subtitle="Defina identidade, personalidade e expressões do agente automático"
-        action={
+        actions={
           <button onClick={handleSave} disabled={saving} style={{
             background: saving ? '#334155' : '#0d9488', border: 'none', borderRadius: '8px',
             color: 'white', padding: '8px 20px', cursor: saving ? 'not-allowed' : 'pointer',
@@ -3401,7 +4353,19 @@ function AgentConfigScreen() {
                 <div style={{ fontSize: '13px', color: '#64748b' }}>Crie, edite e remova expressões. Alterações são salvas pelo botão <strong style={{ color: '#94a3b8' }}>Salvar</strong> no topo.</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
-                {expressions.map(expr => <ExprCard key={expr.type} expr={expr} />)}
+                {expressions.map(expr => (
+                  <ExprCard
+                    key={expr.type}
+                    expr={expr}
+                    uploadingExpr={uploadingExpr}
+                    onUpload={handleExprUpload}
+                    onRemoveImage={handleExprRemove}
+                    onRemove={removeExpression}
+                    onChangeField={(type, field, value) =>
+                      setExpressions(prev => prev.map(x => x.type === type ? { ...x, [field]: value } : x))
+                    }
+                  />
+                ))}
               </div>
               {/* Nova expressão */}
               {newExprForm.open ? (
@@ -3521,6 +4485,18 @@ function AgentConfigScreen() {
                 }}>
                   {previewMsg}
                 </div>
+                {/* Imagem da expressão após a mensagem */}
+                {previewExpr?.image_url ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                    <img src={previewExpr.image_url} alt={previewExpr.label}
+                      style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0d9488' }} />
+                    <span style={{ fontSize: '10px', color: '#475569' }}>Imagem da expressão enviada após a mensagem</span>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '8px', fontSize: '10px', color: '#334155', fontStyle: 'italic' }}>
+                    {previewExpr?.emoji} Adicione uma foto à expressão "{previewExpr?.label}" para ela aparecer aqui
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -3530,4 +4506,451 @@ function AgentConfigScreen() {
   );
 }
 
-Object.assign(window, { IntelligenceScreen, GroupsScreen, ConversationScreen, TagsScreen, SummaryScreen, TeamScreen, ApiDocsScreen, ConfigScreen, UsersScreen, UserProfileModal, EmailAccountsSection, EmailScreen, WppGroupsManagerScreen, RangeSummaryScreen, AgentConfigScreen });
+// ── Automações do Sistema — CRUD completo (admin) — D-026 ────────
+const AUTOM_DOW_OPTIONS = [
+  ['mon', 'seg'], ['tue', 'ter'], ['wed', 'qua'], ['thu', 'qui'],
+  ['fri', 'sex'], ['sat', 'sáb'], ['sun', 'dom'],
+];
+
+const AUTOM_SEVERITY_OPTIONS = [
+  ['low', 'Baixa', '#64748b'],
+  ['medium', 'Média', '#ca8a04'],
+  ['high', 'Alta', '#ea580c'],
+  ['critical', 'Crítica', '#dc2626'],
+];
+
+function AutomJobRow({ job, onSaved }) {
+  const [editing, setEditing] = React.useState(false);
+  const [toggling, setToggling] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const ed = job.editavel || {};
+  const [hour, setHour] = React.useState(ed.hour ?? 6);
+  const [minute, setMinute] = React.useState(ed.minute ?? 0);
+  const [dow, setDow] = React.useState(ed.day_of_week || 'sun');
+  const [intervalMin, setIntervalMin] = React.useState(ed.interval_minutes ?? 15);
+
+  const numInput = { width: '64px', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--color-border-input)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)' };
+  const descStyle = { fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.6 };
+
+  async function toggleEnabled() {
+    setToggling(true);
+    try {
+      await window.apiPatch(`/system/jobs/${job.id}`, { enabled: !job.enabled });
+      window.showToast(job.enabled ? 'Job desativado' : 'Job ativado', 'success');
+      onSaved();
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao atualizar job', 'error');
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function saveSchedule() {
+    setSaving(true);
+    try {
+      const body = ed.tipo === 'interval'
+        ? { interval_minutes: parseInt(intervalMin) }
+        : ed.tipo === 'cron_weekly'
+        ? { day_of_week: dow, hour: parseInt(hour), minute: parseInt(minute) }
+        : { hour: parseInt(hour), minute: parseInt(minute) };
+      await window.apiPatch(`/system/jobs/${job.id}`, body);
+      window.showToast('Agendamento atualizado!', 'success');
+      setEditing(false);
+      onSaved();
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao salvar agendamento', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: '12px 14px', background: 'var(--color-bg-page)', borderRadius: '10px', border: '1px solid var(--color-border-card)', opacity: job.enabled ? 1 : 0.55 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '4px' }}>
+        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-primary)' }}>{job.nome}</span>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {job.envia_whatsapp && (
+            <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '9999px', background: '#dcfce7', color: '#166534', fontWeight: 600 }}>
+              <i className="fab fa-whatsapp" style={{ marginRight: '4px' }}></i>Envia WhatsApp
+            </span>
+          )}
+          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', background: '#e0f2f1', color: '#0d9488', fontWeight: 600 }}>{job.quando}</span>
+          <button onClick={() => setEditing(v => !v)} title="Editar agendamento" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0d9488', fontSize: '13px', padding: '2px 6px' }}>
+            <i className="fas fa-pen"></i>
+          </button>
+          <button onClick={toggleEnabled} disabled={toggling} title={job.enabled ? 'Desativar' : 'Ativar'} style={{ background: 'none', border: 'none', cursor: toggling ? 'wait' : 'pointer', fontSize: '18px', color: job.enabled ? '#16a34a' : '#94a3b8', padding: '2px 4px' }}>
+            <i className={job.enabled ? 'fas fa-toggle-on' : 'fas fa-toggle-off'}></i>
+          </button>
+        </div>
+      </div>
+      <div style={descStyle}>{job.descricao}</div>
+      {job.detalhe && <div style={{ ...descStyle, marginTop: '4px', fontStyle: 'italic', color: 'var(--color-text-tertiary, #94a3b8)' }}>{job.detalhe}</div>}
+      {job.proxima_execucao && (
+        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
+          Próxima execução: {new Date(job.proxima_execucao).toLocaleString('pt-BR')}
+        </div>
+      )}
+      {editing && (
+        <div style={{ marginTop: '10px', padding: '10px 12px', background: 'white', border: '1px solid var(--color-border-card)', borderRadius: '8px', display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          {ed.tipo === 'interval' ? (
+            <div>
+              <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Intervalo (minutos)</div>
+              <input type="number" min="1" style={numInput} value={intervalMin} onChange={e => setIntervalMin(e.target.value)} />
+            </div>
+          ) : (
+            <>
+              {ed.tipo === 'cron_weekly' && (
+                <div>
+                  <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Dia da semana</div>
+                  <select style={numInput} value={dow} onChange={e => setDow(e.target.value)}>
+                    {AUTOM_DOW_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Hora</div>
+                <input type="number" min="0" max="23" style={numInput} value={hour} onChange={e => setHour(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Minuto</div>
+                <input type="number" min="0" max="59" style={numInput} value={minute} onChange={e => setMinute(e.target.value)} />
+              </div>
+            </>
+          )}
+          <button onClick={saveSchedule} disabled={saving} style={{ padding: '7px 14px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AutomThresholdInput({ item, onSaved }) {
+  const [value, setValue] = React.useState(item.value);
+  const [saving, setSaving] = React.useState(false);
+  const dirty = String(value) !== String(item.value);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await window.apiPatch(`/system/settings/${item.key}`, { value: parseFloat(value) });
+      window.showToast('Configuração atualizada!', 'success');
+      onSaved();
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao salvar', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: '8px 12px', background: 'var(--color-bg-page)', borderRadius: '8px', border: '1px solid var(--color-border-card)' }}>
+      <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>{item.label}</div>
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+        <input
+          type="number"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          style={{ width: '76px', padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--color-border-input)', fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
+        />
+        {dirty && (
+          <button onClick={save} disabled={saving} title="Salvar" style={{ background: '#0d9488', border: 'none', color: 'white', borderRadius: '6px', width: '26px', height: '26px', cursor: saving ? 'not-allowed' : 'pointer' }}>
+            <i className="fas fa-check" style={{ fontSize: '11px' }}></i>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AutomAlertRuleModal({ rule, onClose, onSaved }) {
+  const isNew = !rule;
+  const [nome, setNome] = React.useState(rule?.nome || '');
+  const [keywords, setKeywords] = React.useState(rule?.keywords || []);
+  const [newKw, setNewKw] = React.useState('');
+  const [severity, setSeverity] = React.useState(rule?.severity || 'medium');
+  const [ativo, setAtivo] = React.useState(rule?.ativo ?? true);
+  const [saving, setSaving] = React.useState(false);
+
+  const inputStyle = {
+    width: '100%', padding: '9px 12px', boxSizing: 'border-box',
+    border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)',
+    fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none',
+    background: 'white', color: 'var(--color-text-primary)',
+  };
+  const labelStyle = { display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '5px' };
+
+  function addKeyword() {
+    const v = newKw.trim().toLowerCase();
+    if (v && !keywords.includes(v)) {
+      setKeywords(k => [...k, v]);
+      setNewKw('');
+    }
+  }
+
+  async function save() {
+    if (!nome.trim() || keywords.length === 0) {
+      window.showToast('Preencha nome e ao menos uma palavra-chave.', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const body = { nome: nome.trim(), keywords, severity, ativo };
+      if (isNew) await window.apiPost('/system/alert-rules', body);
+      else await window.apiPatch(`/system/alert-rules/${rule.id}`, body);
+      window.showToast(isNew ? 'Regra criada!' : 'Regra atualizada!', 'success');
+      onSaved();
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao salvar regra', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'white', borderRadius: '16px', padding: '28px', width: '460px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}>
+            <i className="fas fa-bell" style={{ marginRight: '8px', color: '#0d9488' }}></i>
+            {isNew ? 'Nova Regra de Alerta' : 'Editar Regra de Alerta'}
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px' }}>
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={labelStyle}>Nome da regra</label>
+            <input style={inputStyle} value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Menção a concorrente" />
+          </div>
+          <div>
+            <label style={labelStyle}>Palavras-chave (dispara se qualquer uma aparecer na mensagem)</label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input
+                style={inputStyle} value={newKw} onChange={e => setNewKw(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
+                placeholder="Digite e pressione Enter"
+              />
+              <button onClick={addKeyword} style={{ padding: '0 14px', background: '#e0f2f1', color: '#0d9488', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontWeight: 600 }}>+</button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+              {keywords.map(kw => (
+                <span key={kw} style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '9999px', background: '#f1f5f9', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {kw}
+                  <i className="fas fa-times" style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setKeywords(k => k.filter(x => x !== kw))}></i>
+                </span>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Severidade</label>
+            <select style={inputStyle} value={severity} onChange={e => setSeverity(e.target.value)}>
+              {AUTOM_SEVERITY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
+            <input type="checkbox" checked={ativo} onChange={e => setAtivo(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: '#0d9488' }} />
+            <span>Regra ativa</span>
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: '#f1f5f9', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: '#374151', fontFamily: 'var(--font-sans)' }}>
+            Cancelar
+          </button>
+          <button onClick={save} disabled={saving} style={{ padding: '9px 18px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {saving ? <><Spinner size={12} /> Salvando...</> : <><i className="fas fa-check"></i> {isNew ? 'Criar' : 'Salvar'}</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AutomationsScreen() {
+  const [data, setData]       = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError]     = React.useState(null);
+  const [ruleModal, setRuleModal] = React.useState(null); // null | 'new' | rule object
+  const [deletingId, setDeletingId] = React.useState(null);
+
+  const load = React.useCallback(() => {
+    return window.apiGet('/system/automations')
+      .then(d => { setData(d); setError(null); })
+      .catch(e => setError(e.message || 'Erro ao carregar'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  async function deleteRule(rule) {
+    if (!window.confirm(`Excluir a regra "${rule.nome}"?`)) return;
+    setDeletingId(rule.id);
+    try {
+      await window.apiDelete(`/system/alert-rules/${rule.id}`);
+      window.showToast('Regra excluída.', 'success');
+      load();
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao excluir regra', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const card = { background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border-card)', padding: '18px 20px', marginBottom: '16px' };
+  const cardTitle = { fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' };
+  const descStyle = { fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.6 };
+
+  return (
+    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <PageHeader title="Automações do Sistema" subtitle="Tudo que roda sozinho — jobs, regras e limites, agora editáveis por aqui" />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: 'var(--color-bg-page)' }}>
+        {loading && <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>}
+        {error && <div style={{ padding: '16px', color: '#dc2626' }}>{error}</div>}
+
+        {data && (
+          <>
+            {data.correcoes_recentes?.length > 0 && (
+              <div style={{ ...card, background: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                <div style={{ ...cardTitle, color: '#166534' }}>
+                  <span><i className="fas fa-circle-check"></i> Correções recentes</span>
+                </div>
+                {data.correcoes_recentes.map((c, i) => (
+                  <div key={i} style={{ marginBottom: i < data.correcoes_recentes.length - 1 ? '12px' : 0 }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#166534', marginBottom: '4px' }}>{c.titulo}</div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: '#14532d', lineHeight: 1.6 }}>{c.descricao}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {data.limitacoes_conhecidas?.length > 0 && (
+              <div style={{ ...card, background: '#fef2f2', borderColor: '#fecaca' }}>
+                <div style={{ ...cardTitle, color: '#991b1b' }}>
+                  <span><i className="fas fa-triangle-exclamation"></i> Limitações conhecidas</span>
+                </div>
+                {data.limitacoes_conhecidas.map((l, i) => (
+                  <div key={i} style={{ marginBottom: i < data.limitacoes_conhecidas.length - 1 ? '12px' : 0 }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: '#991b1b', marginBottom: '4px' }}>{l.titulo}</div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: '#7f1d1d', lineHeight: 1.6 }}>{l.descricao}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={card}>
+              <div style={cardTitle}><span><i className="fas fa-clock" style={{ color: '#0d9488' }}></i> Jobs agendados</span></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {(data.jobs_agendados || []).map(job => (
+                  <AutomJobRow key={job.id} job={job} onSaved={load} />
+                ))}
+              </div>
+            </div>
+
+            <div style={card}>
+              <div style={cardTitle}><span><i className="fas fa-bell" style={{ color: '#ca8a04' }}></i> Thresholds de alerta</span></div>
+              <div style={descStyle}>{data.alertas?.descricao}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+                {(data.alertas?.editavel || []).map(item => (
+                  <AutomThresholdInput key={item.key} item={item} onSaved={load} />
+                ))}
+              </div>
+            </div>
+
+            <div style={card}>
+              <div style={cardTitle}>
+                <span><i className="fas fa-bullseye" style={{ color: '#0d9488' }}></i> Regras de Alerta Customizadas</span>
+                <button onClick={() => setRuleModal('new')} style={{ padding: '6px 12px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: 'var(--text-xs)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fas fa-plus"></i> Nova regra
+                </button>
+              </div>
+              <div style={{ ...descStyle, marginBottom: '10px' }}>
+                Regras criadas pelo admin: se qualquer palavra-chave aparecer em uma mensagem, gera um alerta automaticamente com a severidade escolhida.
+              </div>
+              {(data.regras_alerta_customizadas || []).length === 0 && (
+                <div style={{ ...descStyle, fontStyle: 'italic' }}>Nenhuma regra customizada criada ainda.</div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {(data.regras_alerta_customizadas || []).map(rule => {
+                  const sevInfo = AUTOM_SEVERITY_OPTIONS.find(s => s[0] === rule.severity) || AUTOM_SEVERITY_OPTIONS[1];
+                  return (
+                    <div key={rule.id} style={{ padding: '10px 12px', background: 'var(--color-bg-page)', borderRadius: '8px', border: '1px solid var(--color-border-card)', opacity: rule.ativo ? 1 : 0.55 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-primary)' }}>{rule.nome}</span>
+                          <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '9999px', background: sevInfo[2] + '22', color: sevInfo[2], fontWeight: 700 }}>{sevInfo[1]}</span>
+                          {!rule.ativo && <span style={{ fontSize: '10px', color: '#94a3b8' }}>(inativa)</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={() => setRuleModal(rule)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0d9488', fontSize: '13px', padding: '4px 8px' }}>
+                            <i className="fas fa-pen"></i>
+                          </button>
+                          <button onClick={() => deleteRule(rule)} disabled={deletingId === rule.id} title="Excluir" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '13px', padding: '4px 8px' }}>
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                        {(rule.keywords || []).map(kw => (
+                          <span key={kw} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', background: '#f1f5f9', color: '#64748b' }}>{kw}</span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={card}>
+              <div style={cardTitle}><span><i className="fas fa-lightbulb" style={{ color: '#16a34a' }}></i> Heurística de oportunidade (2 camadas)</span></div>
+              <div style={descStyle}>{data.heuristica_oportunidade?.descricao}</div>
+            </div>
+
+            <div style={card}>
+              <div style={cardTitle}><span><i className="fas fa-mobile-screen" style={{ color: '#0d9488' }}></i> Push notifications automáticas</span></div>
+              <div style={descStyle}>{data.push_notifications?.descricao}</div>
+            </div>
+
+            <div style={card}>
+              <div style={cardTitle}><span><i className="fas fa-rocket" style={{ color: '#0d9488' }}></i> Ao ativar um grupo</span></div>
+              <div style={descStyle}>{data.ativacao_de_grupo?.descricao}</div>
+              <ul style={{ margin: '10px 0 0', paddingLeft: '20px' }}>
+                {(data.ativacao_de_grupo?.itens || []).map((it, i) => (
+                  <li key={i} style={{ ...descStyle, marginBottom: '6px' }}>{it}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={card}>
+              <div style={cardTitle}><span><i className="fas fa-database" style={{ color: '#64748b' }}></i> Retenção de dados (LGPD)</span></div>
+              <div style={descStyle}>{data.retencao_dados?.descricao}</div>
+              {data.retencao_dados?.editavel && (
+                <div style={{ marginTop: '10px' }}>
+                  <AutomThresholdInput item={{ key: data.retencao_dados.editavel.key, label: 'Retenção (dias)', value: data.retencao_dados.editavel.value }} onSaved={load} />
+                </div>
+              )}
+            </div>
+
+            <div style={card}>
+              <div style={cardTitle}><span><i className="fab fa-whatsapp" style={{ color: '#25d366' }}></i> Reconexão automática do WhatsApp</span></div>
+              <div style={descStyle}>{data.reconexao_whatsapp?.descricao}</div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {ruleModal && (
+        <AutomAlertRuleModal
+          rule={ruleModal === 'new' ? null : ruleModal}
+          onClose={() => setRuleModal(null)}
+          onSaved={() => { setRuleModal(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, { IntelligenceScreen, GroupsScreen, ConversationScreen, TagsScreen, SummaryScreen, TeamScreen, ApiDocsScreen, ConfigScreen, UsersScreen, UserProfileModal, EmailAccountsSection, EmailScreen, WppGroupsManagerScreen, RangeSummaryScreen, AgentConfigScreen, AutomationsScreen });

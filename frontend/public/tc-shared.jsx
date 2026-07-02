@@ -54,13 +54,18 @@ window.apiGet = async function(path) {
   return r.json();
 };
 
+async function _apiError(r) {
+  try { const d = await r.json(); throw new Error(d.detail || ('API error: ' + r.status)); }
+  catch(e) { if (e.message !== 'API error: ' + r.status) throw e; throw new Error('API error: ' + r.status); }
+}
+
 window.apiPost = async function(path, body = {}) {
   const r = await fetch(API_BASE + path, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + window.getToken(), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error('API error: ' + r.status);
+  if (!r.ok) await _apiError(r);
   return r.json();
 };
 
@@ -70,7 +75,7 @@ window.apiPatch = async function(path, body = {}) {
     headers: { Authorization: 'Bearer ' + window.getToken(), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error('API error: ' + r.status);
+  if (!r.ok) await _apiError(r);
   return r.json();
 };
 
@@ -80,7 +85,7 @@ window.apiPut = async function(path, body = {}) {
     headers: { Authorization: 'Bearer ' + window.getToken(), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error('API error: ' + r.status);
+  if (!r.ok) await _apiError(r);
   return r.json();
 };
 
@@ -89,14 +94,31 @@ window.apiDelete = async function(path) {
     method: 'DELETE',
     headers: { Authorization: 'Bearer ' + window.getToken() },
   });
-  if (!r.ok) throw new Error('API error: ' + r.status);
+  if (!r.ok) await _apiError(r);
   return r.status === 204 ? null : r.json();
 };
 
 // ── Sidebar ───────────────────────────────────────────────────
+function useWppStatus() {
+  const [status, setStatus] = React.useState(null); // null=loading, true=connected, false=disconnected
+  React.useEffect(() => {
+    const check = () => {
+      fetch('/api/v1/tenant/wpp/status', { headers: { Authorization: 'Bearer ' + window.getToken() } })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setStatus(d ? d.connected : false))
+        .catch(() => setStatus(false));
+    };
+    check();
+    const iv = setInterval(check, 30000);
+    return () => clearInterval(iv);
+  }, []);
+  return status;
+}
+
 function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdmin, onLogout, onOpenProfile }) {
   const [hovered, setHovered] = React.useState(null);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const wppConnected = useWppStatus();
 
   const navItems = [
     { id: 'dashboard',     icon: 'tachometer-alt', label: 'Visão Geral' },
@@ -104,17 +126,20 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
     { id: 'tags',          icon: 'tags',           label: 'Relatório de Tags' },
     { id: 'summary',       icon: 'file-alt',       label: 'Resumo Executivo' },
     { id: 'alerts',        icon: 'bell',            label: 'Alertas', badge: alertsCount },
-    { id: 'groups',        icon: 'users',           label: 'Grupos WhatsApp' },
-    { id: 'wpp-groups',    icon: 'tasks',           label: 'Selecionar Grupos' },
+    { id: 'wpp-groups',    icon: 'users',           label: 'Grupos WhatsApp' },
     { id: 'range-summary', icon: 'calendar-alt',   label: 'Resumo por Período' },
     { id: 'agent',         icon: 'robot',          label: 'Agente Virtual' },
     { id: 'email',         icon: 'envelope',        label: 'E-mails' },
     { id: 'team',          icon: 'user-tie',        label: 'Time' },
   ];
   const sysItems = [
-    { id: 'wpp',     icon: 'whatsapp fab', label: 'Conexão WhatsApp' },
-    { id: 'config',  icon: 'cog',          label: 'Configurações'   },
-    { id: 'api',     icon: 'code',         label: 'API Docs'        },
+    { id: 'wpp',     icon: 'whatsapp fab',  label: 'Conexão WhatsApp' },
+    { id: 'config',  icon: 'cog',           label: 'Configurações'   },
+    { id: 'api',     icon: 'code',          label: 'API Docs'        },
+    ...(isAdmin ? [
+      { id: 'admin', icon: 'shield-halved', label: 'Painel Administrativo' },
+      { id: 'automations', icon: 'gears',   label: 'Automações do Sistema' },
+    ] : []),
   ];
 
   const itemStyle = (id) => ({
@@ -164,6 +189,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
         <div style={{ fontSize: '11px', color: '#6b7280', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
         {sysItems.map(item => {
           const iconClass = item.icon === 'whatsapp fab' ? 'fab fa-whatsapp' : `fas fa-${item.icon}`;
+          const isWpp = item.id === 'wpp';
           return (
             <div key={item.id} style={itemStyle(item.id)}
               onClick={() => onNavigate(item.id)}
@@ -171,10 +197,32 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
               onMouseLeave={() => setHovered(null)}
             >
               <i className={iconClass} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
-              <span style={{ fontSize: 'var(--text-sm)' }}>{item.label}</span>
+              <span style={{ fontSize: 'var(--text-sm)', flex: 1 }}>{item.label}</span>
+              {isWpp && wppConnected !== null && (
+                <span title={wppConnected ? 'WhatsApp conectado' : 'WhatsApp desconectado'} style={{
+                  width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                  background: wppConnected ? '#22c55e' : '#ef4444',
+                  boxShadow: wppConnected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
+                }}></span>
+              )}
             </div>
           );
         })}
+
+        {/* Banner WhatsApp desconectado */}
+        {wppConnected === false && (
+          <div onClick={() => onNavigate('wpp')} style={{
+            marginTop: '6px', padding: '8px 12px', borderRadius: '8px',
+            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            <i className="fab fa-whatsapp" style={{ color: '#f87171', fontSize: '14px' }}></i>
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#f87171' }}>WhatsApp desconectado</div>
+              <div style={{ fontSize: '10px', color: '#9ca3af' }}>Clique para reconectar</div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* User section com popover */}
@@ -337,25 +385,29 @@ function BottomNav({ activePage, onNavigate, alertsCount, onMoreOpen }) {
 // ── MobileDrawer ──────────────────────────────────────────────
 function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, company, userName, isAdmin, onLogout, onOpenProfile }) {
   if (!open) return null;
+  const wppConnected = useWppStatus();
   var allItems = [
     { id: 'dashboard',    icon: 'tachometer-alt', label: 'Visão Geral' },
     { id: 'intelligence', icon: 'bolt',           label: 'Inteligência Operacional' },
     { id: 'tags',         icon: 'tags',           label: 'Relatório de Tags' },
     { id: 'summary',      icon: 'file-alt',       label: 'Resumo Executivo' },
     { id: 'alerts',       icon: 'bell',           label: 'Alertas', badge: alertsCount },
-    { id: 'groups',        icon: 'users',          label: 'Grupos WhatsApp' },
-    { id: 'wpp-groups',   icon: 'list-check',     label: 'Selecionar Grupos' },
+    { id: 'wpp-groups',   icon: 'users',          label: 'Grupos WhatsApp' },
     { id: 'range-summary', icon: 'calendar-week', label: 'Resumo por Período' },
     { id: 'agent',        icon: 'robot',          label: 'Agente Virtual' },
     { id: 'email',        icon: 'envelope',       label: 'E-mails' },
     { id: 'team',         icon: 'user-tie',       label: 'Time' },
   ];
   var sysItems = [
-    { id: 'wpp',    icon: 'whatsapp fab', label: 'Conexão WhatsApp' },
-    { id: 'config', icon: 'cog',          label: 'Configurações' },
-    { id: 'api',    icon: 'code',         label: 'API Docs' },
+    { id: 'wpp',    icon: 'whatsapp fab',  label: 'Conexão WhatsApp' },
+    { id: 'config', icon: 'cog',           label: 'Configurações' },
+    { id: 'api',    icon: 'code',          label: 'API Docs' },
   ];
-  if (isAdmin) sysItems.splice(1, 0, { id: 'users', icon: 'users-cog', label: 'Gerenciar Usuários' });
+  if (isAdmin) {
+    sysItems.splice(1, 0, { id: 'users', icon: 'users-cog', label: 'Gerenciar Usuários' });
+    sysItems.push({ id: 'admin', icon: 'shield-halved', label: 'Painel Administrativo' });
+    sysItems.push({ id: 'automations', icon: 'gears', label: 'Automações do Sistema' });
+  }
 
   var itemStyle = function(id) { return {
     display: 'flex', alignItems: 'center', gap: '12px',
@@ -405,13 +457,26 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
           <div style={{ fontSize: '11px', color: '#6b7280', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
           {sysItems.map(function(item) {
             var iconClass = item.icon === 'whatsapp fab' ? 'fab fa-whatsapp' : 'fas fa-' + item.icon;
+            var isWpp = item.id === 'wpp';
             return (
               <div key={item.id} style={itemStyle(item.id)} onClick={function() { onNavigate(item.id); }}>
                 <i className={iconClass} style={{ width: '20px', textAlign: 'center' }}></i>
-                <span>{item.label}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {isWpp && wppConnected !== null && (
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: wppConnected ? '#22c55e' : '#ef4444', boxShadow: wppConnected ? '0 0 6px #22c55e' : '0 0 6px #ef4444' }}></span>
+                )}
               </div>
             );
           })}
+          {wppConnected === false && (
+            <div onClick={function() { onNavigate('wpp'); }} style={{ marginTop: '6px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fab fa-whatsapp" style={{ color: '#f87171', fontSize: '14px' }}></i>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#f87171' }}>WhatsApp desconectado</div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Toque para reconectar</div>
+              </div>
+            </div>
+          )}
         </nav>
         <div style={{ padding: '16px', borderTop: '1px solid #374151' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

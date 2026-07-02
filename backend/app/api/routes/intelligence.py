@@ -5,17 +5,21 @@ from datetime import datetime, date, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func, text, exists
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.models.message import Message
+from app.models.message import Message, MessageType
 from app.models.conversation import Conversation
-from app.models.participant import Participant
+from app.models.participant import Participant, ParticipantRole
 from app.models.alert import AlertEvent, AlertStatus, AlertSeverity
 from app.models.followup import FollowUpItem, FollowUpStatus
+from app.models.tenant import TenantConfig
+from app.models.source import IngestionSource, SourceType
+from app.connectors.wppconnect_server import get_client_for_session
 
 router = APIRouter()
 
@@ -297,11 +301,154 @@ async def get_conversation_messages(
 
     return {
         "conversation": {"id": str(conv.id), "name": _conv_display(conv),
-                         "original_name": conv.name, "custom_name": conv.custom_name},
+                         "original_name": conv.name, "custom_name": conv.custom_name,
+                         "wpp_group_id": conv.wpp_group_id},
         "messages": messages,
         "total": total,
         "offset": offset,
         "limit": limit,
+    }
+
+
+async def _get_tenant_wpp_client(db: AsyncSession, current_user: User):
+    """Resolve o cliente WppConnect DA SESSÃO DO TENANT — nunca o wpp_client global (admin)."""
+    result = await db.execute(
+        select(TenantConfig).where(TenantConfig.tenant_id == current_user.id)
+    )
+    tenant_cfg = result.scalar_one_or_none()
+    if not tenant_cfg:
+        raise HTTPException(503, "WhatsApp não conectado para esta conta. Conecte-se na tela de Conexão WhatsApp.")
+    return get_client_for_session(tenant_cfg.wpp_url, tenant_cfg.wpp_session, tenant_cfg.wpp_secret)
+
+
+async def _get_or_create_manual_source(db: AsyncSession, tenant_id) -> IngestionSource:
+    """Fonte usada para mensagens enviadas manualmente pela caixa de envio do app."""
+    result = await db.execute(
+        select(IngestionSource).where(
+            IngestionSource.tenant_id == tenant_id,
+            IngestionSource.source_type == SourceType.MANUAL,
+        )
+    )
+    source = result.scalar_one_or_none()
+    if source:
+        return source
+    import uuid as _uuid
+    from app.core.security import hash_api_key
+    source = IngestionSource(
+        tenant_id=tenant_id,
+        name="Envio via App",
+        description="Mensagens enviadas manualmente pela caixa de envio da tela de conversa",
+        source_type=SourceType.MANUAL,
+        api_key_hash=hash_api_key(str(_uuid.uuid4())),
+        is_active=True,
+    )
+    db.add(source)
+    await db.flush()
+    return source
+
+
+async def _get_or_create_operator_participant(db: AsyncSession, current_user: User) -> Participant:
+    """Participante interno que representa 'você' (o operador enviando pelo app)."""
+    external_id = f"app-operator:{current_user.id}"
+    result = await db.execute(select(Participant).where(Participant.external_id == external_id))
+    participant = result.scalar_one_or_none()
+    if participant:
+        return participant
+    participant = Participant(
+        external_id=external_id,
+        name="Você",
+        role=ParticipantRole.COLLABORATOR,
+        is_internal=True,
+    )
+    db.add(participant)
+    await db.flush()
+    return participant
+
+
+class SendMessageRequest(BaseModel):
+    text: Optional[str] = None
+    kind: str = "text"  # text | image | document | audio
+    file_base64: Optional[str] = None
+    file_mime: Optional[str] = None
+    file_name: Optional[str] = None
+
+
+@router.post("/conversations/{conversation_id}/send-message")
+async def send_conversation_message(
+    conversation_id: str,
+    body: SendMessageRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Envia uma mensagem (texto/imagem/documento/áudio) para o grupo WhatsApp
+    correspondente e grava na timeline como mensagem interna ('Você'),
+    já que o webhook do WppConnect ignora eventos fromMe.
+    """
+    conv = await _get_conv_for_tenant(conversation_id, db, current_user)
+    if not conv.wpp_group_id:
+        raise HTTPException(400, "Este grupo não tem wpp_group_id configurado. Associe-o na tela de Seleção de Grupos.")
+
+    text_content = (body.text or "").strip()
+    has_file = bool(body.file_base64)
+    if not text_content and not has_file:
+        raise HTTPException(400, "Mensagem vazia")
+
+    client = await _get_tenant_wpp_client(db, current_user)
+
+    try:
+        token = await client.generate_token()
+        if body.kind == "audio" and has_file:
+            await client.send_voice_base64(token, conv.wpp_group_id, body.file_base64, mime=body.file_mime or "audio/ogg;codecs=opus", is_group=True)
+            message_type = MessageType.AUDIO
+            content = text_content
+        elif has_file:
+            await client.send_file_base64(
+                token, conv.wpp_group_id, body.file_base64, body.file_mime or "application/octet-stream",
+                filename=body.file_name or "arquivo", caption=text_content, is_group=True,
+            )
+            message_type = MessageType.IMAGE if (body.file_mime or "").startswith("image/") else MessageType.DOCUMENT
+            content = text_content or (body.file_name or "")
+        else:
+            await client.send_text_message(token, conv.wpp_group_id, text_content, is_group=True)
+            message_type = MessageType.TEXT
+            content = text_content
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Falha ao enviar para o WhatsApp: {str(e)}")
+
+    source = await _get_or_create_manual_source(db, current_user.id)
+    operator = await _get_or_create_operator_participant(db, current_user)
+    now = datetime.now(timezone.utc)
+
+    msg = Message(
+        conversation_id=conv.id,
+        participant_id=operator.id,
+        source_id=source.id,
+        content=content or "",
+        message_type=message_type,
+        sent_at=now,
+        ingested_at=now,
+        processed_at=now,
+    )
+    db.add(msg)
+    await db.commit()
+
+    type_icons = {"text": "💬", "audio": "🎤", "image": "🖼️", "document": "📄", "video": "📹", "sticker": "😊"}
+    return {
+        "id": str(msg.id),
+        "content": msg.content or "",
+        "message_type": msg.message_type,
+        "type_icon": type_icons.get(msg.message_type, "💬"),
+        "sender": "Você",
+        "sender_id": str(operator.id),
+        "is_internal": True,
+        "sent_at": msg.sent_at.isoformat(),
+        "risk_score": 0,
+        "signals": [],
+        "tags": [],
+        "alerts": [],
     }
 
 
@@ -455,15 +602,33 @@ async def get_conversation_profile(
         ORDER BY p.id, m.sent_at DESC
     """), {"conv_id": str(conv_id)})
 
+    # Busca extra_data dos participantes (inclui ai_profile)
+    part_extra_map: dict[str, dict] = {}
+    part_ids = [str(r[0]) for r in part_rows.fetchall()]
+    part_rows = await db.execute(text("""
+        SELECT DISTINCT ON (p.id)
+            p.id::text, p.name, p.custom_name, p.role, p.is_internal,
+            p.external_id, p.email, p.extra_data,
+            COUNT(m.id) OVER (PARTITION BY p.id) as message_count,
+            MAX(m.sent_at) OVER (PARTITION BY p.id) as last_seen,
+            (SELECT COUNT(DISTINCT m2.conversation_id) FROM messages m2 WHERE m2.participant_id = p.id) as group_count
+        FROM participants p
+        JOIN messages m ON m.participant_id = p.id
+        WHERE m.conversation_id = :conv_id
+        ORDER BY p.id, m.sent_at DESC
+    """), {"conv_id": str(conv_id)})
+
     participants = []
     for r in part_rows.fetchall():
-        pid, name, cname, role, is_int, ext_id, email, msg_cnt, last_seen, grp_cnt = r
+        pid, name, cname, role, is_int, ext_id, email, extra_data, msg_cnt, last_seen, grp_cnt = r
+        ai_profile = (extra_data or {}).get("ai_profile") if extra_data else None
         participants.append({
             "id": pid, "name": cname or name, "original_name": name, "custom_name": cname,
             "role": role, "is_internal": is_int, "external_id": ext_id or "",
             "email": email or "", "message_count": int(msg_cnt or 0),
             "last_seen": last_seen.isoformat() if last_seen else None,
             "group_count": int(grp_cnt or 0),
+            "ai_profile": ai_profile,
         })
 
     extra = conv.extra_data or {}
@@ -525,12 +690,14 @@ async def get_conversation_range_summary(
     conversation_id: str,
     start_date: str = Query(..., description="ISO date: 2026-06-01"),
     end_date: str = Query(..., description="ISO date: 2026-06-27"),
+    summary_type: str = Query("executive", description="executive|general"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Gera resumo analítico de uma conversa para um período customizado.
-    Retorna estatísticas, distribuição de tags, temperatura e texto executivo.
+    Gera resumo de uma conversa para um período customizado.
+    summary_type=executive → análise estratégica com tags/alertas/KPIs
+    summary_type=general   → texto descritivo limpo (ata de reunião), pronto para WhatsApp
     """
     conv = await _get_conv_for_tenant(conversation_id, db, current_user)
 
@@ -654,10 +821,10 @@ async def get_conversation_range_summary(
 
     transcript_lines = [_msg_to_line(m) for m in sample]
 
-    # ── Texto executivo ───────────────────────────────────────────
     from app.services.agent import get_agent_config, inject_agent_identity
     agent_cfg = await get_agent_config(db, current_user.id)
 
+    # ── Resumo Executivo Estratégico ──────────────────────────────
     executive_text = await _generate_range_text(
         conv_name=_conv_display(conv),
         start_date=start_date,
@@ -680,9 +847,33 @@ async def get_conversation_range_summary(
     )
     executive_text = inject_agent_identity(executive_text, agent_cfg, temperature_label)
 
+    # ── Resumo Geral (texto limpo para WhatsApp) ──────────────────
+    general_text = await _generate_general_text(
+        conv_name=_conv_display(conv),
+        start_date=start_date,
+        end_date=end_date,
+        total_messages=total_messages,
+        unique_participants=unique_participants,
+        churn_count=churn_count,
+        escalation_count=escalation_count,
+        opportunity_count=opportunity_count,
+        complaint_count=complaint_count,
+        followup_count=followup_count,
+        tag_dist=tag_dist,
+        top_messages=top,
+        transcript_lines=transcript_lines,
+        db=db,
+        agent_config=agent_cfg,
+    )
+
     return {
-        "conversation": {"id": str(conv.id), "name": _conv_display(conv)},
+        "conversation": {
+            "id": str(conv.id),
+            "name": _conv_display(conv),
+            "wpp_group_id": conv.wpp_group_id,
+        },
         "period": {"start": start_date, "end": end_date},
+        "summary_type": summary_type,
         "stats": {
             "total_messages": total_messages,
             "unique_participants": unique_participants,
@@ -698,6 +889,7 @@ async def get_conversation_range_summary(
         },
         "tag_distribution": dict(sorted(tag_dist.items(), key=lambda x: -x[1])[:12]),
         "executive_text": executive_text,
+        "general_text": general_text,
         "temperature_score": temperature_score,
         "temperature_label": temperature_label,
         "top_messages": [
@@ -735,6 +927,222 @@ async def list_conversations(
     result = await db.execute(query)
     convs = result.scalars().all()
     return [{"id": str(c.id), "name": _conv_display(c)} for c in convs]
+
+
+@router.post("/conversations/{conversation_id}/send-general-summary")
+async def send_general_summary(
+    conversation_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Envia o resumo geral da conversa para o grupo WhatsApp correspondente."""
+    conv = await _get_conv_for_tenant(conversation_id, db, current_user)
+
+    if not conv.wpp_group_id:
+        raise HTTPException(400, "Este grupo não tem wpp_group_id configurado. Associe-o na tela de Seleção de Grupos.")
+
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(400, "Texto vazio")
+
+    from app.connectors.wppconnect_server import wpp_client
+    try:
+        token = await wpp_client.get_cached_token()
+        result = await wpp_client.send_text_message(token, conv.wpp_group_id, text, is_group=True)
+        return {"ok": True, "result": result}
+    except Exception as e:
+        raise HTTPException(500, f"Falha ao enviar para o WhatsApp: {str(e)}")
+
+
+async def _generate_general_text(
+    conv_name, start_date, end_date, total_messages, unique_participants,
+    churn_count, escalation_count, opportunity_count, complaint_count,
+    followup_count, tag_dist, top_messages, transcript_lines, db, agent_config=None,
+) -> str:
+    """Gera texto geral limpo (ata de reunião) — sem scores/tags técnicas, pronto para WhatsApp."""
+    from app.core.config import settings
+
+    if settings.LLM_ENABLED and settings.ANTHROPIC_API_KEY:
+        try:
+            return await _range_text_claude_general(
+                conv_name, start_date, end_date, total_messages, unique_participants,
+                churn_count, escalation_count, opportunity_count, complaint_count,
+                followup_count, tag_dist, top_messages, transcript_lines,
+                agent_config=agent_config,
+            )
+        except Exception:
+            pass
+
+    return _range_text_general_heuristic(
+        conv_name, start_date, end_date, total_messages, unique_participants,
+        churn_count, escalation_count, opportunity_count, complaint_count,
+        followup_count, tag_dist, top_messages,
+    )
+
+
+def _range_text_general_heuristic(
+    conv_name, start_date, end_date, total_messages, unique_participants,
+    churn_count, escalation_count, opportunity_count, complaint_count,
+    followup_count, tag_dist, top_messages,
+) -> str:
+    """Resumo geral limpo — linguagem natural, sem jargão técnico, apto para envio no grupo."""
+    from datetime import date as _date
+
+    def _fmt(d: str) -> str:
+        try:
+            return _date.fromisoformat(d).strftime("%d/%m/%Y")
+        except Exception:
+            return d
+
+    TAG_LABELS = {
+        "risco_churn": "risco de cancelamento",
+        "urgencia_critica": "situações urgentes",
+        "urgencia_alta": "assuntos urgentes",
+        "urgencia_media": "assuntos em andamento",
+        "escalada_emocional": "tensões elevadas",
+        "reclamacao": "reclamações",
+        "followup_necessario": "itens pendentes de retorno",
+        "oportunidade_comercial": "oportunidades de negócio",
+        "promessa_detectada": "compromissos assumidos",
+        "atrito_interno": "atrito interno",
+        "informacao": "informações compartilhadas",
+        "elogio": "elogios e feedbacks positivos",
+        "duvida": "dúvidas e perguntas",
+    }
+
+    lines = []
+    lines.append(f"📋 *Resumo — {conv_name}*")
+    lines.append(f"Período: {_fmt(start_date)} a {_fmt(end_date)}")
+    lines.append("")
+
+    if total_messages == 0:
+        lines.append("Nenhuma mensagem registrada no período.")
+        return "\n".join(lines)
+
+    lines.append(
+        f"Durante o período foram registradas *{total_messages} mensagem(ns)* "
+        f"entre *{unique_participants} participante(s)*."
+    )
+    lines.append("")
+
+    if tag_dist:
+        top_tags = sorted(tag_dist.items(), key=lambda x: -x[1])[:5]
+        temas = [TAG_LABELS.get(t, t.replace("_", " ")) for t, _ in top_tags]
+        lines.append(f"*Principais assuntos abordados:* {', '.join(temas)}.")
+        lines.append("")
+
+    destaques = []
+    if opportunity_count > 0:
+        destaques.append(f"• {opportunity_count} oportunidade(s) de negócio identificada(s)")
+    if followup_count > 0:
+        destaques.append(f"• {followup_count} item(ns) pendente(s) de acompanhamento")
+    if complaint_count > 0:
+        destaques.append(f"• {complaint_count} ponto(s) de insatisfação registrado(s)")
+    if churn_count > 0:
+        destaques.append(f"• {churn_count} sinal(is) de risco de cancelamento")
+    if escalation_count > 0:
+        destaques.append(f"• {escalation_count} situação(ões) de tensão elevada")
+
+    if destaques:
+        lines.append("*Pontos de atenção:*")
+        lines.extend(destaques)
+        lines.append("")
+
+    if top_messages:
+        notable = [m for m in top_messages if m.content and (m.risk_score or 0) >= 40][:3]
+        if notable:
+            lines.append("*Trechos relevantes da conversa:*")
+            for m in notable:
+                ts = m.sent_at.strftime("%d/%m") if m.sent_at else ""
+                snippet = (m.content or "").strip()[:200]
+                lines.append(f"[{ts}] _{snippet}_")
+            lines.append("")
+
+    if followup_count > 0:
+        lines.append(f"*Próximos passos:* {followup_count} item(ns) aguarda(m) retorno e acompanhamento.")
+    elif opportunity_count > 0:
+        lines.append("*Próximos passos:* Avaliar e dar andamento nas oportunidades identificadas.")
+    else:
+        lines.append("*Próximos passos:* Monitoramento contínuo do grupo.")
+
+    return "\n".join(lines)
+
+
+async def _range_text_claude_general(
+    conv_name, start_date, end_date, total_messages, unique_participants,
+    churn_count, escalation_count, opportunity_count, complaint_count,
+    followup_count, tag_dist, top_messages, transcript_lines, agent_config=None,
+) -> str:
+    import httpx
+    from app.core.config import settings
+    from app.services.agent import build_agent_personality_prompt
+    from app.core.logging import get_logger as _log
+    _logger = _log(__name__)
+
+    agent_intro = build_agent_personality_prompt(agent_config) if agent_config else \
+        "Você é um assistente de CRM que redige atas e resumos de reuniões."
+
+    # Limita transcrição para evitar tokens excessivos
+    sample = transcript_lines[:80] if transcript_lines else []
+    transcript_block = "\n".join(sample) if sample else "Sem mensagens disponíveis."
+
+    prompt = f"""{agent_intro}
+
+Crie um *Resumo Geral* da conversa do grupo *{conv_name}* referente ao período de {start_date} a {end_date}.
+
+Abaixo está a transcrição das mensagens do período:
+{transcript_block}
+
+Instruções:
+- Baseie o resumo EXCLUSIVAMENTE no conteúdo das mensagens acima — não invente informações
+- Escreva como uma ata de reunião: o que foi discutido, decisões tomadas, quem ficou responsável por quê
+- Use o nome real dos participantes conforme aparecem na transcrição (ex: "João mencionou que...")
+- Linguagem clara e objetiva, sem jargão técnico
+- Use *negrito* (asteriscos) para destacar itens importantes — compatível com WhatsApp
+- Organize em parágrafos curtos com emojis discretos para separar seções (📋, ✅, ⚠️, 📌)
+- Se houver ações pendentes ou combinados, liste-os em "Próximos passos:"
+- Se não houver conteúdo suficiente, diga isso claramente em vez de inventar
+- Responda em português brasileiro
+- Máximo de 350 palavras"""
+
+    # Tenta Anthropic primeiro
+    if getattr(settings, "ANTHROPIC_API_KEY", None):
+        try:
+            import anthropic
+            client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+            resp = await client.messages.create(
+                model=settings.ANTHROPIC_MODEL,
+                max_tokens=700,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return resp.content[0].text
+        except Exception as e:
+            err = str(e).lower()
+            if any(k in err for k in ("credit", "balance", "billing", "400", "402")):
+                _logger.warning("anthropic_no_credits_general_fallback_groq", error=str(e)[:100])
+            else:
+                raise
+
+    # Fallback: Groq
+    groq_key = getattr(settings, "GROQ_API_KEY", None) or ""
+    if not groq_key:
+        raise RuntimeError("Nenhum LLM disponível para resumo geral")
+
+    body = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 700,
+        "temperature": 0.3,
+    }
+    async with httpx.AsyncClient(timeout=60) as http:
+        r = await http.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            json=body,
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+        )
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip()
 
 
 async def _generate_range_text(
@@ -905,3 +1313,70 @@ async def update_participant(
     await db.commit()
     return {"id": str(part.id), "custom_name": part.custom_name,
             "name": part.name, "role": part.role, "is_internal": part.is_internal}
+
+
+@router.post("/participants/{participant_id}/analyze")
+async def analyze_participant_profile(
+    participant_id: str,
+    body: dict = {},
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Gera (ou atualiza) o perfil IA de um participante com base no histórico de mensagens."""
+    import uuid as _uuid
+    from app.services.participant_profiler import analyze_participant, MIN_MESSAGES
+
+    part_id = _uuid.UUID(participant_id)
+    result = await db.execute(select(Participant).where(Participant.id == part_id))
+    part = result.scalar_one_or_none()
+    if not part:
+        raise HTTPException(404, "Participante não encontrado")
+
+    conversation_id = body.get("conversation_id")
+    group_name = body.get("group_name", "Grupo")
+
+    # Busca mensagens — filtra por conversa se informada
+    q = "SELECT content, sent_at, message_type FROM messages WHERE participant_id = :pid"
+    params = {"pid": str(part_id)}
+    if conversation_id:
+        q += " AND conversation_id = :conv_id"
+        params["conv_id"] = conversation_id
+    q += " ORDER BY sent_at ASC"
+
+    msg_rows = await db.execute(text(q), params)
+    messages = [
+        {"content": r[0], "sent_at": r[1].isoformat() if r[1] else None, "message_type": r[2]}
+        for r in msg_rows.fetchall()
+    ]
+
+    if len(messages) < MIN_MESSAGES:
+        raise HTTPException(400, f"Participante tem apenas {len(messages)} mensagem(s). Mínimo: {MIN_MESSAGES}.")
+
+    try:
+        profile = await analyze_participant(part, group_name, messages, db)
+        return {"ok": True, "profile": profile, "message_count": len(messages)}
+    except Exception as e:
+        raise HTTPException(500, f"Erro na análise: {str(e)}")
+
+
+@router.post("/conversations/{conversation_id}/analyze-participants")
+async def analyze_conversation_participants_endpoint(
+    conversation_id: str,
+    body: dict = {},
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Analisa todos os participantes com mensagens suficientes em uma conversa."""
+    from app.services.participant_profiler import analyze_conversation_participants
+
+    conv = await _get_conv_for_tenant(conversation_id, db, current_user)
+    group_name = body.get("group_name") or conv.custom_name or conv.name
+    force = body.get("force", False)
+
+    result = await analyze_conversation_participants(
+        conversation_id=conversation_id,
+        db=db,
+        group_name=group_name,
+        force=force,
+    )
+    return result

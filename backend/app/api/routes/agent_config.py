@@ -1,11 +1,13 @@
 """Endpoints de configuração do Agente Virtual."""
 import base64
+import copy
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.db.session import get_db
 from app.api.deps import get_current_user
@@ -16,8 +18,23 @@ from app.core.logging import get_logger
 router = APIRouter(prefix="/agent", tags=["Agente Virtual"])
 logger = get_logger(__name__)
 
-MAX_IMAGE_BYTES = 3 * 1024 * 1024  # 3 MB
-ALLOWED_MIMES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB (stickers/GIF podem ser maiores)
+AVATAR_MAX_BYTES = 3 * 1024 * 1024  # 3 MB para avatar
+
+
+def _detect_mime(content: bytes, fallback: str | None) -> str:
+    """Detecta MIME type pelos magic bytes; fallback se declarado pelo browser."""
+    if content[:8] == b'\x89PNG\r\n\x1a\n':
+        return "image/png"
+    if content[:3] == b'\xff\xd8\xff':
+        return "image/jpeg"
+    if content[:6] in (b'GIF87a', b'GIF89a'):
+        return "image/gif"
+    if content[:4] == b'RIFF' and content[8:12] == b'WEBP':
+        return "image/webp"
+    if fallback and fallback.startswith("image/"):
+        return fallback
+    raise HTTPException(400, "Formato não suportado. Envie PNG, JPG, GIF ou WebP.")
 
 
 class AgentConfigUpdate(BaseModel):
@@ -113,6 +130,7 @@ async def update_agent_config(
                 "image_mime": base.get("image_mime"),
             })
         cfg.expressions = updated
+        flag_modified(cfg, "expressions")
 
     await db.commit()
     logger.info("agent_config_updated", tenant=str(current_user.id), name=cfg.name)
@@ -126,18 +144,21 @@ async def upload_avatar(
     current_user: User = Depends(get_current_user),
 ):
     content = await file.read()
-    mime = file.content_type or "image/png"
-    if mime not in ALLOWED_MIMES:
-        raise HTTPException(400, "Formato não suportado. Use PNG, JPEG, GIF ou WebP.")
-    if len(content) > MAX_IMAGE_BYTES:
-        raise HTTPException(400, f"Imagem muito grande. Máximo: {MAX_IMAGE_BYTES // 1024 // 1024}MB.")
+    if len(content) == 0:
+        raise HTTPException(400, "Arquivo vazio. Selecione uma imagem válida.")
+    if len(content) > AVATAR_MAX_BYTES:
+        raise HTTPException(400, f"Imagem muito grande. Máximo: {AVATAR_MAX_BYTES // 1024 // 1024}MB.")
+    mime = _detect_mime(content, file.content_type)
 
-    cfg = await _get_or_create(db, current_user.id)
-    cfg.avatar_b64 = base64.b64encode(content).decode()
-    cfg.avatar_mime = mime
+    b64 = base64.b64encode(content).decode()
+    await db.execute(
+        update(AgentConfig)
+        .where(AgentConfig.tenant_id == current_user.id)
+        .values(avatar_b64=b64, avatar_mime=mime)
+        .execution_options(synchronize_session=False)
+    )
     await db.commit()
-
-    url = f"data:{mime};base64,{cfg.avatar_b64}"
+    url = f"data:{mime};base64,{b64}"
     return {"avatar_url": url}
 
 
@@ -146,9 +167,12 @@ async def delete_avatar(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    cfg = await _get_or_create(db, current_user.id)
-    cfg.avatar_b64 = None
-    cfg.avatar_mime = None
+    await db.execute(
+        update(AgentConfig)
+        .where(AgentConfig.tenant_id == current_user.id)
+        .values(avatar_b64=None, avatar_mime=None)
+        .execution_options(synchronize_session=False)
+    )
     await db.commit()
     return {"status": "removed"}
 
@@ -163,31 +187,40 @@ async def upload_expression_image(
     if not expr_type or len(expr_type) > 50 or not expr_type.replace("_", "").isalnum():
         raise HTTPException(400, "Tipo de expressão inválido.")
     content = await file.read()
-    mime = file.content_type or "image/png"
-    if mime not in ALLOWED_MIMES:
-        raise HTTPException(400, "Formato não suportado.")
+    if len(content) == 0:
+        raise HTTPException(400, "Arquivo vazio. Selecione uma imagem válida.")
     if len(content) > MAX_IMAGE_BYTES:
-        raise HTTPException(400, "Imagem muito grande.")
+        raise HTTPException(400, f"Imagem muito grande. Máximo: {MAX_IMAGE_BYTES // 1024 // 1024}MB.")
+    mime = _detect_mime(content, file.content_type)
 
     cfg = await _get_or_create(db, current_user.id)
-    exprs = list(cfg.expressions or DEFAULT_EXPRESSIONS)
+    # deepcopy garante objetos completamente novos — sem cópia rasa que engana o ORM
+    exprs = copy.deepcopy(cfg.expressions or list(DEFAULT_EXPRESSIONS))
 
+    b64_str = base64.b64encode(content).decode()
     found = False
     for e in exprs:
         if e.get("type") == expr_type:
-            e["image_b64"] = base64.b64encode(content).decode()
+            e["image_b64"] = b64_str
             e["image_mime"] = mime
             found = True
             break
     if not found:
         exprs.append({
             "type": expr_type, "label": expr_type, "emoji": "🤖",
-            "image_b64": base64.b64encode(content).decode(), "image_mime": mime,
+            "image_b64": b64_str, "image_mime": mime,
         })
 
-    cfg.expressions = exprs
+    # UPDATE direto via SQL Core — contorna limitação de tracking JSONB do ORM async
+    await db.execute(
+        update(AgentConfig)
+        .where(AgentConfig.tenant_id == current_user.id)
+        .values(expressions=exprs)
+        .execution_options(synchronize_session=False)
+    )
     await db.commit()
-    url = f"data:{mime};base64,{base64.b64encode(content).decode()}"
+    logger.info("expression_image_uploaded", tenant=str(current_user.id), type=expr_type, mime=mime)
+    url = f"data:{mime};base64,{b64_str}"
     return {"image_url": url, "type": expr_type}
 
 
@@ -200,11 +233,16 @@ async def delete_expression_image(
     if not expr_type or len(expr_type) > 50:
         raise HTTPException(400, "Tipo de expressão inválido.")
     cfg = await _get_or_create(db, current_user.id)
-    exprs = list(cfg.expressions or [])
+    exprs = copy.deepcopy(cfg.expressions or [])
     for e in exprs:
         if e.get("type") == expr_type:
             e["image_b64"] = None
             e["image_mime"] = None
-    cfg.expressions = exprs
+    await db.execute(
+        update(AgentConfig)
+        .where(AgentConfig.tenant_id == current_user.id)
+        .values(expressions=exprs)
+        .execution_options(synchronize_session=False)
+    )
     await db.commit()
     return {"status": "removed", "type": expr_type}

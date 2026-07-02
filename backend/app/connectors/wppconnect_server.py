@@ -126,12 +126,66 @@ class WppConnectClient:
                     "raw_id": gid.get("user", ""),
                     "name": c.get("name") or c.get("pushname") or gid.get("user", ""),
                     "participant_count": len(participants),
+                    "participants_raw": participants,
                     "last_message_ts": c.get("t") or c.get("timestamp") or 0,
                 })
             return groups
 
     async def get_cached_token(self) -> str:
         return await self.generate_token()
+
+    async def send_text_message(self, token: str, phone: str, text: str, is_group: bool = True) -> dict:
+        """Envia mensagem de texto para um contato ou grupo."""
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(
+                f"{self.base}/api/{self.session}/send-message",
+                json={"phone": phone, "message": text, "isGroup": is_group},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            )
+            r.raise_for_status()
+            return r.json()
+
+    async def fetch_messages_history(self, token: str, wpp_id: str, count: int = 2000) -> list[dict]:
+        """Busca histórico de mensagens de um grupo via GET /get-messages/{phone}."""
+        async with httpx.AsyncClient(timeout=120) as client:
+            r = await client.get(
+                f"{self.base}/api/{self.session}/get-messages/{wpp_id}",
+                params={"count": count, "direction": "before"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            r.raise_for_status()
+            data = r.json()
+            msgs = data.get("response", data) if isinstance(data, dict) else data
+            return msgs if isinstance(msgs, list) else []
+
+    async def send_file_base64(
+        self, token: str, phone: str, base64_data: str, mime: str,
+        filename: str = "imagem.png", caption: str = "", is_group: bool = True,
+    ) -> dict:
+        """Envia imagem/arquivo via base64 para um contato ou grupo."""
+        data_uri = base64_data if base64_data.startswith("data:") else f"data:{mime};base64,{base64_data}"
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                f"{self.base}/api/{self.session}/send-file-base64",
+                json={"phone": phone, "base64": data_uri, "filename": filename, "caption": caption, "isGroup": is_group},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            )
+            r.raise_for_status()
+            return r.json()
+
+    async def send_voice_base64(
+        self, token: str, phone: str, base64_data: str, mime: str = "audio/ogg;codecs=opus", is_group: bool = True,
+    ) -> dict:
+        """Envia áudio como nota de voz (PTT) via base64 para um contato ou grupo."""
+        data_uri = base64_data if base64_data.startswith("data:") else f"data:{mime};base64,{base64_data}"
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                f"{self.base}/api/{self.session}/send-voice-base64",
+                json={"phone": phone, "base64Ptt": data_uri, "isGroup": is_group},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            )
+            r.raise_for_status()
+            return r.json()
 
 
 def get_client_for_session(wpp_url: str, wpp_session: str, wpp_secret: str) -> WppConnectClient:

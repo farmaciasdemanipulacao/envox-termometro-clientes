@@ -32,6 +32,18 @@ def _to_dict(cfg) -> dict:
     }
 
 
+def get_expression_image(agent_config: dict | None, expr_type: str) -> tuple[str | None, str | None]:
+    """Retorna (base64_data, mime) da imagem da expressão, ou (None, None) se não configurado."""
+    if not agent_config:
+        return None, None
+    for expr in agent_config.get("expressions", []):
+        if expr.get("type") == expr_type:
+            b64 = expr.get("image_b64")
+            mime = expr.get("image_mime") or "image/png"
+            return b64, mime
+    return None, None
+
+
 def get_expression_emoji(agent_config: dict | None, expr_type: str) -> str:
     """Retorna o emoji da expressão, com fallback para padrões."""
     defaults = {

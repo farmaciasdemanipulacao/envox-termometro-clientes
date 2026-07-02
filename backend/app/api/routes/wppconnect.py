@@ -2,9 +2,10 @@
 Webhook do WppConnect Server — recebe eventos e roteia para o tenant correto.
 URL: POST /api/v1/webhooks/wppconnect
 """
+import re
 from fastapi import APIRouter, Request, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
@@ -13,15 +14,60 @@ from app.db.session import AsyncSessionLocal, get_db
 from app.models.source import IngestionSource, SourceType
 from app.models.tenant import TenantConfig
 from app.models.conversation import Conversation, ConversationType
+from app.models.participant import Participant
+from app.models.message import Message
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.connectors.wppconnect_server import wpp_client
+from app.models.subscription import Subscription
+from app.models.plan import Plan
+from app.connectors.wppconnect_server import wpp_client, get_client_for_session
 from app.services.ingestion.processor import IngestionProcessor
 from app.services.ingestion.wpp_normalizer import normalize_wpp_payload
 
 router = APIRouter()
 logger = get_logger(__name__)
 processor = IngestionProcessor()
+
+
+def _is_name_like(s: str) -> bool:
+    """True se a string parece um nome humano (não é número de telefone nem ID)."""
+    if not s:
+        return False
+    clean = re.sub(r"[\s\-\+\(\)\.]", "", s)
+    if clean.isdigit():
+        return False
+    if "@" in s:
+        return False
+    if len(s) < 2:
+        return False
+    # Se começa com muitos dígitos sem letras → provavelmente número
+    if re.match(r"^\d{5,}", clean):
+        return False
+    return True
+
+
+def _participant_display(p: dict) -> str:
+    """Extrai o nome ou número de um participante bruto do WppConnect."""
+    name = p.get("notifyName") or p.get("pushname") or p.get("name") or ""
+    if _is_name_like(name):
+        return name.strip()
+    pid = p.get("id", {})
+    if isinstance(pid, dict):
+        user = pid.get("user", "")
+        serialized = pid.get("_serialized", "")
+    elif isinstance(pid, str):
+        user = pid.split("@")[0]
+        serialized = pid
+    else:
+        user = ""
+        serialized = str(pid)
+    if user and re.match(r"^\d+$", user):
+        return f"+{user}"
+    if serialized and "@c.us" in serialized:
+        num = serialized.split("@")[0]
+        if re.match(r"^\d+$", num):
+            return f"+{num}"
+    return (name or user or serialized or "").strip() or "Desconhecido"
 
 
 async def _get_source_for_session(db, session_name: str) -> IngestionSource | None:
@@ -50,12 +96,13 @@ async def _get_or_create_fallback_source(db) -> IngestionSource:
     )
     source = result.scalar_one_or_none()
     if not source:
-        from app.core.security import hash_api_key
         source = IngestionSource(
             name="WppConnect Monitor",
             description="Ingestão automática via WppConnect (fallback)",
             source_type=SourceType.WEBHOOK,
-            api_key_hash=hash_api_key(settings.API_KEY_SECRET),
+            # Sem api_key_hash — nunca resolvida por X-API-Key, só por nome/tenant_id.
+            # Reaproveitar API_KEY_SECRET aqui causava colisão com "Development Default" (D-027).
+            api_key_hash=None,
             is_active=True,
         )
         db.add(source)
@@ -85,6 +132,7 @@ class GroupToggleRequest(BaseModel):
     name: str
     participant_count: int = 0
     enable: bool = True
+    days_back: int | None = 90  # None = sem corte (desde o começo); 0 = sem backfill
 
 
 @router.get("/wpp/available-groups")
@@ -93,15 +141,23 @@ async def get_available_groups(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Lista todos os grupos WhatsApp disponíveis no WppConnect
-    e indica quais estão sendo monitorados por este tenant.
+    Lista todos os grupos WhatsApp disponíveis no WppConnect do tenant.
+    Retorna lista vazia se o tenant não tem WppConnect configurado.
     """
+    tc_result = await db.execute(
+        select(TenantConfig).where(TenantConfig.tenant_id == current_user.id)
+    )
+    tenant_cfg = tc_result.scalar_one_or_none()
+    if not tenant_cfg:
+        return []
+
+    client = get_client_for_session(tenant_cfg.wpp_url, tenant_cfg.wpp_session, tenant_cfg.wpp_secret)
     try:
-        token = await wpp_client.generate_token()
-        wpp_groups = await wpp_client.get_all_groups(token)
+        token = await client.generate_token()
+        wpp_groups = await client.get_all_groups(token)
     except Exception as e:
-        logger.error("wpp_list_groups_failed", error=str(e))
-        raise HTTPException(status_code=503, detail="Não foi possível conectar ao WppConnect")
+        logger.warning("wpp_list_groups_failed", session=tenant_cfg.wpp_session, error=str(e))
+        return []  # sessão ainda não iniciada ou desconectada — retorna vazio
 
     # Busca conversas monitoradas do tenant
     result = await db.execute(
@@ -117,6 +173,41 @@ async def get_available_groups(
     for g in wpp_groups:
         wpp_id = g["wpp_id"]
         conv = conv_map.get(wpp_id)
+
+        # Participantes — do banco (grupos monitorados) ou do WppConnect (não monitorados)
+        participants_display: list[str] = []
+        if conv:
+            pid_result = await db.execute(
+                select(Message.participant_id)
+                .where(
+                    Message.conversation_id == conv.id,
+                    Message.participant_id.isnot(None),
+                )
+                .distinct()
+                .limit(15)
+            )
+            pids = [row[0] for row in pid_result.all()]
+            _db_skip = {"unknown", "desconhecido", ""}
+            if pids:
+                part_result = await db.execute(
+                    select(Participant).where(Participant.id.in_(pids))
+                )
+                for p in part_result.scalars().all():
+                    display = p.custom_name or p.name or ""
+                    # Se nome é placeholder ou não parece nome, tenta extrair número
+                    if display.lower() in _db_skip or not _is_name_like(display):
+                        ext = p.external_id or ""
+                        num = ext.split("@")[0]
+                        display = f"+{num}" if (num and re.match(r"^\d+$", num)) else ""
+                    if display:
+                        participants_display.append(display.strip())
+        else:
+            _skip = {"desconhecido", "unknown", ""}
+            for raw_p in (g.get("participants_raw") or [])[:15]:
+                d = _participant_display(raw_p)
+                if d and d.lower() not in _skip:
+                    participants_display.append(d)
+
         out.append({
             "wpp_id": wpp_id,
             "name": g["name"],
@@ -125,6 +216,7 @@ async def get_available_groups(
             "is_monitored": conv is not None and conv.is_active,
             "conversation_id": str(conv.id) if conv else None,
             "custom_name": conv.custom_name if conv else None,
+            "participants": participants_display,
         })
 
     # Ordena: monitorados primeiro, depois por número de participantes
@@ -132,9 +224,186 @@ async def get_available_groups(
     return out
 
 
+def _normalize_history_message(msg: dict, group_id: str, group_name: str) -> dict | None:
+    """Normaliza mensagem do histórico (get-messages) para o formato do processor."""
+    from datetime import datetime, timezone
+    from_me = msg.get("fromMe", False)
+    id_obj = msg.get("id", {})
+    if isinstance(id_obj, dict):
+        from_me = from_me or id_obj.get("fromMe", False)
+    if from_me:
+        return None
+
+    sender_id = msg.get("author") or msg.get("from") or "unknown"
+    sender_name = msg.get("notifyName") or msg.get("pushname") or sender_id.split("@")[0]
+
+    body = msg.get("body") or ""
+    wpp_type = msg.get("type", "chat")
+    if wpp_type == "chat":
+        content, msg_type = (body or "[Mensagem vazia]"), "text"
+    elif wpp_type in ("image", "video", "audio", "ptt", "document"):
+        content, msg_type = (body or f"[{wpp_type}]"), wpp_type
+    else:
+        content, msg_type = (body or f"[{wpp_type}]"), "text"
+
+    ts = msg.get("t")
+    if not ts:
+        return None
+    sent_at = datetime.fromtimestamp(int(ts), tz=timezone.utc).isoformat()
+
+    if isinstance(id_obj, dict):
+        external_id = id_obj.get("_serialized") or ""
+    else:
+        external_id = str(id_obj)
+
+    return {
+        "conversation_external_id": group_id,
+        "conversation_name": group_name,
+        "conversation_type": "group",
+        "participant_external_id": sender_id,
+        "participant_name": sender_name,
+        "participant_role": "unknown",
+        "content": content,
+        "message_type": msg_type,
+        "sent_at": sent_at,
+        "external_id": external_id,
+        "raw_payload": msg,
+    }
+
+
+async def _backfill_group_history(wpp_id: str, group_name: str, source_id: str, days_back: int | None = 90, tenant_id: str | None = None):
+    """Busca e ingere mensagens históricas de um grupo em background.
+
+    days_back=0 → sem backfill; days_back=None → sem corte de data (tudo disponível).
+    Usa o WppConnect do tenant quando disponível; cai no global como fallback.
+    """
+    from datetime import datetime, timezone, timedelta
+    from app.models.message import Message
+    from app.models.source import IngestionSource
+    import uuid
+
+    if days_back == 0:
+        logger.info("wpp_backfill_skipped", wpp_id=wpp_id, reason="days_back=0")
+        return
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)) if days_back is not None else None
+
+    # Resolve cliente WppConnect do tenant
+    client = wpp_client
+    if tenant_id:
+        async with AsyncSessionLocal() as _db:
+            tc_res = await _db.execute(
+                select(TenantConfig).where(TenantConfig.tenant_id == uuid.UUID(tenant_id))
+            )
+            tc = tc_res.scalar_one_or_none()
+            if tc:
+                client = get_client_for_session(tc.wpp_url, tc.wpp_session, tc.wpp_secret)
+
+    try:
+        token = await client.generate_token()
+        msgs = await client.fetch_messages_history(token, wpp_id, count=10000)
+    except Exception as e:
+        logger.error("wpp_backfill_fetch_failed", wpp_id=wpp_id, error=str(e))
+        return
+
+    logger.info("wpp_backfill_fetched", wpp_id=wpp_id, total=len(msgs))
+    ingested = skipped_old = skipped_dup = skipped_invalid = 0
+
+    async with AsyncSessionLocal() as db:
+        try:
+            src_result = await db.execute(
+                select(IngestionSource).where(IngestionSource.id == uuid.UUID(source_id))
+            )
+            source = src_result.scalar_one_or_none()
+            if not source:
+                logger.error("wpp_backfill_source_not_found", source_id=source_id)
+                return
+
+            for raw_msg in msgs:
+                normalized = _normalize_history_message(raw_msg, wpp_id, group_name)
+                if not normalized:
+                    skipped_invalid += 1
+                    continue
+
+                msg_ts = datetime.fromisoformat(normalized["sent_at"])
+                if msg_ts.tzinfo is None:
+                    from datetime import timezone as tz
+                    msg_ts = msg_ts.replace(tzinfo=tz.utc)
+                if cutoff is not None and msg_ts < cutoff:
+                    skipped_old += 1
+                    continue
+
+                ext_id = normalized.get("external_id")
+                if ext_id:
+                    dup = await db.execute(
+                        select(Message).where(Message.external_id == ext_id)
+                    )
+                    if dup.scalar_one_or_none():
+                        skipped_dup += 1
+                        continue
+
+                try:
+                    await processor.process_message(db, normalized, source)
+                    ingested += 1
+                    if ingested % 50 == 0:
+                        await db.commit()
+                except Exception as e:
+                    logger.warning("wpp_backfill_msg_failed", error=str(e))
+                    await db.rollback()
+                    continue
+
+            await db.commit()
+            logger.info(
+                "wpp_backfill_done",
+                wpp_id=wpp_id,
+                ingested=ingested,
+                skipped_old=skipped_old,
+                skipped_dup=skipped_dup,
+                skipped_invalid=skipped_invalid,
+            )
+        except Exception as e:
+            await db.rollback()
+            logger.error("wpp_backfill_failed", wpp_id=wpp_id, error=str(e))
+            return
+
+    # Após backfill, dispara análise de participantes em nova sessão de DB
+    if ingested > 0:
+        await _profile_group_participants(wpp_id, group_name)
+
+
+async def _profile_group_participants(wpp_id: str, group_name: str):
+    """Analisa participantes do grupo após backfill — roda em background."""
+    from app.services.participant_profiler import analyze_conversation_participants
+
+    async with AsyncSessionLocal() as db:
+        try:
+            conv_result = await db.execute(
+                select(Conversation).where(Conversation.wpp_group_id == wpp_id)
+            )
+            conv = conv_result.scalar_one_or_none()
+            if not conv:
+                return
+            result = await analyze_conversation_participants(
+                conversation_id=str(conv.id),
+                db=db,
+                group_name=group_name,
+                force=False,
+            )
+            logger.info(
+                "wpp_participant_profiling_done",
+                wpp_id=wpp_id,
+                analyzed=result.get("analyzed", 0),
+                skipped=result.get("skipped", 0),
+                errors=len(result.get("errors", [])),
+            )
+        except Exception as e:
+            logger.error("wpp_participant_profiling_failed", wpp_id=wpp_id, error=str(e))
+
+
 @router.post("/wpp/groups/toggle")
 async def toggle_group_monitoring(
     payload: GroupToggleRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -180,6 +449,40 @@ async def toggle_group_monitoring(
         conv = result2.scalar_one_or_none()
 
     if payload.enable:
+        # Busca plano do usuário (usado para max_groups e max_history_days)
+        days_back = payload.days_back
+        plan_max: int | None = 90  # default conservador para histórico
+        sub_result = await db.execute(
+            select(Subscription).where(Subscription.user_id == current_user.id)
+        )
+        sub = sub_result.scalar_one_or_none()
+        plan = None
+        if sub:
+            plan = await db.get(Plan, sub.plan_id)
+            if plan:
+                plan_max = plan.max_history_days  # None = ilimitado
+
+        # Valida limite de grupos do plano
+        max_groups = plan.max_groups if plan else 5
+        if max_groups != -1:
+            monitored_count = await db.scalar(
+                select(__import__("sqlalchemy").func.count(Conversation.id)).where(
+                    Conversation.tenant_id == current_user.id,
+                    Conversation.is_monitored == True,  # noqa
+                    Conversation.wpp_group_id != payload.wpp_id,  # não conta o próprio grupo (reativação)
+                )
+            )
+            if (monitored_count or 0) >= max_groups:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Limite do plano atingido: máximo de {max_groups} grupo{'s' if max_groups != 1 else ''} monitorado{'s' if max_groups != 1 else ''}. Faça upgrade para monitorar mais grupos.",
+                )
+
+        # Aplica limite: plan_max=None → sem restrição; plan_max=N → days_back ≤ N
+        if plan_max is not None:
+            if days_back is None or (days_back is not None and days_back > plan_max):
+                days_back = plan_max
+
         if conv:
             conv.is_active = True
             conv.is_monitored = True
@@ -201,7 +504,8 @@ async def toggle_group_monitoring(
             db.add(conv)
         await db.commit()
         await db.refresh(conv)
-        return {"status": "monitoring_enabled", "conversation_id": str(conv.id)}
+        background_tasks.add_task(_backfill_group_history, payload.wpp_id, payload.name, str(source.id), days_back, str(current_user.id))
+        return {"status": "monitoring_enabled", "conversation_id": str(conv.id), "backfill": "started", "days_back": days_back}
     else:
         if conv:
             conv.is_active = False

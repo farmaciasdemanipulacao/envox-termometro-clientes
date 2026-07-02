@@ -119,6 +119,11 @@ function App() {
   const [profileOpen,   setProfileOpen]   = React.useState(false);
   const [pushBanner,    setPushBanner]    = React.useState(false);
   const [installBanner, setInstallBanner] = React.useState(false);
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
+  // Fluxo público
+  const [publicView,    setPublicView]    = React.useState('login');  // 'login' | 'pricing' | 'register'
+  const [regPlan,       setRegPlan]       = React.useState(null);
 
   const isMobile = useIsMobile();
   const company = 'ENVOX';
@@ -128,6 +133,19 @@ function App() {
 
   // Expõe navegação para o Service Worker
   window.envoxNavigate = (url) => { if (url === '/' || url.includes('alert')) handleNavigate('alerts'); };
+
+  // Detecta novo usuário e exibe onboarding
+  React.useEffect(() => {
+    if (!loggedIn) return;
+    if (localStorage.getItem('onboarding_completed')) return;
+    // Verifica se tem grupos monitorados — se não, é novo usuário
+    window.apiGet('/dashboard/groups')
+      .then(d => {
+        const groups = Array.isArray(d) ? d : (d?.groups || []);
+        if (groups.length === 0) setShowOnboarding(true);
+      })
+      .catch(() => {});
+  }, [loggedIn]);
 
   // Carrega perfil do usuário atual após login
   React.useEffect(() => {
@@ -197,6 +215,9 @@ function App() {
     localStorage.removeItem('envox_is_admin');
     localStorage.removeItem('envox_user_id');
     localStorage.removeItem('envox_full_name');
+    localStorage.removeItem('envox_plan_name');
+    localStorage.removeItem('envox_max_history_days');
+    localStorage.removeItem('envox_max_groups');
     setLoggedIn(false);
     setPage('dashboard');
   }
@@ -207,21 +228,51 @@ function App() {
   }
 
   if (!loggedIn) {
-    return <LoginScreen onLogin={handleLogin} company={company} />;
+    if (publicView === 'pricing') {
+      return (
+        <PricingPage
+          onSelectPlan={plan => { setRegPlan(plan); setPublicView('register'); }}
+          onLogin={() => setPublicView('login')}
+        />
+      );
+    }
+    if (publicView === 'register') {
+      return (
+        <RegisterFlow
+          initialPlan={regPlan}
+          onSuccess={handleLogin}
+          onBack={() => setPublicView('pricing')}
+        />
+      );
+    }
+    // Default: login
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        company={company}
+        onCreateAccount={() => setPublicView('pricing')}
+      />
+    );
   }
 
   const renderPage = () => {
+    if (page === 'admin') {
+      return <AdminPanel onBack={() => setPage('dashboard')} />;
+    }
     switch (page) {
       case 'dashboard':    return <DashboardScreen onNavigate={handleNavigate} onGenerateSummary={() => setPage('summary')} />;
       case 'intelligence': return <IntelligenceScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
       case 'tags':         return <TagsScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
       case 'summary':      return <SummaryScreen onNavigateAlerts={() => setPage('alerts')} />;
       case 'alerts':       return <AlertsScreen />;
-      case 'groups':       return <GroupsScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
-      case 'conversation': return selectedGroup
-        ? <ConversationScreen group={selectedGroup} onBack={() => setPage('groups')} />
-        : <GroupsScreen onSelectGroup={g => { setSelectedGroup(g); setPage('conversation'); }} />;
-      case 'wpp-groups':   return <WppGroupsManagerScreen />;
+      case 'groups':           return <WppGroupsManagerScreen onSelectGroup={g => { setSelectedGroup(g); setPage('wpp-conversation'); }} />;
+      case 'conversation':     return selectedGroup
+        ? <ConversationScreen group={selectedGroup} onBack={() => { setSelectedGroup(null); setPage('wpp-groups'); }} />
+        : <WppGroupsManagerScreen onSelectGroup={g => { setSelectedGroup(g); setPage('wpp-conversation'); }} />;
+      case 'wpp-groups':       return <WppGroupsManagerScreen onSelectGroup={g => { setSelectedGroup(g); setPage('wpp-conversation'); }} />;
+      case 'wpp-conversation': return selectedGroup
+        ? <ConversationScreen group={selectedGroup} onBack={() => { setSelectedGroup(null); setPage('wpp-groups'); }} />
+        : <WppGroupsManagerScreen onSelectGroup={g => { setSelectedGroup(g); setPage('wpp-conversation'); }} />;
       case 'range-summary': return <RangeSummaryScreen />;
       case 'agent':        return <AgentConfigScreen />;
       case 'team':         return <TeamScreen />;
@@ -230,6 +281,7 @@ function App() {
       case 'config':       return <ConfigScreen />;
       case 'api':          return <ApiDocsScreen />;
       case 'users':        return <UsersScreen onBack={() => setPage('config')} />;
+      case 'automations':  return <AutomationsScreen />;
       default:             return <DashboardScreen onNavigate={handleNavigate} onGenerateSummary={() => setPage('summary')} />;
     }
   };
@@ -246,9 +298,15 @@ function App() {
     setInstallBanner(false);
   }
 
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('onboarding_completed', '1');
+    setShowOnboarding(false);
+  };
+
   if (isMobile) {
     return (
       <div style={{ height: '100vh', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: 'var(--color-bg-page)' }}>
+        {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
         <MobileTopBar company={company} onMenuOpen={() => setDrawerOpen(true)} />
         {installBanner && <InstallBanner onDismiss={handleInstallDismiss} />}
         {pushBanner && !installBanner && <PushPermissionBanner onDismiss={handlePushDismiss} />}
@@ -295,6 +353,7 @@ function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: 'var(--font-sans)' }}>
+      {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
       {installBanner && <InstallBanner onDismiss={handleInstallDismiss} />}
       {pushBanner && !installBanner && <PushPermissionBanner onDismiss={handlePushDismiss} />}
       <Sidebar

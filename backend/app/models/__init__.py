@@ -13,6 +13,9 @@ from app.models.metrics import CollaboratorMetric, ConversationMetric
 from app.models.processing import ProcessingRun
 from app.models.user import User
 from app.models.tenant import TenantConfig
+from app.models.plan import Plan
+from app.models.subscription import Subscription
+from app.models.automation import ScheduledJobConfig, SystemSetting, CustomAlertRule
 
 __all__ = [
     "IngestionSource",
@@ -27,4 +30,9 @@ __all__ = [
     "ProcessingRun",
     "User",
     "TenantConfig",
+    "Plan",
+    "Subscription",
+    "ScheduledJobConfig",
+    "SystemSetting",
+    "CustomAlertRule",
 ]

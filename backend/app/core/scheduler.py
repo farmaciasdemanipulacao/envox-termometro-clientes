@@ -18,78 +18,123 @@ logger = get_logger(__name__)
 
 _scheduler: AsyncIOScheduler | None = None
 
+# Tipo de agendamento de cada job — usado tanto no setup quanto na edição via API.
+# cron_daily: editável por hour/minute | cron_weekly: editável por day_of_week+hour+minute
+# interval: editável por interval_minutes
+JOB_SCHEDULE_TYPES = {
+    "daily_summary": "cron_daily",
+    "alert_scan": "interval",
+    "metrics_update": "interval",
+    "wpp_health_check": "interval",
+    "eod_briefing": "cron_daily",
+    "data_cleanup": "cron_weekly",
+}
+
+# Defaults de código — usados quando não há override no banco (ScheduledJobConfig)
+_JOB_DEFAULTS = {
+    "daily_summary": {"hour": settings.SUMMARY_SCHEDULE_HOUR, "minute": settings.SUMMARY_SCHEDULE_MINUTE},
+    "alert_scan": {"interval_minutes": settings.ALERT_SCAN_INTERVAL_MIN},
+    "metrics_update": {"interval_minutes": settings.METRICS_UPDATE_INTERVAL_MIN},
+    "wpp_health_check": {"interval_minutes": settings.WPP_HEALTH_CHECK_INTERVAL_MIN},
+    "eod_briefing": {"hour": 18, "minute": 0},
+    "data_cleanup": {"day_of_week": "sun", "hour": 2, "minute": 0},
+}
+
+_JOB_NAMES = {
+    "daily_summary": "Geração de Resumo Diário",
+    "alert_scan": "Scan de Alertas",
+    "metrics_update": "Atualização de Métricas",
+    "wpp_health_check": "Health Check WppConnect",
+    "eod_briefing": "Briefing de Fim de Dia (18h)",
+    "data_cleanup": "Limpeza de Dados (LGPD)",
+}
+
+_JOB_FUNCS = {
+    "daily_summary": lambda: run_daily_summary_job,
+    "alert_scan": lambda: run_alert_scan_job,
+    "metrics_update": lambda: run_metrics_update_job,
+    "wpp_health_check": lambda: run_wpp_health_check_job,
+    "eod_briefing": lambda: run_eod_briefing_job,
+    "data_cleanup": lambda: run_cleanup_job,
+}
+
+_JOB_MISFIRE_GRACE = {
+    "daily_summary": 300,
+    "alert_scan": 60,
+    "wpp_health_check": 60,
+    "eod_briefing": 600,
+}
+
 
 def get_scheduler() -> AsyncIOScheduler | None:
     return _scheduler
 
 
-def setup_scheduler() -> AsyncIOScheduler:
+def build_trigger(job_id: str, cfg: dict):
+    """Monta o trigger (Cron/Interval) de um job a partir de um dict de config (hour/minute/day_of_week/interval_minutes)."""
+    schedule_type = JOB_SCHEDULE_TYPES[job_id]
+    defaults = _JOB_DEFAULTS[job_id]
+    if schedule_type == "cron_daily":
+        hour = cfg.get("hour") if cfg.get("hour") is not None else defaults["hour"]
+        minute = cfg.get("minute") if cfg.get("minute") is not None else defaults["minute"]
+        return CronTrigger(hour=hour, minute=minute)
+    if schedule_type == "cron_weekly":
+        hour = cfg.get("hour") if cfg.get("hour") is not None else defaults["hour"]
+        minute = cfg.get("minute") if cfg.get("minute") is not None else defaults["minute"]
+        dow = cfg.get("day_of_week") or defaults["day_of_week"]
+        return CronTrigger(day_of_week=dow, hour=hour, minute=minute)
+    # interval
+    interval_minutes = cfg.get("interval_minutes") if cfg.get("interval_minutes") is not None else defaults["interval_minutes"]
+    return IntervalTrigger(minutes=interval_minutes)
+
+
+async def _load_job_configs(db) -> dict:
+    """Carrega os overrides de ScheduledJobConfig do banco, indexados por job_id."""
+    from app.models.automation import ScheduledJobConfig
+    from sqlalchemy import select as _sel
+
+    result = await db.execute(_sel(ScheduledJobConfig))
+    rows = result.scalars().all()
+    return {
+        r.job_id: {
+            "enabled": r.enabled,
+            "hour": r.hour,
+            "minute": r.minute,
+            "day_of_week": r.day_of_week,
+            "interval_minutes": r.interval_minutes,
+        }
+        for r in rows
+    }
+
+
+async def setup_scheduler() -> AsyncIOScheduler:
     global _scheduler
 
     _scheduler = AsyncIOScheduler(timezone="America/Sao_Paulo")
 
-    # Job 1: Resumo diário — todo dia às SUMMARY_SCHEDULE_HOUR:00
-    _scheduler.add_job(
-        func=run_daily_summary_job,
-        trigger=CronTrigger(
-            hour=settings.SUMMARY_SCHEDULE_HOUR,
-            minute=settings.SUMMARY_SCHEDULE_MINUTE,
-        ),
-        id="daily_summary",
-        name="Geração de Resumo Diário",
-        replace_existing=True,
-        misfire_grace_time=300,  # 5 min de tolerância
-    )
+    from app.db.session import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        job_configs = await _load_job_configs(db)
 
-    # Job 2: Scan de alertas — a cada ALERT_SCAN_INTERVAL_MIN minutos
-    _scheduler.add_job(
-        func=run_alert_scan_job,
-        trigger=IntervalTrigger(minutes=settings.ALERT_SCAN_INTERVAL_MIN),
-        id="alert_scan",
-        name="Scan de Alertas",
-        replace_existing=True,
-        misfire_grace_time=60,
-    )
-
-    # Job 3: Update de métricas — a cada 30 min
-    _scheduler.add_job(
-        func=run_metrics_update_job,
-        trigger=IntervalTrigger(minutes=settings.METRICS_UPDATE_INTERVAL_MIN),
-        id="metrics_update",
-        name="Atualização de Métricas",
-        replace_existing=True,
-    )
-
-    # Job 4 (novo): Health check WppConnect — a cada WPP_HEALTH_CHECK_INTERVAL_MIN minutos
-    _scheduler.add_job(
-        func=run_wpp_health_check_job,
-        trigger=IntervalTrigger(minutes=settings.WPP_HEALTH_CHECK_INTERVAL_MIN),
-        id="wpp_health_check",
-        name="Health Check WppConnect",
-        replace_existing=True,
-        misfire_grace_time=60,
-    )
-
-    # Job 5: Briefing de fim de dia — todo dia às 18h (horário Brasília)
-    _scheduler.add_job(
-        func=run_eod_briefing_job,
-        trigger=CronTrigger(hour=18, minute=0),
-        id="eod_briefing",
-        name="Briefing de Fim de Dia (18h)",
-        replace_existing=True,
-        misfire_grace_time=600,
-    )
-
-    # Job 6: Cleanup de dados antigos — todo domingo às 02:00
-    _scheduler.add_job(
-        func=run_cleanup_job,
-        trigger=CronTrigger(day_of_week="sun", hour=2, minute=0),
-        id="data_cleanup",
-        name="Limpeza de Dados (LGPD)",
-        replace_existing=True,
-    )
+    for job_id in JOB_SCHEDULE_TYPES:
+        cfg = job_configs.get(job_id, {})
+        trigger = build_trigger(job_id, cfg)
+        _scheduler.add_job(
+            func=_JOB_FUNCS[job_id](),
+            trigger=trigger,
+            id=job_id,
+            name=_JOB_NAMES[job_id],
+            replace_existing=True,
+            misfire_grace_time=_JOB_MISFIRE_GRACE.get(job_id),
+        )
 
     _scheduler.start()
+
+    # Aplica enabled=False (pausa) para jobs desativados pelo admin
+    for job_id, cfg in job_configs.items():
+        if cfg.get("enabled") is False and _scheduler.get_job(job_id):
+            _scheduler.pause_job(job_id)
+
     logger.info(
         "scheduler_started",
         jobs=[j.id for j in _scheduler.get_jobs()],
@@ -99,16 +144,89 @@ def setup_scheduler() -> AsyncIOScheduler:
     return _scheduler
 
 
+def apply_job_runtime_config(job_id: str, cfg: dict) -> None:
+    """
+    Reaplica a configuração (trigger + enabled/disabled) de um job já rodando no scheduler.
+    Usado pelo endpoint PATCH /system/jobs/{job_id} para efeito imediato, sem restart.
+    """
+    scheduler = get_scheduler()
+    if not scheduler or not scheduler.get_job(job_id):
+        return
+    trigger = build_trigger(job_id, cfg)
+    scheduler.reschedule_job(job_id, trigger=trigger)
+    if cfg.get("enabled") is False:
+        scheduler.pause_job(job_id)
+    else:
+        scheduler.resume_job(job_id)
+
+
 # =============================================================================
 # IMPLEMENTAÇÕES DOS JOBS
 # =============================================================================
 
+async def _send_summary_to_wpp_groups(db, summary, agent_config: dict | None, tenant_id) -> None:
+    """
+    Envia o resumo diário para os grupos WhatsApp monitorados DESTE tenant,
+    usando a sessão WppConnect do próprio tenant (nunca a sessão global do admin).
+    """
+    from app.models.conversation import Conversation
+    from app.models.tenant import TenantConfig
+    from app.connectors.wppconnect_server import get_client_for_session
+    from app.services.agent import get_expression_image, temperature_to_expression
+    from sqlalchemy import select as _sel
+
+    try:
+        result = await db.execute(
+            _sel(Conversation).where(
+                Conversation.tenant_id == tenant_id,
+                Conversation.is_monitored == True,  # noqa
+                Conversation.wpp_group_id.isnot(None),
+            )
+        )
+        groups = result.scalars().all()
+        if not groups:
+            logger.debug("wpp_send_summary_no_groups", tenant_id=str(tenant_id))
+            return
+
+        tc_result = await db.execute(_sel(TenantConfig).where(TenantConfig.tenant_id == tenant_id))
+        tenant_cfg = tc_result.scalar_one_or_none()
+        if not tenant_cfg:
+            logger.warning("wpp_send_summary_no_tenant_config", tenant_id=str(tenant_id))
+            return
+        client = get_client_for_session(tenant_cfg.wpp_url, tenant_cfg.wpp_session, tenant_cfg.wpp_secret)
+
+        token = await client.generate_token()
+        expr_type = temperature_to_expression(summary.temperature_label or "neutro")
+        img_b64, img_mime = get_expression_image(agent_config, expr_type) if agent_config else (None, None)
+
+        for conv in groups:
+            try:
+                await client.send_text_message(token, conv.wpp_group_id, summary.executive_text)
+                if img_b64:
+                    ext = (img_mime or "image/png").split("/")[-1]
+                    await client.send_file_base64(
+                        token, conv.wpp_group_id, img_b64, img_mime or "image/png",
+                        filename=f"expressao.{ext}", caption="",
+                    )
+                logger.info("wpp_summary_sent", group=conv.wpp_group_id, expr=expr_type, tenant_id=str(tenant_id))
+            except Exception as e:
+                logger.error("wpp_summary_send_failed", group=conv.wpp_group_id, error=str(e), tenant_id=str(tenant_id))
+    except Exception as e:
+        logger.error("wpp_send_summary_error", error=str(e), tenant_id=str(tenant_id))
+
+
 async def run_daily_summary_job():
-    """Gera resumo diário da operação."""
+    """
+    Gera e envia o resumo diário — UM POR TENANT, isolado (dados, agent_config
+    e sessão WhatsApp cada um só enxerga/usa o que é da própria conta).
+    """
     from app.db.session import AsyncSessionLocal
     from app.services.analysis.summarizer import summary_service
+    from app.services.agent import get_agent_config
     from app.models.processing import ProcessingRun, RunType, RunStatus
+    from app.models.conversation import Conversation
     from datetime import datetime, timezone, date
+    from sqlalchemy import select as _sel
 
     logger.info("daily_summary_job_started")
     async with AsyncSessionLocal() as db:
@@ -121,20 +239,41 @@ async def run_daily_summary_job():
         await db.flush()
 
         try:
-            # Tenta carregar agent config do admin
-            from app.services.agent import get_agent_config
-            from app.models.user import User
-            from sqlalchemy import select as _sel
-            admin_r = await db.execute(_sel(User).where(User.username == "admin", User.is_active == True))  # noqa
-            admin = admin_r.scalar_one_or_none()
-            agent_cfg = await get_agent_config(db, admin.id) if admin else None
+            # Um resumo por tenant que tenha ao menos um grupo monitorado
+            tenants_result = await db.execute(
+                _sel(Conversation.tenant_id)
+                .where(
+                    Conversation.is_monitored == True,  # noqa
+                    Conversation.tenant_id.isnot(None),
+                )
+                .distinct()
+            )
+            tenant_ids = [row[0] for row in tenants_result.all()]
 
-            summary = await summary_service.generate_daily_summary(db, date.today(), agent_config=agent_cfg)
+            processed = 0
+            for tenant_id in tenant_ids:
+                try:
+                    agent_cfg = await get_agent_config(db, tenant_id)
+                    summary = await summary_service.generate_daily_summary(
+                        db, date.today(), agent_config=agent_cfg, tenant_id=tenant_id,
+                    )
+                    await db.commit()
+                    processed += 1
+                    logger.info("daily_summary_job_tenant_completed",
+                                tenant_id=str(tenant_id), temperature=summary.temperature_score)
+
+                    # Envia resumo para os grupos WhatsApp deste tenant (sessão própria)
+                    await _send_summary_to_wpp_groups(db, summary, agent_cfg, tenant_id)
+                except Exception as e:
+                    await db.rollback()
+                    logger.error("daily_summary_job_tenant_failed", tenant_id=str(tenant_id), error=str(e))
+
             run.status = RunStatus.SUCCESS
-            run.items_processed = 1
+            run.items_processed = processed
             run.finished_at = datetime.now(timezone.utc)
             await db.commit()
-            logger.info("daily_summary_job_completed", temperature=summary.temperature_score)
+            logger.info("daily_summary_job_completed", tenants_processed=processed)
+
         except Exception as e:
             run.status = RunStatus.FAILED
             run.error_log = str(e)

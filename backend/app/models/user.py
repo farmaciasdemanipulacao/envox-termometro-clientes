@@ -28,6 +28,12 @@ class User(Base, UUIDMixin, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
 
+    company_name: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
     tenant_config: Mapped[Optional["TenantConfig"]] = relationship(
         "TenantConfig", back_populates="tenant", uselist=False, lazy="noload"
+    )
+    subscription: Mapped[Optional["Subscription"]] = relationship(
+        "Subscription", back_populates="user", uselist=False, lazy="noload"
     )

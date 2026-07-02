@@ -78,7 +78,9 @@ async def generate_summary(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    summary = await summary_service.generate_daily_summary(db, target_date)
+    from app.services.agent import get_agent_config
+    agent_cfg = await get_agent_config(db, current_user.id)
+    summary = await summary_service.generate_daily_summary(db, target_date, agent_config=agent_cfg, tenant_id=current_user.id)
     return _to_out(summary)
 
 

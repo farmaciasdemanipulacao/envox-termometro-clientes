@@ -8,8 +8,8 @@ var GroupCard = window.GroupCard;
 // ─────────────────────────────────────────────────────────────
 // LoginScreen — conecta na API real
 // ─────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin, company }) {
-  const [username, setUsername] = React.useState('admin');
+function LoginScreen({ onLogin, company, onCreateAccount }) {
+  const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading]   = React.useState(false);
   const [error, setError]       = React.useState('');
@@ -38,11 +38,16 @@ function LoginScreen({ onLogin, company }) {
       const data = await r.json();
       localStorage.setItem('envox_token', data.access_token);
       localStorage.setItem('envox_user', data.username || username);
+      localStorage.setItem('envox_plan_name', data.plan_name || '');
+      const mhd = data.max_history_days;
+      localStorage.setItem('envox_max_history_days', mhd === null || mhd === undefined ? '' : String(mhd));
+      localStorage.setItem('envox_max_groups', data.max_groups !== undefined ? String(data.max_groups) : '5');
       onLogin({
         userName: data.username || username,
         isAdmin: data.is_admin,
         userId: data.user_id,
         fullName: data.full_name,
+        planName: data.plan_name || '',
       });
     } catch (err) {
       setError(err.message);
@@ -88,6 +93,18 @@ function LoginScreen({ onLogin, company }) {
         <Button variant="primary" size="lg" fullWidth onClick={handleLogin} disabled={loading}>
           {loading ? <><Spinner size={14} />&nbsp; Entrando...</> : <><i className="fas fa-sign-in-alt"></i>&nbsp; Entrar</>}
         </Button>
+
+        {onCreateAccount && (
+          <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--color-border-input)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Ainda não tem conta? </span>
+            <button
+              onClick={onCreateAccount}
+              style={{ background: 'none', border: 'none', color: 'var(--color-brand-600)', fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+            >
+              Criar conta grátis
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -252,7 +269,7 @@ function DashboardScreen({ onNavigate, onGenerateSummary }) {
         <section style={{ animation: 'fadeInUp 0.4s ease 0.2s both' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <SectionTitle icon="users" label="Grupos em Monitoramento" />
-            <button onClick={() => onNavigate('groups')} style={{ background: 'none', border: 'none', color: 'var(--color-brand-600)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+            <button onClick={() => onNavigate('wpp-groups')} style={{ background: 'none', border: 'none', color: 'var(--color-brand-600)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
               Ver todos ({groups.length}) →
             </button>
           </div>

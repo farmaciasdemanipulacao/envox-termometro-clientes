@@ -91,10 +91,21 @@ class IngestionProcessor:
         db.add(message)
         await db.flush()  # Para ter o ID antes da análise
 
+        # 4b. Busca as últimas mensagens da conversa para dar contexto à análise
+        # (ex.: confirmar se uma keyword ambígua de oportunidade é comercial mesmo)
+        context_result = await db.execute(
+            select(Message.content)
+            .where(Message.conversation_id == conversation.id, Message.id != message.id)
+            .order_by(Message.sent_at.desc())
+            .limit(5)
+        )
+        context_texts = [row[0] for row in reversed(context_result.all())]
+
         # 5. Análise heurística
         result = heuristics_engine.analyze(
             text=message.content,
             participant_role=participant.role if participant else "unknown",
+            context_texts=context_texts,
         )
 
         # 6. Atualizar campos de análise na mensagem
@@ -315,11 +326,48 @@ class IngestionProcessor:
                 triggered_at=datetime.now(timezone.utc),
             ))
 
+        # Regras de alerta customizadas criadas pelo admin (D-026)
+        custom_alerts = await self._check_custom_alert_rules(db, message, conversation, participant)
+        alerts_to_create.extend(custom_alerts)
+
         for alert in alerts_to_create:
             db.add(alert)
 
         # Dispara push notification para alertas críticos/altos
         await self._dispatch_push_for_alerts(db, alerts_to_create, conversation)
+
+    async def _check_custom_alert_rules(
+        self,
+        db: AsyncSession,
+        message: Message,
+        conversation: Conversation,
+        participant: Optional[Participant],
+    ) -> list:
+        """Verifica regras de alerta customizadas (criadas pelo admin) e gera AlertEvents."""
+        from app.models.automation import CustomAlertRule
+
+        result = await db.execute(select(CustomAlertRule).where(CustomAlertRule.ativo == True))  # noqa
+        rules = result.scalars().all()
+        if not rules:
+            return []
+
+        text = (message.content or "").lower()
+        triggered = []
+        for rule in rules:
+            if any(kw in text for kw in (rule.keywords or [])):
+                triggered.append(AlertEvent(
+                    conversation_id=conversation.id,
+                    message_id=message.id,
+                    participant_id=participant.id if participant else None,
+                    alert_type=AlertType.CUSTOM,
+                    severity=rule.severity,
+                    title=f"📌 {rule.nome}: {conversation.name}",
+                    description=f"Regra de alerta customizada '{rule.nome}' disparada.",
+                    excerpt=message.content[:300],
+                    status=AlertStatus.OPEN,
+                    triggered_at=datetime.now(timezone.utc),
+                ))
+        return triggered
 
     async def _dispatch_push_for_alerts(
         self,

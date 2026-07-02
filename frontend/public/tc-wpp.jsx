@@ -2,7 +2,7 @@
 // Usa backend API /api/v1/tenant/wpp/* em vez de chamar WppConnect diretamente
 
 // ── WppConnectionScreen ───────────────────────────────────────
-function WppConnectionScreen() {
+function WppConnectionScreen({ inOnboarding = false, onConnected = null }) {
   const [phase, setPhase]       = React.useState('idle');   // idle|connecting|qrcode|connected|error
   const [qrSrc, setQrSrc]       = React.useState(null);
   const [message, setMessage]   = React.useState('');
@@ -19,6 +19,7 @@ function WppConnectionScreen() {
         setPhase('connected');
         setPhone(s.phone || '');
         setSession(s.session || '');
+        onConnected && onConnected();
       } else {
         setSession(s.session || '');
       }
@@ -34,7 +35,7 @@ function WppConnectionScreen() {
       if (r.status === 204) {
         // Sem QR → provavelmente conectado
         const s = await window.apiGet('/tenant/wpp/status');
-        if (s.connected) { setPhase('connected'); setPhone(s.phone || ''); stopPoll(); }
+        if (s.connected) { markConnected(s.phone); }
         return;
       }
       if (!r.ok) return;
@@ -52,14 +53,17 @@ function WppConnectionScreen() {
     } catch (_) {}
   };
 
+  const markConnected = (phoneNum) => {
+    setPhase('connected');
+    setPhone(phoneNum || '');
+    stopPoll();
+    onConnected && onConnected();
+  };
+
   const checkStatus = async () => {
     try {
       const s = await window.apiGet('/tenant/wpp/status');
-      if (s.connected) {
-        setPhase('connected');
-        setPhone(s.phone || '');
-        stopPoll();
-      }
+      if (s.connected) markConnected(s.phone);
     } catch (_) {}
   };
 
@@ -70,8 +74,7 @@ function WppConnectionScreen() {
     try {
       const data = await window.apiPost('/tenant/wpp/start', {});
       if (data.connected) {
-        setPhase('connected');
-        setPhone(data.phone || '');
+        markConnected(data.phone);
         return;
       }
       // QR embutido na resposta do start-session

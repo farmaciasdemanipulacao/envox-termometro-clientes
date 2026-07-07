@@ -1,0 +1,97 @@
+/* ============================================================
+   ENVOX / ATENX — Theme Tokens (light / dark)
+   Baseado nas cores reais do WhatsApp claro e escuro.
+   Marca (teal --color-brand-*) e severidade não mudam por tema
+   — ficam em colors.css. Aqui só os aliases que trocam de valor.
+
+   Aplicação: document.documentElement definido com
+   data-theme="light" | "dark" (ver script em index.html).
+   Sem data-theme definido, cai no bloco @media prefers-color-scheme.
+   ========================================= */
+
+:root,
+:root[data-theme="light"] {
+  /* Backgrounds */
+  --color-bg-page:          #f0f2f5;   /* WhatsApp: fundo da lista de conversas */
+  --color-bg-sidebar:       #ffffff;   /* WhatsApp claro: painel de navegação é branco */
+  --color-bg-header:        #ffffff;
+  --color-bg-card:          #ffffff;
+  --color-bg-hover-sidebar: #f5f6f6;
+  --color-bg-input:         #ffffff;
+  --color-bg-popover:       #ffffff;
+
+  /* Text */
+  --color-text-primary:          #111b21;
+  --color-text-secondary:        #667781;
+  --color-text-muted:            #667781;
+  --color-text-placeholder:      #8696a0;
+  --color-text-sidebar-inactive: #54656f;
+  --color-text-on-sidebar:       #111b21;
+  --color-text-on-sidebar-muted: #667781;
+
+  /* Borders */
+  --color-border-card:    #e9edef;
+  --color-border-default: #d1d7db;
+  --color-border-input:   #d1d7db;
+  --color-border-sidebar: #e9edef;
+
+  /* Scrollbar */
+  --color-scrollbar-track: #f1f5f9;
+  --color-scrollbar-thumb: #cbd0d3;
+}
+
+:root[data-theme="dark"] {
+  /* Backgrounds */
+  --color-bg-page:          #0b141a;   /* WhatsApp: fundo mais escuro (área de conversa) */
+  --color-bg-sidebar:       #111b21;   /* WhatsApp escuro: painel de navegação */
+  --color-bg-header:        #111b21;
+  --color-bg-card:          #202c33;
+  --color-bg-hover-sidebar: #2a3942;
+  --color-bg-input:         #2a3942;
+  --color-bg-popover:       #233138;
+
+  /* Text */
+  --color-text-primary:          #e9edef;
+  --color-text-secondary:        #8696a0;
+  --color-text-muted:            #8696a0;
+  --color-text-placeholder:      #667781;
+  --color-text-sidebar-inactive: #8696a0;
+  --color-text-on-sidebar:       #e9edef;
+  --color-text-on-sidebar-muted: #8696a0;
+
+  /* Borders */
+  --color-border-card:    #2a3942;
+  --color-border-default: #2a3942;
+  --color-border-input:   #2a3942;
+  --color-border-sidebar: #2a3942;
+
+  /* Scrollbar */
+  --color-scrollbar-track: #0b141a;
+  --color-scrollbar-thumb: #374045;
+}
+
+/* Fallback quando data-theme ainda não foi aplicado (ex.: JS bloqueado) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-bg-page:          #0b141a;
+    --color-bg-sidebar:       #111b21;
+    --color-bg-header:        #111b21;
+    --color-bg-card:          #202c33;
+    --color-bg-hover-sidebar: #2a3942;
+    --color-bg-input:         #2a3942;
+    --color-bg-popover:       #233138;
+    --color-text-primary:          #e9edef;
+    --color-text-secondary:        #8696a0;
+    --color-text-muted:            #8696a0;
+    --color-text-placeholder:      #667781;
+    --color-text-sidebar-inactive: #8696a0;
+    --color-text-on-sidebar:       #e9edef;
+    --color-text-on-sidebar-muted: #8696a0;
+    --color-border-card:    #2a3942;
+    --color-border-default: #2a3942;
+    --color-border-input:   #2a3942;
+    --color-border-sidebar: #2a3942;
+    --color-scrollbar-track: #0b141a;
+    --color-scrollbar-thumb: #374045;
+  }
+}

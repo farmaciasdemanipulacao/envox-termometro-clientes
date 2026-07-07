@@ -1,7 +1,7 @@
 // ATENX — Service Worker
 // Habilita PWA install e push notifications
 
-const CACHE_NAME = 'atenx-v3';
+const CACHE_NAME = 'atenx-v4';
 
 // Instala o SW e faz cache dos assets estáticos essenciais
 self.addEventListener('install', (event) => {
@@ -11,8 +11,8 @@ self.addEventListener('install', (event) => {
       cache.addAll([
         '/',
         '/manifest.json',
-        '/icons/icon-192.png',
-        '/icons/icon-512.png',
+        '/icons/icon-192.png?v=2',
+        '/icons/icon-512.png?v=2',
       ]).catch(() => {}) // silencia erros de cache offline
     )
   );

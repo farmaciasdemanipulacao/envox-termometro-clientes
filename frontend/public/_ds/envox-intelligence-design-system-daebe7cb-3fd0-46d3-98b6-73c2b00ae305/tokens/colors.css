@@ -75,33 +75,17 @@
   --color-temp-critical:  #ef4444;   /* 0–20   */
 
   /* =========================================
-     SEMANTIC ALIASES
-     Use these in components; reference raw
-     values only in the tokens above
+     SEMANTIC ALIASES — theme-invariant only
+     (brand/text-on-brand/focus ring don't change
+     between light/dark — see theme.css for the
+     aliases that DO switch: bg-*, text-primary/
+     secondary/muted/placeholder, border-*, etc.)
   ========================================= */
 
-  /* Backgrounds */
-  --color-bg-page:          var(--color-neutral-50);
-  --color-bg-sidebar:       var(--color-neutral-900);
-  --color-bg-card:          #ffffff;
-  --color-bg-hover-sidebar: var(--color-neutral-700);
-  --color-bg-input:         #ffffff;
-
-  /* Text */
-  --color-text-primary:          var(--color-neutral-900);
-  --color-text-secondary:        var(--color-neutral-600);
-  --color-text-muted:            var(--color-neutral-500);
-  --color-text-placeholder:      var(--color-neutral-400);
   --color-text-inverse:          #ffffff;
-  --color-text-sidebar-inactive: var(--color-neutral-300);
   --color-text-brand:            var(--color-brand-600);
   --color-text-brand-subtle:     var(--color-brand-400);
-
-  /* Borders */
-  --color-border-card:    var(--color-neutral-100);
-  --color-border-default: var(--color-neutral-200);
-  --color-border-input:   var(--color-neutral-300);
-  --color-border-focus:   var(--color-brand-500);
+  --color-border-focus:          var(--color-brand-500);
 
   /* Primary actions */
   --color-primary:              var(--color-brand-600);
@@ -109,8 +93,4 @@
   --color-primary-light:        var(--color-brand-50);
   --color-primary-light-hover:  var(--color-brand-100);
   --color-primary-text-on:      #ffffff;
-
-  /* Scrollbar */
-  --color-scrollbar-track: #f1f5f9;
-  --color-scrollbar-thumb: #94a3b8;
 }

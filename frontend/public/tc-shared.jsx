@@ -16,6 +16,49 @@ var KPICard   = window.DS_KPICard;
 var AlertItem = window.DS_AlertItem;
 var GroupCard = window.DS_GroupCard;
 
+// ── Tema claro/escuro ────────────────────────────────────────
+// data-theme já foi aplicado no <html> pelo script inline em index.html
+// (evita flash). Aqui só expomos como trocar e um hook para re-renderizar.
+window.getTheme = function() {
+  return document.documentElement.getAttribute('data-theme') || 'dark';
+};
+window.setTheme = function(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  try { localStorage.setItem('atenx-theme', mode); } catch (e) {}
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', mode === 'light' ? '#ffffff' : '#111b21');
+  window.dispatchEvent(new CustomEvent('atenx-theme-change', { detail: mode }));
+};
+function useTheme() {
+  var [theme, setThemeState] = React.useState(window.getTheme());
+  React.useEffect(function() {
+    var handler = function(e) { setThemeState(e.detail); };
+    window.addEventListener('atenx-theme-change', handler);
+    return function() { window.removeEventListener('atenx-theme-change', handler); };
+  }, []);
+  return theme;
+}
+function ThemeToggle({ style }) {
+  var theme = useTheme();
+  var isDark = theme === 'dark';
+  return (
+    <div
+      onClick={function() { window.setTheme(isDark ? 'light' : 'dark'); }}
+      title={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
+      style={Object.assign({
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: '32px', height: '32px', borderRadius: 'var(--radius-lg)',
+        cursor: 'pointer', color: 'var(--color-text-on-sidebar-muted)', flexShrink: 0,
+        transition: 'background 0.15s ease',
+      }, style || {})}
+      onMouseEnter={function(e) { e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'; }}
+      onMouseLeave={function(e) { e.currentTarget.style.background = 'transparent'; }}
+    >
+      <i className={'fas fa-' + (isDark ? 'sun' : 'moon')} style={{ fontSize: '15px' }}></i>
+    </div>
+  );
+}
+
 // ── Mobile detection hook ─────────────────────────────────────
 function useIsMobile() {
   var [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
@@ -29,7 +72,7 @@ function useIsMobile() {
 
 // ── Toast system ──────────────────────────────────────────────
 window.showToast = function(message, type = 'info') {
-  const colors = { success: '#16a34a', error: '#dc2626', info: '#2563eb', warning: '#d97706' };
+  const colors = { success: '#16a34a', error: '#dc2626', info: '#0d9488', warning: '#d97706' };
   const icons  = { success: 'check-circle', error: 'times-circle', info: 'info-circle', warning: 'exclamation-triangle' };
   const el = document.createElement('div');
   el.style.cssText = `position:fixed;bottom:${16 + document.querySelectorAll('.toast-item').length * 60}px;right:16px;z-index:9999;
@@ -146,8 +189,8 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
   const itemStyle = (id) => ({
     display: 'flex', alignItems: 'center', gap: '12px',
     padding: '10px 16px', borderRadius: 'var(--radius-lg)',
-    background: activePage === id ? 'var(--color-brand-600)' : hovered === id ? '#374151' : 'transparent',
-    color: activePage === id ? 'white' : '#d1d5db',
+    background: activePage === id ? 'var(--color-brand-600)' : hovered === id ? 'var(--color-bg-hover-sidebar)' : 'transparent',
+    color: activePage === id ? 'white' : 'var(--color-text-on-sidebar)',
     cursor: 'pointer', transition: 'background 0.15s ease', userSelect: 'none',
   });
 
@@ -157,14 +200,15 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
       display: 'flex', flexDirection: 'column',
       boxShadow: 'var(--shadow-sidebar)', flexShrink: 0,
     }}>
-      <div style={{ padding: '24px 20px', borderBottom: '1px solid #374151' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--color-border-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
           <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
-          <div>
-            <div style={{ fontWeight: 700, color: 'white', fontSize: 'var(--text-lg)', lineHeight: 1.15 }}>{company}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, color: 'var(--color-text-on-sidebar)', fontSize: 'var(--text-lg)', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{company}</div>
             <div style={{ color: 'var(--color-brand-400)', fontSize: 'var(--text-xs)' }}>by Envox</div>
           </div>
         </div>
+        <ThemeToggle />
       </div>
 
       <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto' }}>
@@ -177,15 +221,15 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
             <i className={`fas fa-${item.icon}`} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: activePage === item.id ? 500 : 400, flex: 1 }}>{item.label}</span>
             {item.badge > 0 && (
-              <span style={{ background: '#ef4444', color: 'white', fontSize: '11px', borderRadius: '9999px', minWidth: '18px', height: '18px', padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+              <span style={{ background: 'var(--color-critical)', color: 'white', fontSize: '11px', borderRadius: '9999px', minWidth: '18px', height: '18px', padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                 {item.badge > 9 ? '9+' : item.badge}
               </span>
             )}
           </div>
         ))}
 
-        <div style={{ borderTop: '1px solid #374151', margin: '10px 4px' }}></div>
-        <div style={{ fontSize: '11px', color: '#6b7280', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
+        <div style={{ borderTop: '1px solid var(--color-border-sidebar)', margin: '10px 4px' }}></div>
+        <div style={{ fontSize: '11px', color: 'var(--color-text-on-sidebar-muted)', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
         {sysItems.map(item => {
           const iconClass = item.icon === 'whatsapp fab' ? 'fab fa-whatsapp' : `fas fa-${item.icon}`;
           const isWpp = item.id === 'wpp';
@@ -200,7 +244,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
               {isWpp && wppConnected !== null && (
                 <span title={wppConnected ? 'WhatsApp conectado' : 'WhatsApp desconectado'} style={{
                   width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
-                  background: wppConnected ? '#22c55e' : '#ef4444',
+                  background: wppConnected ? 'var(--color-low)' : 'var(--color-critical)',
                   boxShadow: wppConnected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
                 }}></span>
               )}
@@ -215,30 +259,30 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
             background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
           }}>
-            <i className="fab fa-whatsapp" style={{ color: '#f87171', fontSize: '14px' }}></i>
+            <i className="fab fa-whatsapp" style={{ color: 'var(--color-critical)', fontSize: '14px' }}></i>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#f87171' }}>WhatsApp desconectado</div>
-              <div style={{ fontSize: '10px', color: '#9ca3af' }}>Clique para reconectar</div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-critical)' }}>WhatsApp desconectado</div>
+              <div style={{ fontSize: '10px', color: 'var(--color-text-on-sidebar-muted)' }}>Clique para reconectar</div>
             </div>
           </div>
         )}
       </nav>
 
       {/* User section com popover */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid #374151', position: 'relative' }}>
+      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-border-sidebar)', position: 'relative' }}>
         {/* Popover menu */}
         {menuOpen && (
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 198 }} />
             <div style={{
               position: 'absolute', bottom: '64px', left: '12px', right: '12px',
-              background: '#1f2937', border: '1px solid #374151', borderRadius: '12px',
+              background: 'var(--color-bg-popover)', border: '1px solid var(--color-border-sidebar)', borderRadius: '12px',
               boxShadow: '0 -8px 32px rgba(0,0,0,0.4)', zIndex: 199,
               overflow: 'hidden', animation: 'fadeInUp 0.18s ease',
             }}>
-              <div style={{ padding: '12px 14px', borderBottom: '1px solid #374151' }}>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-                <div style={{ fontSize: 'var(--text-xs)', color: '#6b7280', marginTop: '1px' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-border-sidebar)' }}>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-on-sidebar)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-on-sidebar-muted)', marginTop: '1px' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
               </div>
               {[
                 { icon: 'user-circle', label: 'Meu Perfil', action: () => { setMenuOpen(false); onOpenProfile && onOpenProfile(); } },
@@ -247,22 +291,22 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
               ].map((item, i) => (
                 <div key={i} onClick={item.action} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '11px 14px', cursor: 'pointer', color: '#d1d5db', fontSize: 'var(--text-sm)',
+                  padding: '11px 14px', cursor: 'pointer', color: 'var(--color-text-on-sidebar)', fontSize: 'var(--text-sm)',
                   transition: 'background 0.12s',
                 }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <i className={`fas fa-${item.icon}`} style={{ width: '16px', textAlign: 'center', fontSize: '13px', color: '#9ca3af' }}></i>
+                  <i className={`fas fa-${item.icon}`} style={{ width: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-on-sidebar-muted)' }}></i>
                   {item.label}
                 </div>
               ))}
-              <div style={{ borderTop: '1px solid #374151' }} />
+              <div style={{ borderTop: '1px solid var(--color-border-sidebar)' }} />
               <div onClick={() => { setMenuOpen(false); onLogout(); }} style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '11px 14px', cursor: 'pointer', color: '#f87171', fontSize: 'var(--text-sm)',
+                padding: '11px 14px', cursor: 'pointer', color: 'var(--color-critical)', fontSize: 'var(--text-sm)',
               }}
-                onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <i className="fas fa-sign-out-alt" style={{ width: '16px', textAlign: 'center', fontSize: '13px' }}></i>
@@ -276,7 +320,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
         <div
           onClick={() => setMenuOpen(v => !v)}
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '6px 8px', borderRadius: 'var(--radius-lg)', transition: 'background 0.15s', userSelect: 'none' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           <div style={{ width: '32px', height: '32px', background: 'var(--color-brand-600)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
@@ -288,10 +332,10 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
             )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: '#6b7280' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-on-sidebar)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-on-sidebar-muted)' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
           </div>
-          <i className={`fas fa-chevron-${menuOpen ? 'down' : 'up'}`} style={{ color: '#6b7280', fontSize: '11px', transition: 'transform 0.2s' }}></i>
+          <i className={`fas fa-chevron-${menuOpen ? 'down' : 'up'}`} style={{ color: 'var(--color-text-on-sidebar-muted)', fontSize: '11px', transition: 'transform 0.2s' }}></i>
         </div>
       </div>
     </aside>
@@ -308,15 +352,18 @@ function MobileTopBar({ company, onMenuOpen }) {
       padding: '0 16px',
       boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
         <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '32px', height: '32px', flexShrink: 0 }} />
-        <div>
-          <div style={{ fontWeight: 700, color: 'white', fontSize: '15px', lineHeight: 1.15 }}>{company}</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, color: 'var(--color-text-on-sidebar)', fontSize: '15px', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{company}</div>
           <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>by Envox</div>
         </div>
       </div>
-      <div onClick={onMenuOpen} style={{ cursor: 'pointer', padding: '10px', color: '#d1d5db' }}>
-        <i className="fas fa-bars" style={{ fontSize: '18px' }}></i>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+        <ThemeToggle />
+        <div onClick={onMenuOpen} style={{ cursor: 'pointer', padding: '10px', color: 'var(--color-text-on-sidebar)' }}>
+          <i className="fas fa-bars" style={{ fontSize: '18px' }}></i>
+        </div>
       </div>
     </div>
   );
@@ -333,7 +380,7 @@ function BottomNav({ activePage, onNavigate, alertsCount, onMoreOpen }) {
   return (
     <div className="bottom-nav-safe" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: 'var(--color-bg-sidebar)', borderTop: '1px solid #374151',
+      background: 'var(--color-bg-sidebar)', borderTop: '1px solid var(--color-border-sidebar)',
       display: 'flex', alignItems: 'stretch', zIndex: 100, minHeight: '60px',
     }}>
       {mainTabs.map(function(tab) {
@@ -344,7 +391,7 @@ function BottomNav({ activePage, onNavigate, alertsCount, onMoreOpen }) {
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: '3px', cursor: 'pointer', padding: '8px 0', position: 'relative',
-              color: isActive ? 'var(--color-brand-400)' : '#6b7280',
+              color: isActive ? 'var(--color-brand-400)' : 'var(--color-text-on-sidebar-muted)',
               background: isActive ? 'rgba(14,165,233,0.08)' : 'transparent',
             }}
           >
@@ -353,7 +400,7 @@ function BottomNav({ activePage, onNavigate, alertsCount, onMoreOpen }) {
               {tab.badge > 0 && (
                 <span style={{
                   position: 'absolute', top: '-5px', right: '-9px',
-                  background: '#ef4444', color: 'white', fontSize: '10px',
+                  background: 'var(--color-critical)', color: 'white', fontSize: '10px',
                   borderRadius: '9999px', minWidth: '16px', height: '16px',
                   padding: '0 3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
                 }}>
@@ -369,7 +416,7 @@ function BottomNav({ activePage, onNavigate, alertsCount, onMoreOpen }) {
         onClick={onMoreOpen}
         style={{
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: '3px', cursor: 'pointer', padding: '8px 0', color: '#6b7280',
+          gap: '3px', cursor: 'pointer', padding: '8px 0', color: 'var(--color-text-on-sidebar-muted)',
         }}
       >
         <i className="fas fa-ellipsis-h" style={{ fontSize: '18px' }}></i>
@@ -411,7 +458,7 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
     display: 'flex', alignItems: 'center', gap: '12px',
     padding: '13px 16px', borderRadius: 'var(--radius-lg)',
     background: activePage === id ? 'var(--color-brand-600)' : 'transparent',
-    color: activePage === id ? 'white' : '#d1d5db',
+    color: activePage === id ? 'white' : 'var(--color-text-on-sidebar)',
     cursor: 'pointer', fontSize: '15px',
   }; };
   return (
@@ -423,16 +470,19 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
         display: 'flex', flexDirection: 'column',
         animation: 'slideInLeft 0.22s ease',
       }}>
-        <div style={{ padding: '16px', borderBottom: '1px solid #374151', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
             <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: 700, color: 'white', fontSize: 'var(--text-lg)' }}>{company}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, color: 'var(--color-text-on-sidebar)', fontSize: 'var(--text-lg)' }}>{company}</div>
               <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>by Envox</div>
             </div>
           </div>
-          <div onClick={onClose} style={{ cursor: 'pointer', padding: '8px', color: '#9ca3af' }}>
-            <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+            <ThemeToggle />
+            <div onClick={onClose} style={{ cursor: 'pointer', padding: '8px', color: 'var(--color-text-on-sidebar-muted)' }}>
+              <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
+            </div>
           </div>
         </div>
         <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -442,15 +492,15 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
                 <i className={'fas fa-' + item.icon} style={{ width: '20px', textAlign: 'center' }}></i>
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {item.badge > 0 && (
-                  <span style={{ background: '#ef4444', color: 'white', fontSize: '11px', borderRadius: '9999px', minWidth: '18px', height: '18px', padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  <span style={{ background: 'var(--color-critical)', color: 'white', fontSize: '11px', borderRadius: '9999px', minWidth: '18px', height: '18px', padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                     {item.badge > 9 ? '9+' : item.badge}
                   </span>
                 )}
               </div>
             );
           })}
-          <div style={{ borderTop: '1px solid #374151', margin: '10px 4px' }}></div>
-          <div style={{ fontSize: '11px', color: '#6b7280', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
+          <div style={{ borderTop: '1px solid var(--color-border-sidebar)', margin: '10px 4px' }}></div>
+          <div style={{ fontSize: '11px', color: 'var(--color-text-on-sidebar-muted)', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
           {sysItems.map(function(item) {
             var iconClass = item.icon === 'whatsapp fab' ? 'fab fa-whatsapp' : 'fas fa-' + item.icon;
             var isWpp = item.id === 'wpp';
@@ -459,22 +509,22 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
                 <i className={iconClass} style={{ width: '20px', textAlign: 'center' }}></i>
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {isWpp && wppConnected !== null && (
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: wppConnected ? '#22c55e' : '#ef4444', boxShadow: wppConnected ? '0 0 6px #22c55e' : '0 0 6px #ef4444' }}></span>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: wppConnected ? 'var(--color-low)' : 'var(--color-critical)', boxShadow: wppConnected ? '0 0 6px #22c55e' : '0 0 6px #ef4444' }}></span>
                 )}
               </div>
             );
           })}
           {wppConnected === false && (
             <div onClick={function() { onNavigate('wpp'); }} style={{ marginTop: '6px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="fab fa-whatsapp" style={{ color: '#f87171', fontSize: '14px' }}></i>
+              <i className="fab fa-whatsapp" style={{ color: 'var(--color-critical)', fontSize: '14px' }}></i>
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#f87171' }}>WhatsApp desconectado</div>
-                <div style={{ fontSize: '10px', color: '#9ca3af' }}>Toque para reconectar</div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-critical)' }}>WhatsApp desconectado</div>
+                <div style={{ fontSize: '10px', color: 'var(--color-text-on-sidebar-muted)' }}>Toque para reconectar</div>
               </div>
             </div>
           )}
         </nav>
-        <div style={{ padding: '16px', borderTop: '1px solid #374151' }}>
+        <div style={{ padding: '16px', borderTop: '1px solid var(--color-border-sidebar)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <div style={{ width: '36px', height: '36px', background: 'var(--color-brand-600)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -487,13 +537,13 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-              <div style={{ fontSize: 'var(--text-xs)', color: '#6b7280' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-on-sidebar)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-on-sidebar-muted)' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
             </div>
-            <div onClick={onOpenProfile} title="Meu Perfil" style={{ cursor: 'pointer', padding: '8px', color: '#9ca3af' }}>
+            <div onClick={onOpenProfile} title="Meu Perfil" style={{ cursor: 'pointer', padding: '8px', color: 'var(--color-text-on-sidebar-muted)' }}>
               <i className="fas fa-user-circle" style={{ fontSize: '16px' }}></i>
             </div>
-            <div onClick={onLogout} title="Sair" style={{ cursor: 'pointer', padding: '8px', color: '#6b7280' }}>
+            <div onClick={onLogout} title="Sair" style={{ cursor: 'pointer', padding: '8px', color: 'var(--color-text-on-sidebar-muted)' }}>
               <i className="fas fa-sign-out-alt" style={{ fontSize: '16px' }}></i>
             </div>
           </div>
@@ -508,15 +558,15 @@ function PageHeader({ title, subtitle, actions }) {
   var isMobile = useIsMobile();
   return (
     <header style={{
-      background: 'var(--color-neutral-900)',
-      borderBottom: '1px solid var(--color-neutral-800)',
+      background: 'var(--color-bg-header)',
+      borderBottom: '1px solid var(--color-border-sidebar)',
       padding: isMobile ? '10px 16px' : '14px 32px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       position: 'sticky', top: 0, zIndex: 10, flexShrink: 0,
     }}>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <h1 style={{ fontSize: isMobile ? 'var(--text-base)' : 'var(--text-xl)', fontWeight: 700, color: '#e9edef', lineHeight: 1.2, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h1>
-        {subtitle && !isMobile && <p style={{ fontSize: 'var(--text-sm)', color: '#8696a0', margin: '2px 0 0 0' }}>{subtitle}</p>}
+        <h1 style={{ fontSize: isMobile ? 'var(--text-base)' : 'var(--text-xl)', fontWeight: 700, color: 'var(--color-text-on-sidebar)', lineHeight: 1.2, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h1>
+        {subtitle && !isMobile && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-on-sidebar-muted)', margin: '2px 0 0 0' }}>{subtitle}</p>}
       </div>
       {actions && <div style={{ display: 'flex', gap: isMobile ? '6px' : '10px', alignItems: 'center', flexShrink: 0, marginLeft: '8px' }}>{actions}</div>}
     </header>
@@ -560,7 +610,7 @@ function TemperatureGauge({ score, size }) {
 function SectionTitle({ icon, label, color }) {
   color = color || 'var(--color-brand-600)';
   return (
-    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-lg)', fontWeight: 700, color: '#1f2937', margin: '0 0 16px 0' }}>
+    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0 0 16px 0' }}>
       <i className={'fas fa-' + icon} style={{ color: color }}></i>
       {label}
     </h2>
@@ -570,7 +620,7 @@ function SectionTitle({ icon, label, color }) {
 // ── DsCard ────────────────────────────────────────────────────
 function DsCard({ children, style }) {
   return (
-    <div style={Object.assign({ background: 'white', borderRadius: 'var(--radius-xl)', padding: '24px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--color-border-card)' }, style || {})}>
+    <div style={Object.assign({ background: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', padding: '24px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--color-border-card)' }, style || {})}>
       {children}
     </div>
   );
@@ -584,4 +634,4 @@ function Spinner({ size, color }) {
   );
 }
 
-Object.assign(window, { useIsMobile, Sidebar, MobileTopBar, BottomNav, MobileDrawer, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, Button, KPICard, AlertItem, GroupCard });
+Object.assign(window, { useIsMobile, useTheme, ThemeToggle, Sidebar, MobileTopBar, BottomNav, MobileDrawer, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, Button, KPICard, AlertItem, GroupCard });

@@ -27,7 +27,15 @@ tar -czf "${ARCHIVE}" \
   tc-screens-a.jsx \
   tc-screens-b.jsx \
   tc-wpp.jsx \
+  tc-public.jsx \
+  tc-admin.jsx \
+  tc-onboarding.jsx \
   tc-app.jsx \
+  manifest.json \
+  sw.js \
+  favicon.ico \
+  icons \
+  atenx_assets \
   _ds
 echo "      → ${ARCHIVE} ($(du -sh "${ARCHIVE}" | cut -f1))"
 

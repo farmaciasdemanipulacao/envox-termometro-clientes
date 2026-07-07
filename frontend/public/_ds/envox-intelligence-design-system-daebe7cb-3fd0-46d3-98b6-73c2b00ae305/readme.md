@@ -107,6 +107,16 @@ Cada severidade tem **três variantes**: cor principal, bg suave, texto escuro �
 - **Sidebar**: `neutral-900` (#111827) — escuro e imponente, sem gradiente
 - **Sem imagens de fundo**, sem texturas, sem padrões decorativos
 
+> **Nota (2026-07-07):** desde a introdução do modo claro/escuro (ver seção "Tema Claro/Escuro" abaixo), os valores acima (`neutral-*`) são a paleta **crua/base**, não os valores efetivos em produção. Os aliases `--color-bg-*`, `--color-text-*` e `--color-border-*` que os componentes de fato consomem vivem em `tokens/theme.css` e mudam de valor conforme `data-theme="light"` ou `"dark"` no `<html>` — ver a nota de rebrand ATENX/paleta abaixo antes de usar os hex desta seção como referência literal.
+
+### Tema Claro/Escuro (adicionado 2026-07-07)
+O app ATENX (nome de produto atual — ver nota de rebrand abaixo; o namespace JS interno `ENVOXIntelligenceDesignSystem_daebe7` não foi renomeado) suporta os dois temas, escolhidos pelo usuário (ícone sol/lua no Sidebar) ou pela preferência do sistema operacional na primeira visita, persistido em `localStorage['atenx-theme']`.
+
+- `tokens/colors.css` guarda só o que **não muda** entre temas: paleta de marca (teal `--color-brand-*`), escala de severidade, paleta bruta `--color-neutral-*` (usada como matéria-prima, não diretamente pelos componentes).
+- `tokens/theme.css` (novo) guarda os aliases que **mudam** por tema: `--color-bg-page/card/sidebar/header/hover-sidebar/input/popover`, `--color-text-primary/secondary/muted/placeholder/on-sidebar(-muted)`, `--color-border-card/default/input/sidebar`, `--color-scrollbar-*` — definidos em dois blocos `:root[data-theme="light"]` e `:root[data-theme="dark"]`, com fallback via `@media (prefers-color-scheme: dark)` para quando o JS ainda não rodou.
+- Componentes devem sempre consumir os aliases de `theme.css` (ex: `var(--color-bg-card)`), nunca a paleta crua de `colors.css` (ex: `var(--color-neutral-50)`) — só assim herdam o tema automaticamente.
+- Cores categóricas (severidade, status de assinatura, tags, "bolhas" de mensagem estilo WhatsApp) são **intencionalmente fixas** nos dois temas — não fazem parte do sistema de tema.
+
 ### Cards
 - `border-radius: var(--radius-xl)` — 12px, arredondado mas não exagerado
 - `border: 1px solid var(--color-border-card)` — linha sutilíssima
@@ -211,7 +221,8 @@ Não utilizados. Todos os ícones são webfont (Font Awesome).
 ├── SKILL.md                            ← Skill para Claude Code
 │
 ├── tokens/
-│   ├── colors.css                      ← Paleta brand, neutral, severity + aliases semânticos
+│   ├── colors.css                      ← Paleta brand, neutral, severity (tudo invariável por tema)
+│   ├── theme.css                       ← Aliases claro/escuro (bg/text/border) — ver "Tema Claro/Escuro" acima
 │   ├── typography.css                  ← Famílias, escala de tamanhos, pesos, roles semânticos
 │   └── spacing.css                     ← Escala de espaçamento, radii, sombras, transições
 │

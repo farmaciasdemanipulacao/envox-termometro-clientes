@@ -54,9 +54,9 @@ _JOB_DESCRIPTIONS = {
         "detalhe": "Diferente do resumo diário: fica só na plataforma, NÃO é enviado ao WhatsApp.",
     },
     "data_cleanup": {
-        "descricao": "Apaga mensagens mais antigas que o período de retenção definido (LGPD).",
+        "descricao": "Antes apagava mensagens antigas por política de retenção (LGPD). Desativado por decisão do Gus (2026-07-07): mensagens nunca são apagadas do banco.",
         "envia_whatsapp": False,
-        "detalhe": None,
+        "detalhe": "Job mantido só para não quebrar o toggle/agendamento na tela — não executa nenhuma exclusão.",
     },
 }
 
@@ -156,11 +156,8 @@ async def get_system_automations(
             ],
         },
         "retencao_dados": {
-            "descricao": f"Mensagens mais antigas que {settings.DATA_RETENTION_DAYS} dias são apagadas automaticamente toda semana (política de retenção LGPD).",
-            "editavel": {
-                "key": "data_retention_days",
-                "value": settings_map["data_retention_days"].value if "data_retention_days" in settings_map else settings.DATA_RETENTION_DAYS,
-            },
+            "descricao": "Mensagens NÃO são mais apagadas automaticamente — decisão de manter todo o histórico permanentemente no banco (2026-07-07). O limite de histórico por plano (max_history_days) só controla o que é importado/exibido, não uma exclusão física.",
+            "editavel": None,
         },
         "reconexao_whatsapp": {
             "descricao": "Se a sessão do WhatsApp cair, o sistema tenta reconectar sozinho a cada poucos minutos (WPP_AUTO_RECONNECT). Se precisar de um novo QR Code, fica só registrado em log — ninguém é avisado em tela até o usuário abrir a tela de Conexão WhatsApp.",
@@ -173,6 +170,10 @@ async def get_system_automations(
         ],
         "limitacoes_conhecidas": [],
         "correcoes_recentes": [
+            {
+                "titulo": "Mensagens nunca mais são apagadas + relatórios usam TODO o período — 2026-07-07 (D-048)",
+                "descricao": "(1) O job de limpeza LGPD (rodava todo domingo) apagava mensagens mais antigas que o período de retenção — desativado por decisão do Gus: o histórico fica permanente no banco. (2) Se alguém excluir uma mensagem 'para todos' no WhatsApp, o evento é ignorado e a mensagem original permanece gravada. (3) Resumo por Período e Análise Personalizada usavam uma amostra fixa de ~70-80 mensagens para gerar o texto da IA, mesmo quando o grupo tinha centenas/milhares no período — agora usam TODAS as mensagens do período (com resumo em blocos apenas se o volume estourar o contexto do LLM, nunca descartando silenciosamente).",
+            },
             {
                 "titulo": "Isolamento de tenant no resumo diário (06h) — corrigido em 2026-07-01 (D-025)",
                 "descricao": "Antes, o resumo diário e seu envio automático ao WhatsApp misturavam dados de todos os tenants em um único resumo global e enviavam usando a sessão WhatsApp + configuração do Agente Virtual do admin, para os grupos monitorados de qualquer conta. Agora o job gera um resumo por tenant (dados só das conversas daquele tenant), usa o agent_config e a sessão WhatsApp do próprio tenant, e só envia para os grupos monitorados dele.",

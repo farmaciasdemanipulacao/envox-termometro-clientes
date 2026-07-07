@@ -439,6 +439,8 @@ async def lifespan(app: FastAPI):
                 # Fix: colisão de api_key_hash quebrava /ingest/message (D-027)
                 "UPDATE ingestion_sources SET api_key_hash = NULL WHERE name = 'WppConnect Monitor' AND source_type = 'WEBHOOK'",
                 "CREATE UNIQUE INDEX IF NOT EXISTS idx_ingestion_sources_api_key_hash ON ingestion_sources(api_key_hash) WHERE api_key_hash IS NOT NULL",
+                # Comentário de resolução no alerta — usado como feedback para a IA (D-031)
+                "ALTER TABLE alert_events ADD COLUMN IF NOT EXISTS resolution_comment TEXT",
             ]:
                 try:
                     await conn.execute(_sqla_text(sql))
@@ -479,7 +481,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="""
-## ENVOX Intelligence API
+## ATENX API
 
 Plataforma de inteligência operacional para monitoramento de conversas de atendimento.
 
@@ -544,7 +546,7 @@ if os.path.exists(static_dir):
         index_file = os.path.join(static_dir, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)
-        return {"message": "ENVOX Intelligence API", "docs": "/docs"}
+        return {"message": "ATENX API", "docs": "/docs"}
 else:
     @app.get("/")
     async def root():

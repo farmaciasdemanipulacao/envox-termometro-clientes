@@ -1,7 +1,7 @@
 {
-  "name": "ENVOX Intelligence",
-  "short_name": "ENVOX",
-  "description": "Monitoramento e análise de grupos WhatsApp em tempo real",
+  "name": "ATENX",
+  "short_name": "ATENX",
+  "description": "ATENX by Envox — Monitoramento e análise de grupos WhatsApp em tempo real",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -13,13 +13,13 @@
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["business", "productivity"],

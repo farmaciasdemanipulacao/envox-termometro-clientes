@@ -938,7 +938,7 @@ function ApiDocsScreen() {
         <DsCard>
           <SectionTitle icon="info-circle" label="Sobre a API" color="#0d9488" />
           <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
-            A API REST do ENVOX Intelligence permite ingestão de mensagens, consulta de métricas e gerenciamento de alertas.
+            A API REST do ATENX permite ingestão de mensagens, consulta de métricas e gerenciamento de alertas.
             Acesse a documentação interativa completa no Swagger UI.
           </p>
           <div style={{ marginTop: '16px', padding: '12px 16px', background: '#f8fafc', borderRadius: 'var(--radius-lg)', fontFamily: 'monospace', fontSize: '13px', color: '#334155' }}>
@@ -1523,6 +1523,10 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
   const [sending, setSending]     = React.useState(false);
   const [recording, setRecording] = React.useState(false);
   const [recSeconds, setRecSeconds] = React.useState(0);
+  const [showAssist, setShowAssist]     = React.useState(false);
+  const [assistIntent, setAssistIntent] = React.useState('');
+  const [assistLoading, setAssistLoading] = React.useState(false);
+  const [assistResult, setAssistResult]   = React.useState(null); // { suggestion, why, participant_used, based_on_profile }
   const fileInputRef      = React.useRef(null);
   const textareaRef       = React.useRef(null);
   const mediaRecorderRef  = React.useRef(null);
@@ -1614,6 +1618,31 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
+  const openAssist = () => { setShowAssist(true); setAssistResult(null); };
+  const closeAssist = () => { setShowAssist(false); setAssistResult(null); setAssistIntent(''); };
+
+  const handleAssist = async () => {
+    setAssistLoading(true);
+    setAssistResult(null);
+    try {
+      const body = assistIntent.trim()
+        ? { intent: assistIntent.trim() }
+        : (text.trim() ? { draft: text.trim() } : {});
+      const r = await window.apiPost(`/conversations/${convId}/suggest-message`, body);
+      setAssistResult(r);
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao gerar sugestão', 'error');
+    } finally {
+      setAssistLoading(false);
+    }
+  };
+
+  const useSuggestion = () => {
+    setText(assistResult.suggestion);
+    closeAssist();
+    setTimeout(() => { if (textareaRef.current) { textareaRef.current.focus(); textareaRef.current.style.height = 'auto'; textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'; } }, 0);
+  };
+
   if (!wppGroupId) {
     return (
       <div style={{ padding: '10px 16px', background: '#f0f2f5', borderTop: '1px solid #d1d7db', flexShrink: 0, textAlign: 'center' }}>
@@ -1627,6 +1656,69 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
 
   return (
     <div style={{ flexShrink: 0, background: '#f0f2f5', borderTop: '1px solid #d1d7db' }}>
+      {showAssist && (
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e9edef', background: 'white' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#111b21' }}>
+              <i className="fas fa-wand-magic-sparkles" style={{ color: '#0d9488', marginRight: '6px' }}></i>
+              Sugestão de mensagem com IA
+            </span>
+            <button onClick={closeAssist} style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer', fontSize: '14px' }}>
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+
+          {!assistResult && (
+            <>
+              <textarea
+                value={assistIntent}
+                onChange={(e) => setAssistIntent(e.target.value)}
+                placeholder={text.trim()
+                  ? 'O que você quer dizer? Deixe em branco para a IA melhorar o rascunho que você já escreveu.'
+                  : 'O que você quer dizer ao cliente? (opcional — deixe em branco para a IA sugerir a melhor continuação da conversa)'}
+                rows={2}
+                style={{ width: '100%', resize: 'none', border: '1px solid #d1d7db', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', fontFamily: 'var(--font-sans)', outline: 'none' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button onClick={handleAssist} disabled={assistLoading}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: assistLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  {assistLoading ? <><Spinner size={12} color="white" />&nbsp;Gerando...</> : <><i className="fas fa-sparkles"></i> Gerar sugestão</>}
+                </button>
+              </div>
+            </>
+          )}
+
+          {assistResult && (
+            <div>
+              <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: '#111b21', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                {assistResult.suggestion}
+              </div>
+              {assistResult.why && (
+                <div style={{ fontSize: '12px', color: '#54656f', marginTop: '6px', fontStyle: 'italic' }}>
+                  <i className="fas fa-lightbulb" style={{ marginRight: '5px' }}></i>{assistResult.why}
+                </div>
+              )}
+              <div style={{ fontSize: '11px', color: '#8696a0', marginTop: '4px' }}>
+                {assistResult.participant_used
+                  ? (assistResult.based_on_profile
+                      ? `Baseado no perfil de IA de ${assistResult.participant_used.name}`
+                      : `Sem perfil de IA de ${assistResult.participant_used.name} ainda — sugestão baseada só na conversa`)
+                  : 'Sem contato identificado nesta conversa — sugestão baseada só no histórico de mensagens'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button onClick={() => setAssistResult(null)}
+                  style={{ padding: '6px 14px', background: '#f0f2f5', color: '#54656f', border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  Tentar de novo
+                </button>
+                <button onClick={useSuggestion}
+                  style={{ padding: '6px 14px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  Usar esta mensagem
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {attachment && (
         <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #e9edef', background: 'white' }}>
           {attachment.kind === 'image' && <img src={attachment.previewUrl} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} alt="preview" />}
@@ -1651,6 +1743,10 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
         <button onClick={() => fileInputRef.current?.click()} disabled={recording || sending} title="Anexar arquivo"
           style={{ background: 'none', border: 'none', color: '#54656f', fontSize: '20px', cursor: recording ? 'not-allowed' : 'pointer', padding: '6px', flexShrink: 0 }}>
           <i className="fas fa-paperclip"></i>
+        </button>
+        <button onClick={openAssist} disabled={recording || sending} title="Sugerir mensagem com IA"
+          style={{ background: 'none', border: 'none', color: showAssist ? '#0d9488' : '#54656f', fontSize: '20px', cursor: recording ? 'not-allowed' : 'pointer', padding: '6px', flexShrink: 0 }}>
+          <i className="fas fa-wand-magic-sparkles"></i>
         </button>
         <textarea
           ref={textareaRef}
@@ -3238,7 +3334,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
           background: isHovered ? '#243447' : '#1e293b',
           border: `1px solid ${g.is_monitored ? '#0d9488' : '#334155'}`,
           borderRadius: '12px', padding: '14px 16px',
-          display: 'flex', alignItems: 'center', gap: '14px',
+          display: 'flex', alignItems: 'flex-start', gap: '14px',
           transition: 'border-color 0.2s, background 0.12s',
           cursor: canNavigate ? 'pointer' : 'default',
         }}
@@ -3995,6 +4091,572 @@ function RangeSummaryScreen() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// CustomAnalysisScreen — Análise Personalizada (D-036)
+// Usuário seleciona 1+ grupos, um período, e escreve livremente
+// a análise que deseja — sem se limitar aos formatos fixos do
+// "Resumo por Período". A IA também pode sugerir perguntas.
+// ─────────────────────────────────────────────────────────────
+const CUSTOM_ANALYSIS_DEFAULT_SUGGESTIONS = [
+  'Quais clientes estão com risco de cancelar e por quê?',
+  'Resuma as principais reclamações e sugira como resolvê-las',
+  'Quais oportunidades comerciais surgiram nesse período?',
+  'Como está o sentimento geral dos clientes ao longo do período?',
+  'Liste os pontos de atenção que o gestor deveria revisar hoje',
+  'Escreva um resumo executivo em 3 parágrafos para a diretoria',
+];
+
+function CustomAnalysisScreen() {
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+
+  const [conversations,  setConversations]  = React.useState([]);
+  const [convSearch,     setConvSearch]     = React.useState('');
+  const [selectedIds,    setSelectedIds]    = React.useState([]);
+  const [startDate,      setStartDate]      = React.useState(weekAgo);
+  const [endDate,        setEndDate]        = React.useState(today);
+  const [question,       setQuestion]       = React.useState('');
+  const [loading,        setLoading]        = React.useState(false);
+  const [loadingConvs,   setLoadingConvs]   = React.useState(false);
+  const [suggesting,     setSuggesting]     = React.useState(false);
+  const [aiSuggestions,  setAiSuggestions]  = React.useState([]);
+  const [result,         setResult]         = React.useState(null);
+  const [showConvList,   setShowConvList]   = React.useState(false);
+
+  const [activeTab,      setActiveTab]      = React.useState('new'); // 'new' | 'history'
+  const [history,        setHistory]        = React.useState([]);
+  const [loadingHistory, setLoadingHistory] = React.useState(false);
+  const [historyDetail,  setHistoryDetail]  = React.useState(null);
+  const [loadingDetail,  setLoadingDetail]  = React.useState(false);
+
+  const isMobile = useIsMobile();
+
+  React.useEffect(() => {
+    setLoadingConvs(true);
+    window.apiGet('/conversations?limit=200')
+      .then(d => setConversations(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setLoadingConvs(false));
+  }, []);
+
+  function loadHistory() {
+    setLoadingHistory(true);
+    window.apiGet('/analysis/custom/history?limit=50')
+      .then(d => setHistory(Array.isArray(d.items) ? d.items : []))
+      .catch(() => window.showToast('Erro ao carregar histórico.', 'error'))
+      .finally(() => setLoadingHistory(false));
+  }
+
+  React.useEffect(() => {
+    if (activeTab === 'history') { setHistoryDetail(null); loadHistory(); }
+  }, [activeTab]);
+
+  function openHistoryItem(id) {
+    setLoadingDetail(true);
+    setHistoryDetail(null);
+    window.apiGet(`/analysis/custom/history/${id}`)
+      .then(d => setHistoryDetail(d))
+      .catch(() => window.showToast('Erro ao carregar análise.', 'error'))
+      .finally(() => setLoadingDetail(false));
+  }
+
+  async function deleteHistoryItem(id, e) {
+    e.stopPropagation();
+    if (!window.confirm('Excluir esta análise do histórico?')) return;
+    try {
+      await window.apiDelete(`/analysis/custom/history/${id}`);
+      setHistory(prev => prev.filter(h => h.id !== id));
+      if (historyDetail?.id === id) setHistoryDetail(null);
+      window.showToast('Análise excluída.', 'success');
+    } catch (e2) {
+      window.showToast('Erro ao excluir análise.', 'error');
+    }
+  }
+
+  function formatDateTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const filteredConvs = conversations.filter(c =>
+    !convSearch || c.name.toLowerCase().includes(convSearch.toLowerCase())
+  );
+  const selectedConvs = conversations.filter(c => selectedIds.includes(c.id));
+
+  function toggleConv(id) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function setQuickRange(days) {
+    const end = new Date();
+    const start = new Date(end.getTime() - days * 86400000);
+    setStartDate(start.toISOString().slice(0, 10));
+    setEndDate(end.toISOString().slice(0, 10));
+  }
+
+  function setTodayRange() {
+    const d = new Date().toISOString().slice(0, 10);
+    setStartDate(d); setEndDate(d);
+  }
+
+  function setYesterdayRange() {
+    const d = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    setStartDate(d); setEndDate(d);
+  }
+
+  async function handleSuggestWithAI() {
+    setSuggesting(true);
+    try {
+      const data = await window.apiPost('/analysis/suggestions', {
+        conversation_ids: selectedIds,
+        start_date: startDate,
+        end_date: endDate,
+      });
+      const list = Array.isArray(data.suggestions) ? data.suggestions : [];
+      if (list.length === 0) {
+        window.showToast('Não foi possível gerar sugestões agora. Tente as sugestões padrão.', 'warning');
+      }
+      setAiSuggestions(list);
+    } catch (e) {
+      window.showToast('Erro ao sugerir análises. Tente novamente.', 'error');
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
+  async function handleGenerate() {
+    if (selectedIds.length === 0) { window.showToast('Selecione ao menos um grupo.', 'warning'); return; }
+    if (!question.trim()) { window.showToast('Descreva a análise que você deseja.', 'warning'); return; }
+    if (!startDate || !endDate) { window.showToast('Informe o período.', 'warning'); return; }
+    if (startDate > endDate) { window.showToast('Data inicial deve ser anterior à final.', 'warning'); return; }
+
+    setLoading(true);
+    setResult(null);
+    try {
+      const data = await window.apiPost('/analysis/custom', {
+        conversation_ids: selectedIds,
+        question: question.trim(),
+        start_date: startDate,
+        end_date: endDate,
+      });
+      setResult(data);
+    } catch (e) {
+      window.showToast(e.message || 'Erro ao gerar análise. Tente novamente.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const suggestionChips = aiSuggestions.length > 0 ? aiSuggestions : CUSTOM_ANALYSIS_DEFAULT_SUGGESTIONS;
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <PageHeader title="Análise Personalizada" subtitle="Peça qualquer análise sobre um ou mais grupos, no período que quiser" />
+
+      {/* ── Abas ── */}
+      <div style={{ display: 'flex', gap: '4px', padding: '16px 24px 0', borderBottom: '1px solid #334155' }}>
+        {[['new', 'Nova Análise', 'wand-magic-sparkles'], ['history', 'Histórico de Análises', 'clock-rotate-left']].map(([id, label, icon]) => (
+          <button key={id} onClick={() => setActiveTab(id)} style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: activeTab === id ? '#2dd4bf' : '#94a3b8', fontSize: '13px', fontWeight: 600,
+            padding: '10px 16px', borderBottom: activeTab === id ? '2px solid #0d9488' : '2px solid transparent',
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            <i className={`fas fa-${icon}`} />{label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+
+        {activeTab === 'history' ? (
+          <div style={{ paddingTop: '20px' }}>
+            {historyDetail ? (
+              <div>
+                <button onClick={() => setHistoryDetail(null)} style={{
+                  background: 'transparent', border: '1px solid #334155', borderRadius: '6px',
+                  color: '#94a3b8', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', marginBottom: '16px',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}>
+                  <i className="fas fa-arrow-left" />Voltar ao histórico
+                </button>
+
+                <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '10px' }}>Detalhes da Análise</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '10px', fontSize: '13px' }}>
+                    <div><span style={{ color: '#64748b' }}>Data/hora realizada: </span><span style={{ color: '#f1f5f9' }}>{formatDateTime(historyDetail.created_at)}</span></div>
+                    <div><span style={{ color: '#64748b' }}>Período analisado: </span><span style={{ color: '#f1f5f9' }}>{historyDetail.period.start} → {historyDetail.period.end}</span></div>
+                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Grupos analisados: </span><span style={{ color: '#f1f5f9' }}>{(historyDetail.groups_stats || []).map(g => g.name).join(', ') || '—'}</span></div>
+                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Descrição/pergunta utilizada: </span><span style={{ color: '#f1f5f9', fontStyle: 'italic' }}>"{historyDetail.question}"</span></div>
+                  </div>
+                </div>
+
+                {historyDetail.groups_stats?.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                    {historyDetail.groups_stats.map(g => (
+                      <div key={g.id} style={{ background: '#1e293b', borderRadius: '10px', padding: '14px 16px', border: '1px solid #334155' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px' }}>{g.name}</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
+                          <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#94a3b8' }}>
+                            <i className="fas fa-comment" style={{ marginRight: '4px' }} />{g.stats.total_messages} msgs
+                          </span>
+                          <span style={{
+                            background: '#0f172a', borderRadius: '6px', padding: '3px 8px',
+                            color: g.stats.avg_risk_score >= 60 ? '#ef4444' : g.stats.avg_risk_score >= 30 ? '#f59e0b' : '#10b981',
+                          }}>
+                            <i className="fas fa-exclamation-triangle" style={{ marginRight: '4px' }} />{g.stats.avg_risk_score}/100
+                          </span>
+                          {g.stats.churn_risk_count > 0 && (
+                            <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#ef4444' }}>
+                              <i className="fas fa-user-minus" style={{ marginRight: '4px' }} />{g.stats.churn_risk_count} churn
+                            </span>
+                          )}
+                          {g.stats.opportunity_count > 0 && (
+                            <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#10b981' }}>
+                              <i className="fas fa-lightbulb" style={{ marginRight: '4px' }} />{g.stats.opportunity_count} oport.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+                    <i className="fas fa-sparkles" style={{ marginRight: '6px' }}></i>Resposta Gerada
+                  </div>
+                  <div
+                    style={{ fontSize: '14px', lineHeight: 1.7, color: '#d1d5db' }}
+                    dangerouslySetInnerHTML={{ __html: renderMd(historyDetail.answer_text) }}
+                  />
+                </div>
+              </div>
+            ) : loadingDetail ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}><i className="fas fa-spinner fa-spin" /> Carregando...</div>
+            ) : loadingHistory ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}><i className="fas fa-spinner fa-spin" /> Carregando histórico...</div>
+            ) : history.length === 0 ? (
+              <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
+                <i className="fas fa-clock-rotate-left" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Nenhuma análise salva ainda</div>
+                <div style={{ fontSize: '14px' }}>Toda análise gerada na aba "Nova Análise" fica salva aqui automaticamente.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {history.map(h => (
+                  <div key={h.id} onClick={() => openHistoryItem(h.id)} style={{
+                    background: '#1e293b', border: '1px solid #334155', borderRadius: '10px',
+                    padding: '14px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'flex-start', gap: '12px',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#243447'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#1e293b'}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                        {formatDateTime(h.created_at)} · {h.start_date} → {h.end_date} · {h.total_messages} msgs
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#f1f5f9', fontStyle: 'italic', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        "{h.question}"
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        <i className="fas fa-users" style={{ marginRight: '6px' }} />{h.group_names.join(', ') || '—'}
+                      </div>
+                    </div>
+                    <button onClick={(e) => deleteHistoryItem(h.id, e)} title="Excluir" style={{
+                      background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', flexShrink: 0,
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                      onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                    >
+                      <i className="fas fa-trash" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+        <React.Fragment>
+
+        {/* ── Formulário ── */}
+        <div style={{
+          background: '#1e293b', border: '1px solid #334155', borderRadius: '14px',
+          padding: '20px', marginBottom: '24px',
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px',
+        }}>
+
+          {/* Seleção de grupos (múltipla) */}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+              <i className="fas fa-users" style={{ marginRight: '6px' }}></i>Grupo(s) / Conversa(s)
+            </label>
+            <div style={{ position: 'relative' }}>
+              <div
+                onClick={() => setShowConvList(v => !v)}
+                style={{
+                  background: '#0f172a', border: `1px solid ${showConvList ? '#0d9488' : '#475569'}`,
+                  borderRadius: '8px', padding: '10px 14px', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px',
+                  color: selectedIds.length ? '#f1f5f9' : '#64748b', fontSize: '14px', minHeight: '20px',
+                }}
+              >
+                {selectedIds.length === 0 ? (
+                  <span>Selecionar grupo(s)...</span>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {selectedConvs.map(c => (
+                      <span key={c.id} style={{
+                        background: 'rgba(13,148,136,0.15)', color: '#2dd4bf', border: '1px solid rgba(13,148,136,0.4)',
+                        borderRadius: '999px', padding: '2px 10px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px',
+                      }}>
+                        {c.name}
+                        <i className="fas fa-times" style={{ cursor: 'pointer', fontSize: '10px' }}
+                          onClick={e => { e.stopPropagation(); toggleConv(c.id); }} />
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <i className={`fas fa-chevron-${showConvList ? 'up' : 'down'}`} style={{ fontSize: '11px', color: '#64748b', flexShrink: 0 }} />
+              </div>
+              {showConvList && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                  background: '#1e293b', border: '1px solid #334155', borderRadius: '8px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: '4px',
+                }}>
+                  <div style={{ padding: '8px' }}>
+                    <input
+                      autoFocus
+                      value={convSearch}
+                      onChange={e => setConvSearch(e.target.value)}
+                      placeholder="Buscar..."
+                      style={{
+                        width: '100%', background: '#0f172a', border: '1px solid #334155',
+                        borderRadius: '6px', color: '#f1f5f9', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                    {loadingConvs ? (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Carregando...</div>
+                    ) : filteredConvs.length === 0 ? (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
+                    ) : filteredConvs.map(c => {
+                      const checked = selectedIds.includes(c.id);
+                      return (
+                        <div
+                          key={c.id}
+                          onClick={() => toggleConv(c.id)}
+                          style={{
+                            padding: '10px 14px', cursor: 'pointer', fontSize: '14px',
+                            color: checked ? '#2dd4bf' : '#d1d5db',
+                            background: checked ? 'rgba(13,148,136,0.1)' : 'transparent',
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                          }}
+                          onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#334155'; }}
+                          onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <i className={`fas fa-${checked ? 'check-square' : 'square'}`} style={{ color: checked ? '#0d9488' : '#475569', fontSize: '13px' }} />
+                          {c.name}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {filteredConvs.length > 0 && (
+                    <div style={{ borderTop: '1px solid #334155', padding: '8px 14px', display: 'flex', justifyContent: 'space-between' }}>
+                      <button onClick={() => setSelectedIds(filteredConvs.map(c => c.id))}
+                        style={{ background: 'transparent', border: 'none', color: '#0d9488', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
+                        Selecionar todos
+                      </button>
+                      <button onClick={() => setSelectedIds([])}
+                        style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
+                        Limpar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Data início */}
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+              <i className="fas fa-calendar-alt" style={{ marginRight: '6px' }}></i>Data Inicial
+            </label>
+            <input
+              type="date" value={startDate} max={endDate}
+              onChange={e => setStartDate(e.target.value)}
+              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Data fim */}
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+              <i className="fas fa-calendar-check" style={{ marginRight: '6px' }}></i>Data Final
+            </label>
+            <input
+              type="date" value={endDate} min={startDate} max={today}
+              onChange={e => setEndDate(e.target.value)}
+              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Atalhos de período */}
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Atalhos:</span>
+            {[['hoje', 'Hoje', setTodayRange], ['ontem', 'Ontem', setYesterdayRange]].map(([k, label, fn]) => (
+              <button key={k} onClick={fn} style={{
+                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
+                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+              }}>{label}</button>
+            ))}
+            {[[7,'7 dias'],[14,'14 dias'],[30,'30 dias'],[90,'3 meses']].map(([d, label]) => (
+              <button key={d} onClick={() => setQuickRange(d)} style={{
+                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
+                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+              }}>{label}</button>
+            ))}
+          </div>
+
+          {/* Pergunta livre + sugestões */}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>
+                <i className="fas fa-comment-dots" style={{ marginRight: '6px' }}></i>O que você quer saber?
+              </label>
+              <button
+                onClick={handleSuggestWithAI}
+                disabled={suggesting}
+                style={{
+                  background: 'transparent', border: '1px solid #475569', borderRadius: '6px',
+                  color: suggesting ? '#475569' : '#a78bfa', padding: '4px 10px', cursor: suggesting ? 'not-allowed' : 'pointer',
+                  fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                {suggesting
+                  ? <><i className="fas fa-spinner fa-spin" />Pensando...</>
+                  : <><i className="fas fa-wand-magic-sparkles" />Sugerir com IA</>
+                }
+              </button>
+            </div>
+            <textarea
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              rows={3}
+              placeholder='Ex: "Quais clientes estão insatisfeitos e por quê?" ou "Faça um raio-x comercial desse grupo no período"'
+              style={{
+                width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #475569',
+                borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px',
+                fontFamily: 'inherit', resize: 'vertical',
+              }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+              {suggestionChips.map((s, i) => (
+                <button key={i} onClick={() => setQuestion(s)} title={s} style={{
+                  background: '#0f172a', border: '1px solid #334155', borderRadius: '999px',
+                  color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '11px',
+                  maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{s}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Botão gerar */}
+          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={handleGenerate}
+              disabled={loading || selectedIds.length === 0 || !question.trim()}
+              style={{
+                background: loading || selectedIds.length === 0 || !question.trim() ? '#334155' : '#0d9488',
+                border: 'none', borderRadius: '8px', color: 'white',
+                padding: '10px 24px', cursor: loading || selectedIds.length === 0 || !question.trim() ? 'not-allowed' : 'pointer',
+                fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+              }}
+            >
+              {loading
+                ? <><i className="fas fa-spinner fa-spin" />Gerando...</>
+                : <><i className="fas fa-magic" />Gerar Análise</>
+              }
+            </button>
+          </div>
+        </div>
+
+        {/* ── Resultado ── */}
+        {result && (
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>
+                {result.period.start} → {result.period.end} · {result.groups_stats?.length || 0} grupo(s)
+              </div>
+              <div style={{ fontSize: '15px', color: '#94a3b8', fontStyle: 'italic' }}>"{result.question}"</div>
+            </div>
+
+            {/* Stats por grupo */}
+            {result.groups_stats?.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                {result.groups_stats.map(g => (
+                  <div key={g.id} style={{ background: '#1e293b', borderRadius: '10px', padding: '14px 16px', border: '1px solid #334155' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px' }}>{g.name}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
+                      <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#94a3b8' }}>
+                        <i className="fas fa-comment" style={{ marginRight: '4px' }} />{g.stats.total_messages} msgs
+                      </span>
+                      <span style={{
+                        background: '#0f172a', borderRadius: '6px', padding: '3px 8px',
+                        color: g.stats.avg_risk_score >= 60 ? '#ef4444' : g.stats.avg_risk_score >= 30 ? '#f59e0b' : '#10b981',
+                      }}>
+                        <i className="fas fa-exclamation-triangle" style={{ marginRight: '4px' }} />{g.stats.avg_risk_score}/100
+                      </span>
+                      {g.stats.churn_risk_count > 0 && (
+                        <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#ef4444' }}>
+                          <i className="fas fa-user-minus" style={{ marginRight: '4px' }} />{g.stats.churn_risk_count} churn
+                        </span>
+                      )}
+                      {g.stats.opportunity_count > 0 && (
+                        <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#10b981' }}>
+                          <i className="fas fa-lightbulb" style={{ marginRight: '4px' }} />{g.stats.opportunity_count} oport.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Resposta da IA */}
+            <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+                <i className="fas fa-sparkles" style={{ marginRight: '6px' }}></i>Resultado da Análise
+              </div>
+              <div
+                style={{ fontSize: '14px', lineHeight: 1.7, color: '#d1d5db' }}
+                dangerouslySetInnerHTML={{ __html: renderMd(result.answer_text) }}
+              />
+            </div>
+          </div>
+        )}
+
+        {!result && !loading && (
+          <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
+            <i className="fas fa-wand-magic-sparkles" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Peça qualquer análise sobre seus grupos</div>
+            <div style={{ fontSize: '14px' }}>
+              Selecione um ou mais grupos, um período e escreva o que você quer saber — a IA responde com base nas conversas reais.
+            </div>
+          </div>
+        )}
+        </React.Fragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // renderMd helper simples (compatível com os outros screens)
 function renderMd(text) {
   if (!text) return '';
@@ -4262,7 +4924,7 @@ function AgentConfigScreen() {
   const previewName = name || 'Agente ENVOX';
   const previewRole = roleLabel ? ` — ${roleLabel}` : '';
   const previewSig = signature ? `\n_${signature}_` : '';
-  const previewMsg = `${previewEmoji} *${previewName}${previewRole}*\n━━━━━━━━━━━━━━━━━\n_Aqui virá o conteúdo do resumo gerado automaticamente..._\n━━━━━━━━━━━━━━━━━\n📝 _Gerado por ${previewName} · ENVOX Intelligence_${previewSig}`;
+  const previewMsg = `${previewEmoji} *${previewName}${previewRole}*\n━━━━━━━━━━━━━━━━━\n_Aqui virá o conteúdo do resumo gerado automaticamente..._\n━━━━━━━━━━━━━━━━━\n📝 _Gerado por ${previewName} · ATENX_${previewSig}`;
 
   const S = { // shared styles
     label: { display: 'block', fontSize: '12px', color: '#94a3b8', fontWeight: 500, marginBottom: '6px' },
@@ -4953,4 +5615,4 @@ function AutomationsScreen() {
   );
 }
 
-Object.assign(window, { IntelligenceScreen, GroupsScreen, ConversationScreen, TagsScreen, SummaryScreen, TeamScreen, ApiDocsScreen, ConfigScreen, UsersScreen, UserProfileModal, EmailAccountsSection, EmailScreen, WppGroupsManagerScreen, RangeSummaryScreen, AgentConfigScreen, AutomationsScreen });
+Object.assign(window, { IntelligenceScreen, GroupsScreen, ConversationScreen, TagsScreen, SummaryScreen, TeamScreen, ApiDocsScreen, ConfigScreen, UsersScreen, UserProfileModal, EmailAccountsSection, EmailScreen, WppGroupsManagerScreen, RangeSummaryScreen, CustomAnalysisScreen, AgentConfigScreen, AutomationsScreen });

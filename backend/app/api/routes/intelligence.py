@@ -19,6 +19,7 @@ from app.models.alert import AlertEvent, AlertStatus, AlertSeverity
 from app.models.followup import FollowUpItem, FollowUpStatus
 from app.models.tenant import TenantConfig
 from app.models.source import IngestionSource, SourceType
+from app.models.custom_analysis import CustomAnalysisRun
 from app.connectors.wppconnect_server import get_client_for_session
 
 router = APIRouter()
@@ -253,8 +254,12 @@ async def get_conversation_messages(
     count_q = select(func.count()).select_from(q.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
-    q = q.order_by(Message.sent_at.asc()).offset(offset).limit(limit)
-    rows = (await db.execute(q)).fetchall()
+    # Pagina a partir do mais recente (offset conta "quantas já foram carregadas
+    # a partir do fim"), depois reverte para ordem cronológica ascendente. Antes
+    # buscava a partir do início (ASC + offset=0), então grupos com >60 mensagens
+    # sempre abriam nas mensagens mais antigas em vez das mais recentes (D-032).
+    q = q.order_by(Message.sent_at.desc()).offset(offset).limit(limit)
+    rows = list(reversed((await db.execute(q)).fetchall()))
 
     msg_ids = [msg.id for msg, _ in rows]
     alert_map: dict[str, list] = {}
@@ -449,6 +454,85 @@ async def send_conversation_message(
         "signals": [],
         "tags": [],
         "alerts": [],
+    }
+
+
+class SuggestMessageRequest(BaseModel):
+    participant_id: Optional[str] = None
+    intent: Optional[str] = None
+    draft: Optional[str] = None
+
+
+@router.post("/conversations/{conversation_id}/suggest-message")
+async def suggest_conversation_message(
+    conversation_id: str,
+    body: SuggestMessageRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Sugere uma mensagem para enviar ao cliente, usando o perfil de IA do
+    participante (quando existente — D-009) + contexto recente da conversa
+    + tom do Agente Virtual configurado (D-002). Não envia nada, só sugere.
+    """
+    from app.services.agent import get_agent_config
+    from app.services.message_assistant import suggest_client_message
+
+    conv = await _get_conv_for_tenant(conversation_id, db, current_user)
+
+    # Resolve o participante-alvo: o informado, ou o último externo que mandou mensagem
+    target: Optional[Participant] = None
+    if body.participant_id:
+        result = await db.execute(
+            select(Participant).where(Participant.id == body.participant_id)
+        )
+        target = result.scalar_one_or_none()
+    else:
+        result = await db.execute(
+            select(Participant)
+            .join(Message, Message.participant_id == Participant.id)
+            .where(Message.conversation_id == conv.id, Participant.is_internal == False)  # noqa
+            .order_by(Message.sent_at.desc())
+            .limit(1)
+        )
+        target = result.scalar_one_or_none()
+
+    profile = None
+    if target:
+        profile = (target.extra_data or {}).get("ai_profile")
+
+    ctx_rows = await db.execute(
+        select(Message, Participant)
+        .join(Participant, Message.participant_id == Participant.id)
+        .where(Message.conversation_id == conv.id)
+        .order_by(Message.sent_at.desc())
+        .limit(15)
+    )
+    recent_messages = [
+        {"content": msg.content, "is_internal": bool(part.is_internal), "sender": _part_display(part)}
+        for msg, part in reversed(ctx_rows.fetchall())
+    ]
+
+    agent_cfg = await get_agent_config(db, current_user.id)
+
+    try:
+        result = await suggest_client_message(
+            group_name=_conv_display(conv),
+            participant_name=_part_display(target) if target else None,
+            profile=profile,
+            recent_messages=recent_messages,
+            agent_config=agent_cfg,
+            intent=(body.intent or "").strip() or None,
+            draft=(body.draft or "").strip() or None,
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Falha ao gerar sugestão: {str(e)}")
+
+    return {
+        "suggestion": result["message"],
+        "why": result["why"],
+        "participant_used": {"id": str(target.id), "name": _part_display(target)} if target else None,
+        "based_on_profile": bool(profile),
     }
 
 
@@ -803,23 +887,12 @@ async def get_conversation_range_summary(
     # ── Mensagens de destaque (maior risco) ───────────────────────
     top = sorted(messages, key=lambda m: (m.risk_score or 0), reverse=True)[:5]
 
-    # ── Transcrição amostrada para LLM ────────────────────────────
-    # Estratégia: primeiras 25 + últimas 25 + top-25 por risco (sem duplicatas, até 60 total)
-    if total_messages <= 80:
-        sample = messages
-    else:
-        first25 = messages[:25]
-        last25 = messages[-25:]
-        by_risk = sorted(messages, key=lambda m: (m.risk_score or 0), reverse=True)[:25]
-        seen_ids = set()
-        sample = []
-        for m in first25 + by_risk + last25:
-            if m.id not in seen_ids:
-                seen_ids.add(m.id)
-                sample.append(m)
-        sample.sort(key=lambda m: m.sent_at or datetime.min.replace(tzinfo=timezone.utc))
-
-    transcript_lines = [_msg_to_line(m) for m in sample]
+    # ── Transcrição para o LLM ─────────────────────────────────────
+    # Cobre TODAS as mensagens do período — sem teto arbitrário de contagem.
+    # A única fronteira de quantidade é o período/plano selecionado (max_history_days
+    # já resolve isso na hora do backfill); ver _build_full_transcript_block para a
+    # salvaguarda de volume extremo (map-reduce só quando estoura o contexto do LLM).
+    transcript_lines = [_msg_to_line(m) for m in messages]
 
     from app.services.agent import get_agent_config, inject_agent_identity
     agent_cfg = await get_agent_config(db, current_user.id)
@@ -903,6 +976,390 @@ async def get_conversation_range_summary(
             for m in top
         ],
     }
+
+
+class CustomAnalysisRequest(BaseModel):
+    conversation_ids: list[str]
+    question: str
+    start_date: str
+    end_date: str
+
+
+@router.post("/analysis/custom")
+async def custom_analysis(
+    body: CustomAnalysisRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Análise Personalizada (D-036): o usuário escolhe 1+ grupos, um período e escreve
+    livremente a análise que deseja — a IA responde com base nas mensagens reais desses
+    grupos no período, sem se limitar aos formatos fixos do "Resumo por Período".
+    """
+    if not body.conversation_ids:
+        raise HTTPException(400, "Selecione ao menos um grupo.")
+    if len(body.conversation_ids) > 10:
+        raise HTTPException(400, "Selecione no máximo 10 grupos por análise.")
+
+    question = (body.question or "").strip()
+    if not question:
+        raise HTTPException(400, "Descreva a análise que deseja.")
+
+    try:
+        start_dt = datetime.fromisoformat(body.start_date).replace(tzinfo=timezone.utc)
+        end_dt = datetime.fromisoformat(body.end_date).replace(tzinfo=timezone.utc) + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        raise HTTPException(400, "Datas inválidas. Use o formato YYYY-MM-DD.")
+
+    if (end_dt - start_dt).days > 366:
+        raise HTTPException(400, "Período máximo: 366 dias.")
+
+    convs = [await _get_conv_for_tenant(cid, db, current_user) for cid in body.conversation_ids]
+
+    groups_payload = []
+    prompt_blocks = []
+    total_messages_all = 0
+
+    for conv in convs:
+        msg_result = await db.execute(
+            select(Message).where(
+                and_(
+                    Message.conversation_id == conv.id,
+                    Message.sent_at >= start_dt,
+                    Message.sent_at <= end_dt,
+                )
+            ).order_by(Message.sent_at)
+        )
+        messages = msg_result.scalars().all()
+        total = len(messages)
+        total_messages_all += total
+
+        participant_ids = list({m.participant_id for m in messages if m.participant_id})
+        participant_names: dict = {}
+        if participant_ids:
+            part_result = await db.execute(select(Participant).where(Participant.id.in_(participant_ids)))
+            for p in part_result.scalars().all():
+                participant_names[p.id] = p.custom_name or p.name or str(p.id)[:8]
+
+        def _msg_to_line(m, _names=participant_names):
+            ts = m.sent_at.strftime("%d/%m %H:%M") if m.sent_at else "??"
+            author = _names.get(m.participant_id, "Desconhecido")
+            content = (m.content or "").strip()[:300]
+            return f"[{ts}] {author}: {content}"
+
+        tag_dist: dict = {}
+        for m in messages:
+            for tag in (m.tags or []):
+                tag_dist[tag] = tag_dist.get(tag, 0) + 1
+        avg_risk = (sum(m.risk_score or 0 for m in messages) / total) if total else 0.0
+        churn_count = sum(1 for m in messages if m.is_churn_risk)
+        complaint_count = sum(1 for m in messages if m.is_complaint)
+        opportunity_count = sum(1 for m in messages if m.is_opportunity)
+
+        groups_payload.append({
+            "id": str(conv.id),
+            "name": _conv_display(conv),
+            "stats": {
+                "total_messages": total,
+                "avg_risk_score": round(avg_risk, 1),
+                "churn_risk_count": churn_count,
+                "complaint_count": complaint_count,
+                "opportunity_count": opportunity_count,
+            },
+            "tag_distribution": dict(sorted(tag_dist.items(), key=lambda x: -x[1])[:8]),
+        })
+
+        transcript_lines_g = [_msg_to_line(m) for m in messages]
+        transcript = await _build_full_transcript_block(transcript_lines_g, total)
+        top_tags_str = ", ".join(f"{t}({n}x)" for t, n in sorted(tag_dist.items(), key=lambda x: -x[1])[:6]) or "nenhuma"
+        prompt_blocks.append(
+            f"### Grupo: {_conv_display(conv)}\n"
+            f"Mensagens no período: {total} | Risco médio: {avg_risk:.0f}/100 | Churn: {churn_count} | "
+            f"Reclamações: {complaint_count} | Oportunidades: {opportunity_count} | Tags: {top_tags_str}\n"
+            f"Transcrição:\n{transcript}"
+        )
+
+    if total_messages_all == 0:
+        answer_text = "Nenhuma mensagem encontrada no período selecionado para os grupos escolhidos."
+    else:
+        from app.services.agent import get_agent_config
+        agent_cfg = await get_agent_config(db, current_user.id)
+
+        answer_text = await _generate_custom_analysis_text(
+            question=question,
+            start_date=body.start_date,
+            end_date=body.end_date,
+            multi_group=len(convs) > 1,
+            prompt_blocks=prompt_blocks,
+            agent_config=agent_cfg,
+        )
+
+    run = CustomAnalysisRun(
+        tenant_id=current_user.id,
+        created_by=current_user.id,
+        question=question,
+        start_date=start_dt.date(),
+        end_date=end_dt.date(),
+        conversation_ids=[g["id"] for g in groups_payload],
+        groups_snapshot=groups_payload,
+        answer_text=answer_text,
+        total_messages=total_messages_all,
+    )
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+
+    return {
+        "id": str(run.id),
+        "groups": [g["id"] for g in groups_payload],
+        "period": {"start": body.start_date, "end": body.end_date},
+        "question": question,
+        "answer_text": answer_text,
+        "groups_stats": groups_payload,
+        "created_at": run.created_at.isoformat(),
+    }
+
+
+@router.get("/analysis/custom/history")
+async def list_custom_analysis_history(
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Lista o histórico de Análises Personalizadas já geradas para o tenant (D-049)."""
+    result = await db.execute(
+        select(CustomAnalysisRun)
+        .where(CustomAnalysisRun.tenant_id == current_user.id)
+        .order_by(desc(CustomAnalysisRun.created_at))
+        .offset(offset)
+        .limit(limit)
+    )
+    runs = result.scalars().all()
+    return {
+        "items": [
+            {
+                "id": str(r.id),
+                "created_at": r.created_at.isoformat(),
+                "question": r.question,
+                "start_date": r.start_date.isoformat(),
+                "end_date": r.end_date.isoformat(),
+                "group_names": [g.get("name") for g in (r.groups_snapshot or [])],
+                "total_messages": r.total_messages or 0,
+            }
+            for r in runs
+        ]
+    }
+
+
+@router.get("/analysis/custom/history/{run_id}")
+async def get_custom_analysis_history_item(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Detalhe completo de uma Análise Personalizada salva (D-049)."""
+    result = await db.execute(
+        select(CustomAnalysisRun).where(
+            and_(
+                CustomAnalysisRun.id == run_id,
+                CustomAnalysisRun.tenant_id == current_user.id,
+            )
+        )
+    )
+    run = result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(404, "Análise não encontrada.")
+    return {
+        "id": str(run.id),
+        "created_at": run.created_at.isoformat(),
+        "question": run.question,
+        "period": {"start": run.start_date.isoformat(), "end": run.end_date.isoformat()},
+        "groups": run.conversation_ids,
+        "groups_stats": run.groups_snapshot,
+        "answer_text": run.answer_text,
+    }
+
+
+@router.delete("/analysis/custom/history/{run_id}")
+async def delete_custom_analysis_history_item(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove uma Análise Personalizada salva do histórico (D-049)."""
+    result = await db.execute(
+        select(CustomAnalysisRun).where(
+            and_(
+                CustomAnalysisRun.id == run_id,
+                CustomAnalysisRun.tenant_id == current_user.id,
+            )
+        )
+    )
+    run = result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(404, "Análise não encontrada.")
+    await db.delete(run)
+    await db.commit()
+    return {"ok": True}
+
+
+async def _generate_custom_analysis_text(
+    question, start_date, end_date, multi_group, prompt_blocks, agent_config=None,
+) -> str:
+    from app.core.config import settings
+
+    if settings.LLM_ENABLED and settings.ANTHROPIC_API_KEY:
+        try:
+            return await _custom_analysis_claude(
+                question, start_date, end_date, multi_group, prompt_blocks, agent_config,
+            )
+        except Exception as e:
+            from app.core.logging import get_logger as _log
+            _log(__name__).error("custom_analysis_failed", error=str(e))
+
+    return (
+        "Não foi possível gerar a análise no momento (IA indisponível). "
+        "Tente novamente em instantes ou contate o suporte."
+    )
+
+
+async def _custom_analysis_claude(
+    question, start_date, end_date, multi_group, prompt_blocks, agent_config=None,
+) -> str:
+    import anthropic
+    from app.core.config import settings
+    from app.services.agent import build_agent_personality_prompt
+
+    agent_intro = build_agent_personality_prompt(agent_config) if agent_config else \
+        "Você é um analista de relacionamento e CRM de uma empresa de manipulação farmacêutica."
+
+    groups_block = "\n\n".join(prompt_blocks)
+    scope_note = (
+        "Os dados abaixo cobrem VÁRIOS grupos — compare ou agregue entre eles quando fizer sentido "
+        "para a pergunta, e deixe claro a qual grupo cada observação se refere."
+        if multi_group else
+        "Os dados abaixo cobrem um único grupo."
+    )
+
+    prompt = f"""{agent_intro}
+
+Um gestor pediu a seguinte análise sobre o(s) grupo(s) de WhatsApp de clientes no período de {start_date} a {end_date}:
+
+"{question}"
+
+{scope_note}
+
+{groups_block}
+
+**Instruções:**
+- Responda diretamente ao pedido acima, usando apenas os dados e a transcrição fornecidos — não invente informações que não estejam no material
+- Se o pedido não puder ser respondido com os dados disponíveis, diga isso explicitamente
+- Use markdown (negrito, parágrafos ou listas curtas quando fizer sentido); evite listas longas demais
+- Responda em português brasileiro
+- Seja específico: cite exemplos concretos da transcrição quando relevante"""
+
+    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    resp = await client.messages.create(
+        model=settings.ANTHROPIC_MODEL,
+        max_tokens=1200,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return resp.content[0].text
+
+
+class AnalysisSuggestionsRequest(BaseModel):
+    conversation_ids: list[str] = []
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+
+@router.post("/analysis/suggestions")
+async def suggest_analyses(
+    body: AnalysisSuggestionsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Sugere perguntas de análise sob medida (D-036), com base nas tags/risco predominantes
+    dos grupos e período selecionados. Alimenta o botão "Sugerir com IA" da tela de
+    Análise Personalizada — as sugestões estáticas padrão vivem no frontend.
+    """
+    from app.core.config import settings
+    if not (settings.LLM_ENABLED and settings.ANTHROPIC_API_KEY):
+        return {"suggestions": []}
+
+    tag_dist: dict = {}
+    total = 0
+    avg_risk_sum = 0.0
+    group_names = []
+
+    if body.conversation_ids:
+        try:
+            start_dt = datetime.fromisoformat(body.start_date).replace(tzinfo=timezone.utc) if body.start_date else None
+            end_dt = (
+                datetime.fromisoformat(body.end_date).replace(tzinfo=timezone.utc) + timedelta(days=1) - timedelta(seconds=1)
+                if body.end_date else None
+            )
+        except ValueError:
+            start_dt = end_dt = None
+
+        for cid in body.conversation_ids[:10]:
+            conv = await _get_conv_for_tenant(cid, db, current_user)
+            group_names.append(_conv_display(conv))
+            conditions = [Message.conversation_id == conv.id]
+            if start_dt:
+                conditions.append(Message.sent_at >= start_dt)
+            if end_dt:
+                conditions.append(Message.sent_at <= end_dt)
+            msg_result = await db.execute(select(Message).where(and_(*conditions)))
+            messages = msg_result.scalars().all()
+            total += len(messages)
+            avg_risk_sum += sum(m.risk_score or 0 for m in messages)
+            for m in messages:
+                for tag in (m.tags or []):
+                    tag_dist[tag] = tag_dist.get(tag, 0) + 1
+
+    avg_risk = (avg_risk_sum / total) if total else 0.0
+    top_tags = ", ".join(f"{t}({n}x)" for t, n in sorted(tag_dist.items(), key=lambda x: -x[1])[:6]) or "nenhuma tag predominante"
+    groups_str = ", ".join(group_names) if group_names else "nenhum grupo específico selecionado ainda"
+
+    try:
+        suggestions = await _suggest_analyses_claude(groups_str, total, avg_risk, top_tags)
+    except Exception:
+        suggestions = []
+
+    return {"suggestions": suggestions}
+
+
+async def _suggest_analyses_claude(groups_str, total_messages, avg_risk, top_tags) -> list:
+    import json
+    import anthropic
+    from app.core.config import settings
+
+    prompt = f"""Você ajuda um gestor de CRM de uma empresa de manipulação farmacêutica a decidir que análise pedir sobre conversas de WhatsApp com clientes.
+
+Contexto:
+- Grupo(s) selecionado(s): {groups_str}
+- Mensagens no período: {total_messages}
+- Risco médio: {avg_risk:.0f}/100
+- Tags mais frequentes: {top_tags}
+
+Sugira 5 perguntas de análise curtas, específicas e úteis que esse gestor poderia pedir sobre esse(s) grupo(s) nesse período (ex: "Quais clientes estão com risco de cancelar e por quê?", "Resuma as reclamações e sugira como resolvê-las"). Responda APENAS com um JSON: {{"suggestions": ["...", "...", "...", "...", "..."]}}"""
+
+    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    resp = await client.messages.create(
+        model=settings.ANTHROPIC_MODEL,
+        max_tokens=400,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = (resp.content[0].text or "").strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    data = json.loads(raw)
+    return [s for s in data.get("suggestions", []) if isinstance(s, str)][:6]
 
 
 @router.get("/conversations")
@@ -1083,9 +1540,7 @@ async def _range_text_claude_general(
     agent_intro = build_agent_personality_prompt(agent_config) if agent_config else \
         "Você é um assistente de CRM que redige atas e resumos de reuniões."
 
-    # Limita transcrição para evitar tokens excessivos
-    sample = transcript_lines[:80] if transcript_lines else []
-    transcript_block = "\n".join(sample) if sample else "Sem mensagens disponíveis."
+    transcript_block = await _build_full_transcript_block(transcript_lines, total_messages)
 
     prompt = f"""{agent_intro}
 
@@ -1143,6 +1598,99 @@ Instruções:
         )
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"].strip()
+
+
+# ── Transcrição completa para os prompts de LLM ───────────────────────
+# Sem cap arbitrário de mensagens: o relatório cobre TODO o período selecionado.
+# _SINGLE_PASS_CHAR_LIMIT é só uma salvaguarda técnica pra não estourar o
+# contexto do LLM numa chamada só — acima disso, resume em blocos (map-reduce)
+# preservando nomes/decisões/números/datas, em vez de simplesmente descartar
+# mensagens fora de uma amostra fixa.
+_SINGLE_PASS_CHAR_LIMIT = 180_000
+_CHUNK_CHAR_LIMIT = 60_000
+
+
+async def _llm_call_raw(prompt: str, max_tokens: int = 600) -> str:
+    """Anthropic com fallback Groq — mesmo padrão usado nos demais textos deste módulo."""
+    from app.core.config import settings
+
+    if settings.LLM_ENABLED and getattr(settings, "ANTHROPIC_API_KEY", None):
+        try:
+            import anthropic
+            client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+            resp = await client.messages.create(
+                model=settings.ANTHROPIC_MODEL,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return resp.content[0].text.strip()
+        except Exception as e:
+            err = str(e).lower()
+            if not any(k in err for k in ("credit", "balance", "billing", "400", "402")):
+                raise
+
+    groq_key = getattr(settings, "GROQ_API_KEY", None) or ""
+    if not groq_key:
+        raise RuntimeError("Nenhum LLM disponível")
+    import httpx
+    body = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
+        "temperature": 0.3,
+    }
+    async with httpx.AsyncClient(timeout=60) as http:
+        r = await http.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            json=body,
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+        )
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip()
+
+
+async def _build_full_transcript_block(transcript_lines: list, total_messages: int) -> str:
+    """Monta o bloco de transcrição usando SEMPRE todas as mensagens do período.
+    Se o texto completo estourar o contexto de uma chamada de LLM, resume em blocos
+    (preservando nomes/decisões/números/datas) e consolida — nunca corta mensagens
+    fora silenciosamente."""
+    if not transcript_lines:
+        return "Sem mensagens disponíveis."
+
+    full_text = "\n".join(transcript_lines)
+    if len(full_text) <= _SINGLE_PASS_CHAR_LIMIT:
+        return f"(transcrição completa — {total_messages} mensagens)\n{full_text}"
+
+    chunks, current, current_len = [], [], 0
+    for line in transcript_lines:
+        if current_len + len(line) > _CHUNK_CHAR_LIMIT and current:
+            chunks.append(current)
+            current, current_len = [], 0
+        current.append(line)
+        current_len += len(line)
+    if current:
+        chunks.append(current)
+
+    partial_summaries = []
+    for idx, chunk in enumerate(chunks, start=1):
+        chunk_text = "\n".join(chunk)
+        prompt = (
+            f"Trecho {idx} de {len(chunks)} da transcrição de um grupo de WhatsApp de clientes.\n\n"
+            f"{chunk_text}\n\n"
+            "Resuma os pontos principais deste trecho em bullet points objetivos, preservando "
+            "nomes de pessoas, decisões tomadas, números/valores e datas importantes. "
+            "Máximo 10 bullets. Responda em português brasileiro."
+        )
+        try:
+            partial_summaries.append(await _llm_call_raw(prompt, max_tokens=500))
+        except Exception:
+            partial_summaries.append(f"[Trecho {idx} não pôde ser resumido — {len(chunk)} mensagens]")
+
+    consolidated = "\n\n".join(f"**Bloco {i + 1}:**\n{s}" for i, s in enumerate(partial_summaries))
+    return (
+        f"(resumo consolidado de TODAS as {total_messages} mensagens do período, "
+        f"processadas em {len(chunks)} blocos por volume elevado)\n{consolidated}"
+    )
 
 
 async def _generate_range_text(
@@ -1246,7 +1794,7 @@ async def _range_text_claude(
     agent_intro = build_agent_personality_prompt(agent_config) if agent_config else \
         "Você é um analista de relacionamento e CRM."
 
-    transcript_block = "\n".join(transcript_lines) if transcript_lines else "Sem mensagens disponíveis."
+    transcript_block = await _build_full_transcript_block(transcript_lines, total_messages)
 
     top_tags_str = ", ".join(
         f"{t}({n}x)" for t, n in sorted(tag_dist.items(), key=lambda x: -x[1])[:6]
@@ -1266,7 +1814,7 @@ Analise a conversa do grupo **{conv_name}** no período de {start_date} a {end_d
 **Estatísticas do período:**
 {stats_block}
 
-**Transcrição das mensagens ({len(transcript_lines)} de {total_messages}):**
+**Transcrição das mensagens do período:**
 {transcript_block}
 
 **Instruções:**

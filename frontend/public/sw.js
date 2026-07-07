@@ -1,7 +1,7 @@
-// ENVOX Intelligence — Service Worker
+// ATENX — Service Worker
 // Habilita PWA install e push notifications
 
-const CACHE_NAME = 'envox-v2';
+const CACHE_NAME = 'atenx-v3';
 
 // Instala o SW e faz cache dos assets estáticos essenciais
 self.addEventListener('install', (event) => {

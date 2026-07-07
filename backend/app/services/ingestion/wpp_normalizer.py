@@ -24,6 +24,17 @@ def normalize_wpp_payload(payload: dict) -> dict | None:
     if data.get("fromMe"):
         return None
 
+    # "Excluir para todos" no WhatsApp — desconsidera o evento e mantém a
+    # mensagem original já gravada no banco intacta (decisão do Gus, 2026-07-07:
+    # mensagens nunca são apagadas/alteradas por causa de uma exclusão remota).
+    wpp_type_raw = data.get("type")
+    if (
+        wpp_type_raw in ("revoked", "revoke")
+        or data.get("isRevoked")
+        or data.get("subtype") in ("message_deletion", "revoke")
+    ):
+        return None
+
     # chatId terminando em @g.us = grupo (WppConnect/WhatsApp multi-device pode ter isGroupMsg=False)
     chat_id = str(data.get("chatId") or data.get("from") or "")
     is_group = data.get("isGroupMsg") or data.get("isGroup") or chat_id.endswith("@g.us")

@@ -587,6 +587,21 @@ async def _process_message(payload: dict, session_name: str):
                 logger.warning("wpp_unknown_session_fallback", session=session_name)
                 source = await _get_or_create_fallback_source(db)
 
+            # Só processa (heurísticas, alertas, push) grupos explicitamente
+            # selecionados em "Selecionar Grupos" — evita analisar/alertar
+            # grupos nunca monitorados ou desativados pelo usuário.
+            group_id = normalized.get("conversation_external_id")
+            monitored_result = await db.execute(
+                select(Conversation.id).where(
+                    Conversation.tenant_id == source.tenant_id,
+                    Conversation.external_id == group_id,
+                    Conversation.is_monitored == True,  # noqa
+                )
+            )
+            if monitored_result.scalar_one_or_none() is None:
+                logger.debug("wpp_message_skipped_not_monitored", group=group_id, session=session_name)
+                return
+
             from app.models.message import Message
             ext_id = normalized.get("external_id")
             if ext_id:

@@ -96,7 +96,7 @@ async def test_push(
     sent = await broadcast_push(
         db=db,
         user_id=current_user.id,
-        title="ENVOX Intelligence",
+        title="ATENX",
         body="Notificações ativas! Você receberá alertas críticos aqui.",
         url="/",
         critical=False,

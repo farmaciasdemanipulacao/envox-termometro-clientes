@@ -88,7 +88,7 @@ def build_agent_footer(agent_config: dict | None, expr_type: str = "neutral") ->
     name = agent_config.get("name", "Agente ENVOX")
     signature = agent_config.get("signature", "")
     sig_str = f"\n_{signature}_" if signature else ""
-    return f"\n━━━━━━━━━━━━━━━━━\n📝 _Gerado por {name} · ENVOX Intelligence_{sig_str}"
+    return f"\n━━━━━━━━━━━━━━━━━\n📝 _Gerado por {name} · ATENX_{sig_str}"
 
 
 def inject_agent_identity(text: str, agent_config: dict | None, temperature_label: str = "neutro") -> str:

@@ -18,16 +18,18 @@ class AlertOut(BaseModel):
     status: str
     triggered_at: datetime
     resolved_at: Optional[datetime] = None
+    resolution_comment: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
 
 class AlertUpdateRequest(BaseModel):
-    """Atualização de status de alerta."""
-    status: str  # acknowledged|resolved|dismissed
+    """Atualização de status/comentário de alerta."""
+    status: Optional[str] = None  # acknowledged|resolved|dismissed — omitir para só salvar o comentário
+    comment: Optional[str] = None  # comentário do operador — usado como feedback para a IA
 
     model_config = {
         "json_schema_extra": {
-            "example": {"status": "acknowledged"}
+            "example": {"status": "resolved", "comment": "Falso positivo: cliente só estava brincando."}
         }
     }

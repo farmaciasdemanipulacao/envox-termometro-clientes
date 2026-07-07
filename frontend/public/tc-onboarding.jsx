@@ -319,7 +319,7 @@ function OnboardingWizard({ onComplete }) {
           <div style={{ fontSize: '56px', marginBottom: '20px' }}>🎉</div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', margin: '0 0 10px 0' }}>Tudo pronto!</h2>
           <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: '0 0 28px 0', maxWidth: '360px', display: 'inline-block' }}>
-            Seu ENVOX Intelligence está configurado. Em breve você começará a receber insights dos seus grupos do WhatsApp.
+            Seu ATENX está configurado. Em breve você começará a receber insights dos seus grupos do WhatsApp.
           </p>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
             <button onClick={onComplete} style={{ ...btnPrimary(false), fontSize: '15px', padding: '12px 28px' }}>

@@ -21,10 +21,10 @@ function PricingPage({ onSelectPlan, onLogin }) {
       {/* Header */}
       <header style={{ padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #0d9488, #075e54)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: '18px' }}>E</div>
+          <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
           <div>
-            <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '16px' }}>ENVOX</div>
-            <div style={{ fontSize: '11px', color: '#0d9488', fontWeight: 600 }}>Intelligence</div>
+            <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '16px' }}>ATENX</div>
+            <div style={{ fontSize: '11px', color: '#0d9488', fontWeight: 600 }}>by Envox</div>
           </div>
         </div>
         <button

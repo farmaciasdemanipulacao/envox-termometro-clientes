@@ -164,15 +164,17 @@ def apply_job_runtime_config(job_id: str, cfg: dict) -> None:
 # IMPLEMENTAÇÕES DOS JOBS
 # =============================================================================
 
-async def _send_summary_to_wpp_groups(db, summary, agent_config: dict | None, tenant_id) -> None:
+async def _send_summary_to_wpp_groups(db, target_date, agent_config: dict | None, tenant_id) -> None:
     """
-    Envia o resumo diário para os grupos WhatsApp monitorados DESTE tenant,
-    usando a sessão WppConnect do próprio tenant (nunca a sessão global do admin).
+    Envia, para cada grupo WhatsApp monitorado DESTE tenant, uma "ata" das
+    próprias conversas do dia (não o resumo executivo agregado — esse é só para
+    uso interno/dashboard). Usa a sessão WppConnect do próprio tenant.
     """
     from app.models.conversation import Conversation
     from app.models.tenant import TenantConfig
     from app.connectors.wppconnect_server import get_client_for_session
     from app.services.agent import get_expression_image, temperature_to_expression
+    from app.services.analysis.group_digest import generate_group_daily_ata
     from sqlalchemy import select as _sel
 
     try:
@@ -196,12 +198,14 @@ async def _send_summary_to_wpp_groups(db, summary, agent_config: dict | None, te
         client = get_client_for_session(tenant_cfg.wpp_url, tenant_cfg.wpp_session, tenant_cfg.wpp_secret)
 
         token = await client.generate_token()
-        expr_type = temperature_to_expression(summary.temperature_label or "neutro")
-        img_b64, img_mime = get_expression_image(agent_config, expr_type) if agent_config else (None, None)
 
         for conv in groups:
             try:
-                await client.send_text_message(token, conv.wpp_group_id, summary.executive_text)
+                text, temperature_label = await generate_group_daily_ata(db, conv, target_date, agent_config)
+                expr_type = temperature_to_expression(temperature_label)
+                img_b64, img_mime = get_expression_image(agent_config, expr_type) if agent_config else (None, None)
+
+                await client.send_text_message(token, conv.wpp_group_id, text)
                 if img_b64:
                     ext = (img_mime or "image/png").split("/")[-1]
                     await client.send_file_base64(
@@ -225,7 +229,7 @@ async def run_daily_summary_job():
     from app.services.agent import get_agent_config
     from app.models.processing import ProcessingRun, RunType, RunStatus
     from app.models.conversation import Conversation
-    from datetime import datetime, timezone, date
+    from datetime import datetime, timezone, date, timedelta
     from sqlalchemy import select as _sel
 
     logger.info("daily_summary_job_started")
@@ -251,6 +255,7 @@ async def run_daily_summary_job():
             tenant_ids = [row[0] for row in tenants_result.all()]
 
             processed = 0
+            yesterday = date.today() - timedelta(days=1)
             for tenant_id in tenant_ids:
                 try:
                     agent_cfg = await get_agent_config(db, tenant_id)
@@ -262,8 +267,9 @@ async def run_daily_summary_job():
                     logger.info("daily_summary_job_tenant_completed",
                                 tenant_id=str(tenant_id), temperature=summary.temperature_score)
 
-                    # Envia resumo para os grupos WhatsApp deste tenant (sessão própria)
-                    await _send_summary_to_wpp_groups(db, summary, agent_cfg, tenant_id)
+                    # Envia, por grupo, a ata das conversas de ONTEM (não o executivo
+                    # agregado — esse fica só no dashboard interno). Ver D-030.
+                    await _send_summary_to_wpp_groups(db, yesterday, agent_cfg, tenant_id)
                 except Exception as e:
                     await db.rollback()
                     logger.error("daily_summary_job_tenant_failed", tenant_id=str(tenant_id), error=str(e))
@@ -389,41 +395,26 @@ async def run_eod_briefing_job():
 
 async def run_cleanup_job():
     """
-    Remove dados antigos conforme política de retenção (LGPD).
-    Mantém apenas os últimos DATA_RETENTION_DAYS dias.
+    Antes apagava mensagens mais antigas que DATA_RETENTION_DAYS (política LGPD).
+    Decisão de produto (Gus, 2026-07-07): mensagens NUNCA são apagadas do banco —
+    o limite de histórico por plano (max_history_days) já controla o que é
+    importado/exibido; uma vez capturada, a mensagem fica permanentemente.
+    Job mantido registrado (não removido, para não quebrar a tela de Automações
+    do Sistema nem o toggle de jobs agendados), mas sem nenhum efeito destrutivo.
     """
     from app.db.session import AsyncSessionLocal
-    from app.models.message import Message
     from app.models.processing import ProcessingRun, RunType, RunStatus
-    from datetime import datetime, timezone, timedelta
-    from sqlalchemy import delete, and_
+    from datetime import datetime, timezone
 
-    logger.info("cleanup_job_started", retention_days=settings.DATA_RETENTION_DAYS)
-
-    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.DATA_RETENTION_DAYS)
+    logger.info("cleanup_job_skipped_retention_disabled")
 
     async with AsyncSessionLocal() as db:
         run = ProcessingRun(
             run_type=RunType.CLEANUP,
-            status=RunStatus.RUNNING,
+            status=RunStatus.SUCCESS,
             started_at=datetime.now(timezone.utc),
+            finished_at=datetime.now(timezone.utc),
+            items_processed=0,
         )
         db.add(run)
-        await db.flush()
-
-        try:
-            result = await db.execute(
-                delete(Message).where(Message.sent_at < cutoff)
-            )
-            deleted_count = result.rowcount
-            run.status = RunStatus.SUCCESS
-            run.items_processed = deleted_count
-            run.finished_at = datetime.now(timezone.utc)
-            await db.commit()
-            logger.info("cleanup_job_completed", deleted_messages=deleted_count)
-        except Exception as e:
-            run.status = RunStatus.FAILED
-            run.error_log = str(e)
-            run.finished_at = datetime.now(timezone.utc)
-            await db.commit()
-            logger.error("cleanup_job_failed", error=str(e))
+        await db.commit()

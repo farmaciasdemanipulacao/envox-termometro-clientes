@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
 
     # === APP ===
-    APP_NAME: str = "ENVOX Intelligence"
+    APP_NAME: str = "ATENX"
     APP_VERSION: str = "0.1.0"
     APP_ENV: str = "development"  # development | production
     APP_HOST: str = "0.0.0.0"

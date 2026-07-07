@@ -128,6 +128,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
     { id: 'alerts',        icon: 'bell',            label: 'Alertas', badge: alertsCount },
     { id: 'wpp-groups',    icon: 'users',           label: 'Grupos WhatsApp' },
     { id: 'range-summary', icon: 'calendar-alt',   label: 'Resumo por Período' },
+    { id: 'custom-analysis', icon: 'wand-magic-sparkles', label: 'Análise Personalizada' },
     { id: 'agent',         icon: 'robot',          label: 'Agente Virtual' },
     { id: 'email',         icon: 'envelope',        label: 'E-mails' },
     { id: 'team',          icon: 'user-tie',        label: 'Time' },
@@ -158,12 +159,10 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
     }}>
       <div style={{ padding: '24px 20px', borderBottom: '1px solid #374151' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', background: 'var(--color-brand-600)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <i className="fas fa-brain" style={{ color: 'white', fontSize: '18px' }}></i>
-          </div>
+          <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
           <div>
             <div style={{ fontWeight: 700, color: 'white', fontSize: 'var(--text-lg)', lineHeight: 1.15 }}>{company}</div>
-            <div style={{ color: 'var(--color-brand-400)', fontSize: 'var(--text-xs)' }}>Intelligence</div>
+            <div style={{ color: 'var(--color-brand-400)', fontSize: 'var(--text-xs)' }}>by Envox</div>
           </div>
         </div>
       </div>
@@ -310,12 +309,10 @@ function MobileTopBar({ company, onMenuOpen }) {
       boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ width: '32px', height: '32px', background: 'var(--color-brand-600)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <i className="fas fa-brain" style={{ color: 'white', fontSize: '14px' }}></i>
-        </div>
+        <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '32px', height: '32px', flexShrink: 0 }} />
         <div>
           <div style={{ fontWeight: 700, color: 'white', fontSize: '15px', lineHeight: 1.15 }}>{company}</div>
-          <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>Intelligence</div>
+          <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>by Envox</div>
         </div>
       </div>
       <div onClick={onMenuOpen} style={{ cursor: 'pointer', padding: '10px', color: '#d1d5db' }}>
@@ -394,6 +391,7 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
     { id: 'alerts',       icon: 'bell',           label: 'Alertas', badge: alertsCount },
     { id: 'wpp-groups',   icon: 'users',          label: 'Grupos WhatsApp' },
     { id: 'range-summary', icon: 'calendar-week', label: 'Resumo por Período' },
+    { id: 'custom-analysis', icon: 'wand-magic-sparkles', label: 'Análise Personalizada' },
     { id: 'agent',        icon: 'robot',          label: 'Agente Virtual' },
     { id: 'email',        icon: 'envelope',       label: 'E-mails' },
     { id: 'team',         icon: 'user-tie',       label: 'Time' },
@@ -427,12 +425,10 @@ function MobileDrawer({ open, activePage, onNavigate, onClose, alertsCount, comp
       }}>
         <div style={{ padding: '16px', borderBottom: '1px solid #374151', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', background: 'var(--color-brand-600)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="fas fa-brain" style={{ color: 'white', fontSize: '16px' }}></i>
-            </div>
+            <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '36px', height: '36px', flexShrink: 0 }} />
             <div>
               <div style={{ fontWeight: 700, color: 'white', fontSize: 'var(--text-lg)' }}>{company}</div>
-              <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>Intelligence</div>
+              <div style={{ color: 'var(--color-brand-400)', fontSize: '11px' }}>by Envox</div>
             </div>
           </div>
           <div onClick={onClose} style={{ cursor: 'pointer', padding: '8px', color: '#9ca3af' }}>

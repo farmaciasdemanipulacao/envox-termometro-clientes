@@ -16,6 +16,7 @@ from app.models.tenant import TenantConfig
 from app.models.plan import Plan
 from app.models.subscription import Subscription
 from app.models.automation import ScheduledJobConfig, SystemSetting, CustomAlertRule
+from app.models.custom_analysis import CustomAnalysisRun
 
 __all__ = [
     "IngestionSource",
@@ -35,4 +36,5 @@ __all__ = [
     "ScheduledJobConfig",
     "SystemSetting",
     "CustomAlertRule",
+    "CustomAnalysisRun",
 ]

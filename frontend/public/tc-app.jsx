@@ -83,7 +83,7 @@ function InstallBanner({ onDismiss }) {
       <i className="fas fa-download" style={{ color: '#0d9488', fontSize: '20px', flexShrink: 0 }} />
       <div style={{ flex: 1 }}>
         <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 600 }}>Instalar app</div>
-        <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>Adicione o ENVOX à tela inicial para acesso rápido em tela cheia.</div>
+        <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>Adicione o ATENX à tela inicial para acesso rápido em tela cheia.</div>
       </div>
       <button
         onClick={handleInstall}
@@ -126,7 +126,7 @@ function App() {
   const [regPlan,       setRegPlan]       = React.useState(null);
 
   const isMobile = useIsMobile();
-  const company = 'ENVOX';
+  const company = 'ATENX';
 
   // Registra logout global
   window.doLogout = handleLogout;
@@ -274,6 +274,7 @@ function App() {
         ? <ConversationScreen group={selectedGroup} onBack={() => { setSelectedGroup(null); setPage('wpp-groups'); }} />
         : <WppGroupsManagerScreen onSelectGroup={g => { setSelectedGroup(g); setPage('wpp-conversation'); }} />;
       case 'range-summary': return <RangeSummaryScreen />;
+      case 'custom-analysis': return <CustomAnalysisScreen />;
       case 'agent':        return <AgentConfigScreen />;
       case 'team':         return <TeamScreen />;
       case 'email':        return <EmailScreen onNavigateConfig={() => handleNavigate('config')} />;

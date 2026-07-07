@@ -57,7 +57,7 @@ Analise as mensagens abaixo de um grupo do WhatsApp e responda em JSON com exata
 
 Grupo: {conversation_name}
 Período: {period}
-
+{feedback_block}
 Mensagens (mais antigas primeiro):
 {messages}
 
@@ -67,6 +67,36 @@ Responda APENAS com o JSON, sem texto adicional."""
 def _llm_available() -> bool:
     from app.core.config import settings
     return settings.LLM_ENABLED and bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+
+
+async def _get_learned_feedback(db: AsyncSession, tenant_id, limit: int = 6) -> str:
+    """
+    Busca comentários que um humano deixou ao resolver alertas anteriores deste tenant
+    (tela "Alertas" — D-031). Usado para calibrar a análise: se alguém já corrigiu uma
+    avaliação (ex: "isso não é churn, é só brincadeira"), a IA deve considerar isso em
+    alertas parecidos no futuro, em vez de repetir a mesma leitura.
+    """
+    if not tenant_id:
+        return ""
+    from app.models.alert import AlertEvent
+    from app.models.conversation import Conversation
+
+    result = await db.execute(
+        select(AlertEvent.alert_type, AlertEvent.title, AlertEvent.resolution_comment)
+        .join(Conversation, AlertEvent.conversation_id == Conversation.id)
+        .where(
+            and_(
+                Conversation.tenant_id == tenant_id,
+                AlertEvent.resolution_comment.isnot(None),
+            )
+        )
+        .order_by(AlertEvent.resolved_at.desc())
+        .limit(limit)
+    )
+    rows = result.all()
+    if not rows:
+        return ""
+    return "\n".join(f'- ({alert_type}) "{title}": {comment}' for alert_type, title, comment in rows)
 
 
 async def analyze_single_message(message_id: str, content: str) -> None:
@@ -191,6 +221,13 @@ async def analyze_conversation(
     if not messages_text.strip():
         return None
 
+    feedback_context = await _get_learned_feedback(db, conversation.tenant_id)
+    feedback_block = (
+        f"\nAprendizados de um humano que já revisou alertas parecidos nesta conta "
+        f"(considere ao avaliar risco/churn/oportunidade — não repita leituras já corrigidas):\n{feedback_context}\n"
+        if feedback_context else ""
+    )
+
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(
         None,
@@ -198,10 +235,11 @@ async def analyze_conversation(
         conversation.name,
         period,
         messages_text,
+        feedback_block,
     )
 
 
-def _sync_analyze(conversation_name: str, period: str, messages_text: str) -> Optional[dict]:
+def _sync_analyze(conversation_name: str, period: str, messages_text: str, feedback_block: str = "") -> Optional[dict]:
     import json
     import anthropic
     from app.core.config import settings
@@ -213,6 +251,7 @@ def _sync_analyze(conversation_name: str, period: str, messages_text: str) -> Op
         conversation_name=conversation_name,
         period=period,
         messages=messages_text,
+        feedback_block=feedback_block,
     )
 
     try:

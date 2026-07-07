@@ -67,6 +67,7 @@ async def list_alerts(
             status=alert.status,
             triggered_at=alert.triggered_at,
             resolved_at=alert.resolved_at,
+            resolution_comment=alert.resolution_comment,
         ))
 
     return out
@@ -94,13 +95,18 @@ async def update_alert_status(
     if not alert:
         raise HTTPException(status_code=404, detail="Alerta não encontrado")
 
-    valid_statuses = [s.value for s in AlertStatus]
-    if payload.status not in valid_statuses:
-        raise HTTPException(status_code=422, detail=f"Status inválido. Use: {valid_statuses}")
+    if payload.status is not None:
+        valid_statuses = [s.value for s in AlertStatus]
+        if payload.status not in valid_statuses:
+            raise HTTPException(status_code=422, detail=f"Status inválido. Use: {valid_statuses}")
+        alert.status = payload.status
+        if payload.status == AlertStatus.RESOLVED:
+            alert.resolved_at = datetime.now(timezone.utc)
 
-    alert.status = payload.status
-    if payload.status == AlertStatus.RESOLVED:
-        alert.resolved_at = datetime.now(timezone.utc)
+    if payload.comment is not None:
+        alert.resolution_comment = payload.comment.strip() or None
+
+    await db.commit()
 
     conv_result = await db.execute(
         select(Conversation.name, Conversation.custom_name).where(
@@ -123,4 +129,5 @@ async def update_alert_status(
         status=alert.status,
         triggered_at=alert.triggered_at,
         resolved_at=alert.resolved_at,
+        resolution_comment=alert.resolution_comment,
     )

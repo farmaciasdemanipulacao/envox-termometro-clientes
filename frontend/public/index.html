@@ -7,16 +7,16 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>ENVOX Intelligence</title>
-  <meta name="description" content="ENVOX Intelligence — Monitoramento e análise de grupos WhatsApp em tempo real" />
+  <title>ATENX</title>
+  <meta name="description" content="ATENX by Envox — Monitoramento e análise de grupos WhatsApp em tempo real" />
 
-  <!-- Favicon inline -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230d9488'/><text x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>E</text></svg>" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
   <!-- PWA manifest + icons -->
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <meta name="apple-mobile-web-app-title" content="ENVOX" />
+  <meta name="apple-mobile-web-app-title" content="ATENX" />
 
   <!-- ─── Design System CSS ─── -->
   <link rel="stylesheet" href="_ds/envox-intelligence-design-system-daebe7cb-3fd0-46d3-98b6-73c2b00ae305/tokens/colors.css" />
@@ -69,16 +69,8 @@
     .boot-logo {
       width: 64px;
       height: 64px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #0d9488, #075e54);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -1px;
-      box-shadow: 0 0 40px rgba(13,148,136,0.5);
+      display: block;
+      filter: drop-shadow(0 0 24px rgba(13,148,136,0.5));
     }
     .boot-title {
       font-size: 22px;
@@ -180,9 +172,9 @@
 
   <!-- Boot loading screen (removed when React mounts) -->
   <div id="boot-loading">
-    <div class="boot-logo">E</div>
+    <img class="boot-logo" src="/atenx_assets/png/atenx-icon-dark-transparent-256.png" alt="ATENX" />
     <div>
-      <p class="boot-title">ENVOX Intelligence</p>
+      <p class="boot-title">ATENX</p>
       <p class="boot-subtitle">Carregando sistema…</p>
     </div>
     <div class="boot-spinner"></div>

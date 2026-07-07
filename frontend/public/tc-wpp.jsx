@@ -180,11 +180,11 @@ function WppConnectionScreen({ inOnboarding = false, onConnected = null }) {
         {/* QR Code */}
         {phase === 'qrcode' && qrSrc && (
           <DsCard style={{ maxWidth: '360px', animation: 'fadeInUp 0.4s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: '#374151', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className="fas fa-qrcode" style={{ color: 'var(--color-brand-600)' }}></i>
               Escaneie com o WhatsApp
             </div>
-            <div style={{ padding: '12px', background: 'white', borderRadius: 'var(--radius-xl)', border: '2px solid var(--color-border-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ padding: '12px', background: 'var(--color-bg-card)', borderRadius: 'var(--radius-xl)', border: '2px solid var(--color-border-card)', boxShadow: 'var(--shadow-sm)' }}>
               <img src={qrSrc} alt="QR Code WhatsApp"
                 style={{ width: '240px', height: '240px', display: 'block', imageRendering: 'pixelated' }}
               />

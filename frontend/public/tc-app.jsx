@@ -27,21 +27,21 @@ function PushPermissionBanner({ onDismiss }) {
   return (
     <div style={{
       position: 'fixed', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
-      background: '#1e293b', border: '1px solid #0d9488', borderRadius: '12px',
+      background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-600)', borderRadius: '12px',
       padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
       zIndex: 8000, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       maxWidth: '420px', width: 'calc(100% - 32px)',
     }}>
-      <i className="fas fa-bell" style={{ color: '#0d9488', fontSize: '20px', flexShrink: 0 }} />
+      <i className="fas fa-bell" style={{ color: 'var(--color-brand-600)', fontSize: '20px', flexShrink: 0 }} />
       <div style={{ flex: 1 }}>
-        <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 600 }}>Ativar alertas no celular</div>
-        <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>Receba notificações de churn e urgência mesmo com o app fechado.</div>
+        <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 600 }}>Ativar alertas no celular</div>
+        <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>Receba notificações de churn e urgência mesmo com o app fechado.</div>
       </div>
       <button
         onClick={handleEnable}
         disabled={loading}
         style={{
-          background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px',
+          background: 'var(--color-brand-600)', color: '#fff', border: 'none', borderRadius: '8px',
           padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
           flexShrink: 0, opacity: loading ? 0.6 : 1,
         }}
@@ -50,7 +50,7 @@ function PushPermissionBanner({ onDismiss }) {
       </button>
       <button
         onClick={onDismiss}
-        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', fontSize: '16px' }}
+        style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '4px', fontSize: '16px' }}
       >
         <i className="fas fa-times" />
       </button>
@@ -75,21 +75,21 @@ function InstallBanner({ onDismiss }) {
   return (
     <div style={{
       position: 'fixed', bottom: '70px', left: '50%', transform: 'translateX(-50%)',
-      background: '#1e293b', border: '1px solid #0d9488', borderRadius: '12px',
+      background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-600)', borderRadius: '12px',
       padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
       zIndex: 8001, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       maxWidth: '420px', width: 'calc(100% - 32px)',
     }}>
-      <i className="fas fa-download" style={{ color: '#0d9488', fontSize: '20px', flexShrink: 0 }} />
+      <i className="fas fa-download" style={{ color: 'var(--color-brand-600)', fontSize: '20px', flexShrink: 0 }} />
       <div style={{ flex: 1 }}>
-        <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 600 }}>Instalar app</div>
-        <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>Adicione o ATENX à tela inicial para acesso rápido em tela cheia.</div>
+        <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 600 }}>Instalar app</div>
+        <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>Adicione o ATENX à tela inicial para acesso rápido em tela cheia.</div>
       </div>
       <button
         onClick={handleInstall}
         disabled={loading}
         style={{
-          background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px',
+          background: 'var(--color-brand-600)', color: '#fff', border: 'none', borderRadius: '8px',
           padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
           flexShrink: 0, opacity: loading ? 0.6 : 1,
         }}
@@ -98,7 +98,7 @@ function InstallBanner({ onDismiss }) {
       </button>
       <button
         onClick={onDismiss}
-        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', fontSize: '16px' }}
+        style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '4px', fontSize: '16px' }}
       >
         <i className="fas fa-times" />
       </button>

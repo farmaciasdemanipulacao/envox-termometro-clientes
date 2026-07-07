@@ -50,8 +50,8 @@ function IntelligenceScreen({ onSelectGroup }) {
   const tabStyle = (id) => ({
     padding: '5px 12px', borderRadius: '9999px', fontSize: '12px',
     cursor: 'pointer', fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '5px',
-    background: tab === id ? '#0d9488' : '#e9edef',
-    color: tab === id ? 'white' : '#54656f',
+    background: tab === id ? 'var(--color-brand-600)' : 'var(--color-border-sidebar)',
+    color: tab === id ? 'white' : 'var(--color-text-muted)',
     border: 'none',
     fontWeight: tab === id ? 600 : 400, transition: 'all 0.15s ease',
   });
@@ -64,9 +64,9 @@ function IntelligenceScreen({ onSelectGroup }) {
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Lista de itens — estilo WhatsApp */}
-        <div style={{ flex: selected ? '0 0 380px' : 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: selected ? '1px solid #e9edef' : 'none' }}>
+        <div style={{ flex: selected ? '0 0 380px' : 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: selected ? '1px solid var(--color-border-sidebar)' : 'none' }}>
           {/* Tabs / Filter bar */}
-          <div style={{ padding: '10px 16px', background: '#f0f2f5', display: 'flex', gap: '6px', flexWrap: 'wrap', borderBottom: '1px solid #e9edef' }}>
+          <div style={{ padding: '10px 16px', background: 'var(--color-bg-page)', display: 'flex', gap: '6px', flexWrap: 'wrap', borderBottom: '1px solid var(--color-border-sidebar)' }}>
             {tabs.map(t => (
               <button key={t.id} style={tabStyle(t.id)} onClick={() => { setTab(t.id); setSelected(null); }}>
                 <i className={`fas fa-${t.icon}`} style={{ fontSize: '11px' }}></i>
@@ -75,11 +75,11 @@ function IntelligenceScreen({ onSelectGroup }) {
             ))}
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', background: 'white' }}>
+          <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg-card)' }}>
             {loading
-              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>
+              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
               : items.length === 0
-                ? <div style={{ textAlign: 'center', padding: '48px', color: '#8696a0', fontSize: 'var(--text-sm)' }}>
+                ? <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-placeholder)', fontSize: 'var(--text-sm)' }}>
                     <i className="fas fa-check-circle" style={{ fontSize: '32px', color: '#22c55e', display: 'block', marginBottom: '12px' }}></i>
                     Nenhum item encontrado para este filtro.
                   </div>
@@ -93,13 +93,13 @@ function IntelligenceScreen({ onSelectGroup }) {
                         style={{
                           display: 'flex', alignItems: 'center', gap: '14px',
                           padding: '12px 20px', cursor: 'pointer',
-                          background: isActive ? '#f0fdfa' : 'white',
-                          borderBottom: '1px solid #f0f2f5',
-                          borderLeft: isActive ? '3px solid #0d9488' : '3px solid transparent',
+                          background: isActive ? '#f0fdfa' : 'var(--color-bg-card)',
+                          borderBottom: '1px solid var(--color-border-card)',
+                          borderLeft: isActive ? '3px solid var(--color-brand-600)' : '3px solid transparent',
                           transition: 'background 0.1s',
                         }}
-                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#f5f6f6'; }}
-                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'white'; }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg-card)'; }}
                       >
                         {/* Avatar círculo */}
                         <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -107,11 +107,11 @@ function IntelligenceScreen({ onSelectGroup }) {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                            <span style={{ fontWeight: 500, fontSize: 'var(--text-sm)', color: '#111b21', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.conversation_name}</span>
-                            <span style={{ fontSize: '11px', color: '#8696a0', flexShrink: 0, marginLeft: '8px' }}>{ts}</span>
+                            <span style={{ fontWeight: 500, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.conversation_name}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', flexShrink: 0, marginLeft: '8px' }}>{ts}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: 'var(--text-xs)', color: '#54656f', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
                             <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '9999px', background: meta.bg, color: meta.color, fontWeight: 600, flexShrink: 0 }}>{meta.label}</span>
                             {item.severity && <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '9999px', background: severityColor[item.severity] + '20', color: severityColor[item.severity], fontWeight: 600, flexShrink: 0 }}>
                               {{ critical: 'Crítico', high: 'Alto', medium: 'Médio', low: 'Baixo' }[item.severity]}
@@ -135,25 +135,25 @@ function IntelligenceScreen({ onSelectGroup }) {
                   <i className={`fas fa-${(kindMeta[selected.kind] || kindMeta.alert).icon}`} style={{ color: 'white', fontSize: '16px' }}></i>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: '#e9edef' }}>{context?.conversation?.name || selected.conversation_name}</div>
-                  <div style={{ fontSize: '12px', color: '#8696a0' }}>Últimas mensagens</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-on-sidebar)' }}>{context?.conversation?.name || selected.conversation_name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-placeholder)' }}>Últimas mensagens</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {onSelectGroup && (
                   <button onClick={() => onSelectGroup({ conversation_id: selected.conversation_id, conversation_name: context?.conversation?.name || selected.conversation_name, temperature_score: 0, open_alerts: 0, followups_pending: 0 })}
-                    style={{ background: '#0d9488', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: 'white', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    style={{ background: 'var(--color-brand-600)', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: 'white', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <i className="fas fa-comments"></i> Abrir
                   </button>
                 )}
-                <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: 'none', borderRadius: '50%', padding: '6px 8px', cursor: 'pointer', color: '#aebac3', fontSize: '14px' }}>
+                <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: 'none', borderRadius: '50%', padding: '6px 8px', cursor: 'pointer', color: 'var(--color-text-on-sidebar-muted)', fontSize: '14px' }}>
                   <i className="fas fa-times"></i>
                 </button>
               </div>
             </div>
 
             {/* Alert item badge */}
-            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e9edef', background: '#f0f2f5' }}>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--color-border-sidebar)', background: 'var(--color-bg-page)' }}>
               {(() => {
                 const meta = kindMeta[selected.kind] || kindMeta.alert;
                 return (
@@ -170,10 +170,10 @@ function IntelligenceScreen({ onSelectGroup }) {
             {/* Mensagens como bolhas WhatsApp */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px', background: '#e5ddd5' }}>
               {ctxLoading
-                ? <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={20} color="#0d9488" /></div>
+                ? <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={20} color="var(--color-brand-600)" /></div>
                 : !context || context.messages.length === 0
                   ? <div style={{ textAlign: 'center', padding: '32px' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '10px', padding: '16px 20px', display: 'inline-block', color: '#54656f', fontSize: 'var(--text-sm)' }}>Sem mensagens recentes neste grupo.</div>
+                      <div style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '10px', padding: '16px 20px', display: 'inline-block', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Sem mensagens recentes neste grupo.</div>
                     </div>
                   : context.messages.map(msg => {
                       const t = msg.sent_at ? new Date(msg.sent_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
@@ -183,19 +183,19 @@ function IntelligenceScreen({ onSelectGroup }) {
                       return (
                         <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', marginBottom: '2px' }}>
                           <div style={{ maxWidth: '75%', background: bubbleBg, borderRadius: isMe ? '12px 0 12px 12px' : '0 12px 12px 12px', padding: '6px 10px 8px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-                            {!isMe && <div style={{ fontSize: '11px', fontWeight: 600, color: '#0d9488', marginBottom: '2px' }}>{msg.type_icon} {msg.sender}</div>}
-                            <div style={{ fontSize: '12px', color: '#111b21', lineHeight: 1.5 }}>
+                            {!isMe && <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-brand-600)', marginBottom: '2px' }}>{msg.type_icon} {msg.sender}</div>}
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>
                               {msg.content || (msg.message_type !== 'text' ? `[${msg.message_type}]` : '')}
                             </div>
                             {msg.tags && msg.tags.length > 0 && (
                               <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                                 {msg.tags.map(tag => (
-                                  <span key={tag} style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '9999px', background: isMe ? 'rgba(0,0,0,0.08)' : '#f0f2f5', color: '#54656f' }}>{tag}</span>
+                                  <span key={tag} style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '9999px', background: isMe ? 'rgba(0,0,0,0.08)' : 'var(--color-bg-page)', color: 'var(--color-text-muted)' }}>{tag}</span>
                                 ))}
                               </div>
                             )}
                             {msg.risk_score >= 50 && <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '3px', fontWeight: 600 }}>⚠ Risco {msg.risk_score}</div>}
-                            <div style={{ fontSize: '11px', color: '#8696a0', textAlign: 'right', marginTop: '3px' }}>{t}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', textAlign: 'right', marginTop: '3px' }}>{t}</div>
                           </div>
                         </div>
                       );
@@ -230,8 +230,8 @@ function GroupsScreen({ onSelectGroup }) {
   }, []);
 
   const filtered = groups.filter(g => (g.conversation_name || '').toLowerCase().includes(search.toLowerCase()));
-  const tempColor = (s) => s >= 80 ? '#16a34a' : s >= 60 ? '#0d9488' : s >= 40 ? '#ca8a04' : s >= 20 ? '#ea580c' : '#dc2626';
-  const avatarColors = ['#0d9488', '#0891b2', '#7c3aed', '#be185d', '#d97706', '#15803d', '#b45309', '#0e7490'];
+  const tempColor = (s) => s >= 80 ? '#16a34a' : s >= 60 ? 'var(--color-brand-600)' : s >= 40 ? '#ca8a04' : s >= 20 ? '#ea580c' : '#dc2626';
+  const avatarColors = ['var(--color-brand-600)', '#0891b2', '#7c3aed', '#be185d', '#d97706', '#15803d', '#b45309', '#0e7490'];
   const avatarColor  = (name, i) => avatarColors[(name || '').charCodeAt(0) % avatarColors.length] || avatarColors[i % avatarColors.length];
   const initials     = (name) => (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
@@ -261,19 +261,19 @@ function GroupsScreen({ onSelectGroup }) {
       <PageHeader title="Grupos WhatsApp" subtitle={groups.length + ' grupos monitorados'} />
 
       {/* Search bar WhatsApp-style */}
-      <div style={{ padding: '10px 16px', background: '#f0f2f5', borderBottom: '1px solid #e9edef' }}>
+      <div style={{ padding: '10px 16px', background: 'var(--color-bg-page)', borderBottom: '1px solid var(--color-border-sidebar)' }}>
         <div style={{ position: 'relative' }}>
-          <i className="fas fa-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#8696a0', fontSize: '13px' }}></i>
+          <i className="fas fa-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-placeholder)', fontSize: '13px' }}></i>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar grupo..."
-            style={{ width: '100%', padding: '8px 12px 8px 34px', boxSizing: 'border-box', border: 'none', borderRadius: '8px', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none', background: 'white', color: 'var(--color-text-primary)' }} />
+            style={{ width: '100%', padding: '8px 12px 8px 34px', boxSizing: 'border-box', border: 'none', borderRadius: '8px', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none', background: 'var(--color-bg-card)', color: 'var(--color-text-primary)' }} />
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', background: 'white' }}>
+      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg-card)' }}>
         {loading
-          ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>
+          ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
           : filtered.length === 0
-            ? <div style={{ textAlign: 'center', padding: '48px', color: '#8696a0', fontSize: 'var(--text-sm)' }}>
+            ? <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-placeholder)', fontSize: 'var(--text-sm)' }}>
                 {groups.length === 0 ? 'Nenhum grupo monitorado ainda. Ingira dados via API.' : 'Nenhum grupo encontrado.'}
               </div>
             : filtered.map((g, i) => (
@@ -284,8 +284,8 @@ function GroupsScreen({ onSelectGroup }) {
                   style={{
                     display: 'flex', alignItems: 'center', gap: '14px',
                     padding: '14px 20px', cursor: 'pointer',
-                    borderBottom: '1px solid #f0f2f5',
-                    background: hovered === g.conversation_id ? '#f5f6f6' : 'white',
+                    borderBottom: '1px solid var(--color-border-card)',
+                    background: hovered === g.conversation_id ? 'var(--color-bg-hover-sidebar)' : 'var(--color-bg-card)',
                     transition: 'background 0.1s',
                   }}
                 >
@@ -302,30 +302,30 @@ function GroupsScreen({ onSelectGroup }) {
                           <div style={{ display: 'flex', gap: '6px', flex: 1 }} onClick={e => e.stopPropagation()}>
                             <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') saveEdit(g); if (e.key === 'Escape') cancelEdit(); }}
-                              style={{ flex: 1, padding: '3px 8px', border: '1px solid #0d9488', borderRadius: '6px', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none' }} />
-                            <button onClick={e => saveEdit(g, e)} disabled={saving} style={{ padding: '3px 8px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
+                              style={{ flex: 1, padding: '3px 8px', border: '1px solid var(--color-brand-600)', borderRadius: '6px', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none' }} />
+                            <button onClick={e => saveEdit(g, e)} disabled={saving} style={{ padding: '3px 8px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
                               {saving ? <Spinner size={10} /> : <i className="fas fa-check"></i>}
                             </button>
-                            <button onClick={cancelEdit} style={{ padding: '3px 8px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
+                            <button onClick={cancelEdit} style={{ padding: '3px 8px', background: 'var(--color-bg-page)', color: 'var(--color-text-muted)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>
                               <i className="fas fa-times"></i>
                             </button>
                           </div>
                         )
                         : (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                            <span style={{ fontWeight: 500, fontSize: 'var(--text-sm)', color: '#111b21', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.conversation_name}</span>
+                            <span style={{ fontWeight: 500, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.conversation_name}</span>
                             <button onClick={e => startEdit(g, e)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8696a0', padding: '2px 3px', borderRadius: '4px', flexShrink: 0, opacity: hovered === g.conversation_id ? 1 : 0, transition: 'opacity 0.1s' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-placeholder)', padding: '2px 3px', borderRadius: '4px', flexShrink: 0, opacity: hovered === g.conversation_id ? 1 : 0, transition: 'opacity 0.1s' }}
                               title="Editar nome">
                               <i className="fas fa-pencil-alt" style={{ fontSize: '11px' }}></i>
                             </button>
                           </div>
                         )
                       }
-                      <span style={{ fontSize: '11px', color: '#8696a0', flexShrink: 0, marginLeft: '8px' }}>{g.total_messages || 0} msg</span>
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', flexShrink: 0, marginLeft: '8px' }}>{g.total_messages || 0} msg</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', color: '#8696a0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-placeholder)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {(g.open_alerts || 0) > 0 ? `🔔 ${g.open_alerts} alerta${g.open_alerts > 1 ? 's' : ''}` : ''}
                         {(g.open_alerts || 0) > 0 && (g.followups_pending || 0) > 0 ? ' · ' : ''}
                         {(g.followups_pending || 0) > 0 ? `⏰ ${g.followups_pending} follow-up` : ''}
@@ -400,7 +400,7 @@ function SummaryScreen({ onNavigateAlerts }) {
     finally { setGenBriefing(false); }
   };
 
-  const tempColors = { excellent: '#16a34a', good: '#0d9488', attention: '#ca8a04', warning: '#ea580c', critical: '#dc2626' };
+  const tempColors = { excellent: '#16a34a', good: 'var(--color-brand-600)', attention: '#ca8a04', warning: '#ea580c', critical: '#dc2626' };
 
   const renderMd = (text) => (text || '')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -458,17 +458,17 @@ function SummaryScreen({ onNavigateAlerts }) {
         {/* ── TAB: RESUMO ── */}
         {activeTab === 'resumo' && (
           loading
-            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="#0d9488" /></div>
+            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="var(--color-brand-600)" /></div>
             : !summary
               ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: '16px', animation: 'fadeIn 0.4s ease' }}>
                   <div style={{ width: '72px', height: '72px', background: '#f0fdfa', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="fas fa-magic" style={{ fontSize: '28px', color: '#0d9488' }}></i>
+                    <i className="fas fa-magic" style={{ fontSize: '28px', color: 'var(--color-brand-600)' }}></i>
                   </div>
                   <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-text-primary)' }}>Resumo ainda não gerado</h3>
                   <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: '380px' }}>
                     Clique em "Gerar Resumo" para consolidar os dados de hoje em um relatório executivo.
                   </p>
-                  <button onClick={handleGenerate} style={{ padding: '10px 24px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
+                  <button onClick={handleGenerate} style={{ padding: '10px 24px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
                     <i className="fas fa-magic" style={{ marginRight: '8px' }}></i>Gerar Resumo do Dia
                   </button>
                 </div>
@@ -477,10 +477,10 @@ function SummaryScreen({ onNavigateAlerts }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border-card)' }}>
                       <div>
                         <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Resumo de {new Date(summary.summary_date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-                        <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '2px' }}>Gerado via {summary.generation_method === 'heuristic' ? 'Heurísticas' : 'IA'}</div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginTop: '2px' }}>Gerado via {summary.generation_method === 'heuristic' ? 'Heurísticas' : 'IA'}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: tempColors[summary.temperature_label] || '#374151' }}>{summary.temperature_score}</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: tempColors[summary.temperature_label] || 'var(--color-text-primary)' }}>{summary.temperature_score}</div>
                         <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Termômetro</div>
                       </div>
                     </div>
@@ -489,11 +489,11 @@ function SummaryScreen({ onNavigateAlerts }) {
 
                   {summary.highlights?.length > 0 && (
                     <DsCard>
-                      <SectionTitle icon="star" label="Destaques do Dia" color="#0d9488" />
+                      <SectionTitle icon="star" label="Destaques do Dia" color="var(--color-brand-600)" />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {summary.highlights.map((h, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#f0fdfa', borderRadius: 'var(--radius-lg)' }}>
-                            <i className="fas fa-check-circle" style={{ color: '#0d9488', marginTop: '2px', flexShrink: 0 }}></i>
+                            <i className="fas fa-check-circle" style={{ color: 'var(--color-brand-600)', marginTop: '2px', flexShrink: 0 }}></i>
                             <span style={{ fontSize: 'var(--text-sm)', color: '#0f766e' }}>{h}</span>
                           </div>
                         ))}
@@ -562,13 +562,13 @@ function SummaryScreen({ onNavigateAlerts }) {
                             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
                               Briefing de {briefing.summary_date ? new Date(briefing.summary_date + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : 'hoje'}
                             </div>
-                            <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '2px' }}>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
                               {briefing.generated_at ? 'Gerado às ' + new Date(briefing.generated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Gerado automaticamente'}
                             </div>
                           </div>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                             <div style={{ textAlign: 'center' }}>
-                              <div style={{ fontSize: '28px', fontWeight: 700, color: tempColors[briefing.temperature_label] || '#374151' }}>{briefing.temperature_score}</div>
+                              <div style={{ fontSize: '28px', fontWeight: 700, color: tempColors[briefing.temperature_label] || 'var(--color-text-primary)' }}>{briefing.temperature_score}</div>
                               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Termômetro</div>
                             </div>
                             <div style={{ textAlign: 'center', padding: '8px 14px', background: '#f5f3ff', borderRadius: 'var(--radius-lg)' }}>
@@ -650,12 +650,12 @@ function SummaryScreen({ onNavigateAlerts }) {
                                       <td style={{ padding: '9px 12px', textAlign: 'center' }}>
                                         {g.alerts > 0
                                           ? <span style={{ padding: '2px 8px', background: '#fef2f2', color: '#dc2626', borderRadius: '9999px', fontWeight: 600 }}>{g.alerts}</span>
-                                          : <span style={{ color: '#94a3b8' }}>—</span>}
+                                          : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>}
                                       </td>
                                       <td style={{ padding: '9px 12px', textAlign: 'center' }}>
                                         {g.followups > 0
                                           ? <span style={{ padding: '2px 8px', background: '#fffbeb', color: '#b45309', borderRadius: '9999px', fontWeight: 600 }}>{g.followups}</span>
-                                          : <span style={{ color: '#94a3b8' }}>—</span>}
+                                          : <span style={{ color: 'var(--color-text-secondary)' }}>—</span>}
                                       </td>
                                       <td style={{ padding: '9px 12px', color: 'var(--color-text-secondary)' }}>{g.responsible}</td>
                                     </tr>
@@ -754,8 +754,8 @@ function TeamScreen() {
   const tabStyle = (id) => ({
     padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 500,
     cursor: 'pointer', border: 'none', fontFamily: 'var(--font-sans)',
-    background: tab === id ? '#0d9488' : 'transparent',
-    color: tab === id ? 'white' : '#64748b',
+    background: tab === id ? 'var(--color-brand-600)' : 'transparent',
+    color: tab === id ? 'white' : 'var(--color-text-muted)',
   });
 
   return (
@@ -765,7 +765,7 @@ function TeamScreen() {
         subtitle={`${members.length} colaborador${members.length !== 1 ? 'es' : ''} cadastrado${members.length !== 1 ? 's' : ''}`}
         actions={
           <button onClick={() => { setTab(tab === 'add' ? 'members' : 'add'); setSearch(''); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: tab === 'add' ? '#334155' : '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: tab === 'add' ? 'var(--color-border-default)' : 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
             <i className={`fas fa-${tab === 'add' ? 'times' : 'plus'}`}></i>
             {tab === 'add' ? 'Cancelar' : 'Adicionar colaborador'}
           </button>
@@ -776,7 +776,7 @@ function TeamScreen() {
 
         {/* Tabs + search */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', borderRadius: '24px', padding: '3px' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'var(--color-bg-page)', borderRadius: '24px', padding: '3px' }}>
             <button style={tabStyle('members')} onClick={() => { setTab('members'); setSearch(''); }}>
               <i className="fas fa-users" style={{ marginRight: '6px', fontSize: '12px' }}></i>Colaboradores ({members.length})
             </button>
@@ -785,9 +785,9 @@ function TeamScreen() {
             </button>
           </div>
           <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-            <i className="fas fa-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '13px' }}></i>
+            <i className="fas fa-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-secondary)', fontSize: '13px' }}></i>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome..."
-              style={{ width: '100%', paddingLeft: '32px', padding: '8px 12px 8px 32px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+              style={{ width: '100%', paddingLeft: '32px', padding: '8px 12px 8px 32px', border: '1px solid var(--color-border-card)', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
           </div>
         </div>
 
@@ -795,12 +795,12 @@ function TeamScreen() {
         {tab === 'members' && (
           <>
             {loading
-              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>
+              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
               : filteredMembers.length === 0
               ? (
-                <div style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-secondary)' }}>
                   <i className="fas fa-users" style={{ fontSize: '40px', display: 'block', marginBottom: '12px', opacity: 0.4 }}></i>
-                  <div style={{ fontWeight: 600, marginBottom: '6px', color: '#64748b' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-muted)' }}>
                     {search ? 'Nenhum colaborador encontrado.' : 'Nenhum colaborador cadastrado ainda.'}
                   </div>
                   {!search && <div style={{ fontSize: '13px' }}>Use "Buscar nos grupos" para adicionar colaboradores.</div>}
@@ -809,7 +809,7 @@ function TeamScreen() {
               : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {/* Header da tabela */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px 80px', gap: '12px', padding: '6px 16px', fontSize: '11px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px 80px', gap: '12px', padding: '6px 16px', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
                     <span>Colaborador</span>
                     <span style={{ textAlign: 'center' }}>Grupos</span>
                     <span style={{ textAlign: 'center' }}>Mensagens</span>
@@ -817,10 +817,10 @@ function TeamScreen() {
                     <span></span>
                   </div>
                   {filteredMembers.map(m => (
-                    <div key={m.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px 80px', gap: '12px', alignItems: 'center' }}>
+                    <div key={m.id} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 80px 80px 100px 80px', gap: '12px', alignItems: 'center' }}>
                       {/* Nome */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg,#0d9488,#0f766e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '14px', flexShrink: 0 }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg,var(--color-brand-600),#0f766e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '14px', flexShrink: 0 }}>
                           {(m.display_name || '?')[0].toUpperCase()}
                         </div>
                         <div style={{ minWidth: 0 }}>
@@ -828,20 +828,20 @@ function TeamScreen() {
                             <div style={{ display: 'flex', gap: '6px' }}>
                               <input autoFocus value={editName} onChange={e => setEditName(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') saveName(m); if (e.key === 'Escape') setEditingId(null); }}
-                                style={{ padding: '4px 8px', border: '1px solid #0d9488', borderRadius: '6px', fontSize: '13px', outline: 'none', width: '140px' }} />
-                              <button onClick={() => saveName(m)} style={{ padding: '4px 8px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✓</button>
-                              <button onClick={() => setEditingId(null)} style={{ padding: '4px 8px', background: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                                style={{ padding: '4px 8px', border: '1px solid var(--color-brand-600)', borderRadius: '6px', fontSize: '13px', outline: 'none', width: '140px' }} />
+                              <button onClick={() => saveName(m)} style={{ padding: '4px 8px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✓</button>
+                              <button onClick={() => setEditingId(null)} style={{ padding: '4px 8px', background: 'var(--color-bg-page)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
                             </div>
                           ) : (
                             <>
-                              <div style={{ fontWeight: 600, fontSize: '14px', color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {m.display_name}
                                 <button onClick={() => { setEditingId(m.id); setEditName(m.custom_name || m.name || ''); }}
-                                  style={{ marginLeft: '6px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '11px' }}>
+                                  style={{ marginLeft: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: '11px' }}>
                                   <i className="fas fa-pen"></i>
                                 </button>
                               </div>
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {m.groups?.slice(0, 2).join(', ')}{(m.groups?.length || 0) > 2 ? ` +${m.groups.length - 2}` : ''}
                               </div>
                             </>
@@ -853,13 +853,13 @@ function TeamScreen() {
                         <span style={{ background: '#f0fdf4', color: '#16a34a', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px' }}>{m.group_count}</span>
                       </div>
                       {/* Mensagens */}
-                      <div style={{ textAlign: 'center', fontSize: '13px', color: '#475569', fontWeight: 500 }}>{m.message_count}</div>
+                      <div style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-text-placeholder)', fontWeight: 500 }}>{m.message_count}</div>
                       {/* Resp. média */}
                       <div style={{ textAlign: 'center' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 600, color: m.avg_response_minutes !== null ? (m.avg_response_minutes <= 30 ? '#16a34a' : m.avg_response_minutes <= 120 ? '#ca8a04' : '#dc2626') : '#94a3b8' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: m.avg_response_minutes !== null ? (m.avg_response_minutes <= 30 ? '#16a34a' : m.avg_response_minutes <= 120 ? '#ca8a04' : '#dc2626') : 'var(--color-text-secondary)' }}>
                           {fmtMinutes(m.avg_response_minutes)}
                         </span>
-                        {m.response_count > 0 && <div style={{ fontSize: '10px', color: '#94a3b8' }}>{m.response_count} resp.</div>}
+                        {m.response_count > 0 && <div style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>{m.response_count} resp.</div>}
                       </div>
                       {/* Remover */}
                       <div style={{ textAlign: 'center' }}>
@@ -881,34 +881,34 @@ function TeamScreen() {
         {tab === 'add' && (
           <>
             {loadCand
-              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>
+              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
               : filteredCandidates.length === 0
               ? (
-                <div style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-secondary)' }}>
                   <i className="fas fa-search" style={{ fontSize: '40px', display: 'block', marginBottom: '12px', opacity: 0.4 }}></i>
-                  <div style={{ fontWeight: 600, color: '#64748b' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--color-text-muted)' }}>
                     {search ? 'Nenhum participante encontrado.' : 'Nenhum candidato encontrado nos grupos monitorados.'}
                   </div>
                 </div>
               )
               : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
                     {filteredCandidates.length} participante{filteredCandidates.length !== 1 ? 's' : ''} encontrado{filteredCandidates.length !== 1 ? 's' : ''} nos grupos — clique em "Adicionar ao time" para marcar como colaborador interno.
                   </div>
                   {filteredCandidates.map(c => (
-                    <div key={c.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>
+                    <div key={c.id} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--color-border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>
                         {(c.display_name || '?')[0].toUpperCase()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>{c.display_name}</div>
-                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-primary)' }}>{c.display_name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
                           {c.message_count} msgs · {c.groups?.slice(0, 2).join(', ')}{(c.groups?.length || 0) > 2 ? ` +${c.groups.length - 2}` : ''}
                         </div>
                       </div>
                       <button onClick={() => toggleMember(c, true)} disabled={toggling[c.id]}
-                        style={{ padding: '6px 12px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        style={{ padding: '6px 12px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {toggling[c.id] ? <Spinner size={12} color="white" /> : <><i className="fas fa-user-plus"></i> Adicionar ao time</>}
                       </button>
                     </div>
@@ -930,18 +930,18 @@ function ApiDocsScreen() {
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <PageHeader title="API Docs" subtitle="Documentação interativa da API" actions={
-        <a href="/docs" target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#0d9488', color: 'white', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', textDecoration: 'none', fontWeight: 500 }}>
+        <a href="/docs" target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--color-brand-600)', color: 'white', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', textDecoration: 'none', fontWeight: 500 }}>
           <i className="fas fa-external-link-alt"></i> Abrir Swagger UI
         </a>
       } />
       <div style={{ flex: 1, overflowY: 'auto', padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <DsCard>
-          <SectionTitle icon="info-circle" label="Sobre a API" color="#0d9488" />
+          <SectionTitle icon="info-circle" label="Sobre a API" color="var(--color-brand-600)" />
           <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
             A API REST do ATENX permite ingestão de mensagens, consulta de métricas e gerenciamento de alertas.
             Acesse a documentação interativa completa no Swagger UI.
           </p>
-          <div style={{ marginTop: '16px', padding: '12px 16px', background: '#f8fafc', borderRadius: 'var(--radius-lg)', fontFamily: 'monospace', fontSize: '13px', color: '#334155' }}>
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'var(--color-bg-page)', borderRadius: 'var(--radius-lg)', fontFamily: 'monospace', fontSize: '13px', color: 'var(--color-text-primary)' }}>
             Base URL: <strong>/api/v1</strong>
           </div>
         </DsCard>
@@ -967,8 +967,8 @@ function ApiDocsScreen() {
           return (
             <DsCard key={i} style={{ padding: '14px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: mc[ep.method] || '#f1f5f9', color: tc[ep.method] || '#374151', fontFamily: 'monospace', minWidth: '52px', textAlign: 'center' }}>{ep.method}</span>
-                <code style={{ fontSize: '13px', color: '#334155', fontFamily: 'monospace', flex: 1 }}>/api/v1{ep.path}</code>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: mc[ep.method] || 'var(--color-bg-page)', color: tc[ep.method] || 'var(--color-text-primary)', fontFamily: 'monospace', minWidth: '52px', textAlign: 'center' }}>{ep.method}</span>
+                <code style={{ fontSize: '13px', color: 'var(--color-text-primary)', fontFamily: 'monospace', flex: 1 }}>/api/v1{ep.path}</code>
                 {ep.auth && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', background: '#fef9c3', color: '#854d0e' }}>🔒 JWT</span>}
               </div>
               <p style={{ margin: '8px 0 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{ep.desc}</p>
@@ -996,7 +996,7 @@ function UserFormModal({ onClose, onSaved, editing }) {
     width: '100%', padding: '9px 12px', boxSizing: 'border-box',
     border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)',
     fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none',
-    background: 'white', color: 'var(--color-text-primary)',
+    background: 'var(--color-bg-card)', color: 'var(--color-text-primary)',
   };
   const labelStyle = { display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '5px' };
 
@@ -1028,13 +1028,13 @@ function UserFormModal({ onClose, onSaved, editing }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: '16px', padding: '28px', width: '420px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+      <div style={{ background: 'var(--color-bg-card)', borderRadius: '16px', padding: '28px', width: '420px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}>
-            <i className="fas fa-user-plus" style={{ marginRight: '8px', color: '#0d9488' }}></i>
+            <i className="fas fa-user-plus" style={{ marginRight: '8px', color: 'var(--color-brand-600)' }}></i>
             {isEdit ? 'Editar Usuário' : 'Novo Usuário'}
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: '18px' }}>
             <i className="fas fa-times"></i>
           </button>
         </div>
@@ -1059,16 +1059,16 @@ function UserFormModal({ onClose, onSaved, editing }) {
             <input style={inputStyle} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
-            <input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: '#0d9488' }} />
-            <span>Administrador <span style={{ color: '#94a3b8', fontSize: 'var(--text-xs)' }}>(acesso total ao sistema)</span></span>
+            <input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--color-brand-600)' }} />
+            <span>Administrador <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-xs)' }}>(acesso total ao sistema)</span></span>
           </label>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: '#f1f5f9', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: '#374151', fontFamily: 'var(--font-sans)' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: 'var(--color-bg-page)', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}>
             Cancelar
           </button>
-          <button onClick={handleSubmit} disabled={saving} style={{ padding: '9px 18px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={handleSubmit} disabled={saving} style={{ padding: '9px 18px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
             {saving ? <><Spinner size={12} /> Salvando...</> : <><i className="fas fa-check"></i> {isEdit ? 'Salvar' : 'Cadastrar'}</>}
           </button>
         </div>
@@ -1108,7 +1108,7 @@ function UsersSection() {
     <DsCard>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <SectionTitle icon="users-cog" label="Usuários do Sistema" />
-        <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+        <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
           <i className="fas fa-plus"></i> Novo usuário
         </button>
       </div>
@@ -1116,25 +1116,25 @@ function UsersSection() {
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Spinner size={24} /></div>
       ) : users.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#94a3b8', padding: '24px', fontSize: 'var(--text-sm)' }}>Nenhum usuário cadastrado.</div>
+        <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: '24px', fontSize: 'var(--text-sm)' }}>Nenhum usuário cadastrado.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {users.map(u => (
-            <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: u.is_active ? '#f8fafc' : '#fef2f2', border: '1px solid ' + (u.is_active ? 'var(--color-border-card)' : '#fecaca'), borderRadius: 'var(--radius-lg)' }}>
+            <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: u.is_active ? 'var(--color-bg-page)' : '#fef2f2', border: '1px solid ' + (u.is_active ? 'var(--color-border-card)' : '#fecaca'), borderRadius: 'var(--radius-lg)' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '9999px', background: u.is_active ? '#ccfbf1' : '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <i className="fas fa-user" style={{ color: u.is_active ? '#0d9488' : '#ef4444', fontSize: '14px' }}></i>
+                <i className="fas fa-user" style={{ color: u.is_active ? 'var(--color-brand-600)' : '#ef4444', fontSize: '14px' }}></i>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>{u.full_name || u.username}</span>
-                  {u.full_name && <span style={{ fontSize: 'var(--text-xs)', color: '#94a3b8' }}>@{u.username}</span>}
+                  {u.full_name && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>@{u.username}</span>}
                   {u.is_admin && <span style={{ background: '#ede9fe', color: '#7c3aed', fontSize: '11px', fontWeight: 600, padding: '1px 7px', borderRadius: '9999px' }}>Admin</span>}
                   {!u.is_active && <span style={{ background: '#fee2e2', color: '#dc2626', fontSize: '11px', fontWeight: 600, padding: '1px 7px', borderRadius: '9999px' }}>Inativo</span>}
                 </div>
-                {u.email && <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '1px' }}>{u.email}</div>}
+                {u.email && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginTop: '1px' }}>{u.email}</div>}
               </div>
               <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                <button onClick={() => setModal(u)} title="Editar" style={{ padding: '6px 10px', background: 'white', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', cursor: 'pointer', color: '#374151', fontSize: '13px' }}>
+                <button onClick={() => setModal(u)} title="Editar" style={{ padding: '6px 10px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', cursor: 'pointer', color: 'var(--color-text-primary)', fontSize: '13px' }}>
                   <i className="fas fa-pen"></i>
                 </button>
                 <button
@@ -1199,7 +1199,7 @@ function ConfigScreen() {
     width: '100%', padding: '10px 14px', boxSizing: 'border-box',
     border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)',
     fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none',
-    background: 'white', color: 'var(--color-text-primary)',
+    background: 'var(--color-bg-card)', color: 'var(--color-text-primary)',
   };
   const labelStyle = { display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '6px' };
 
@@ -1214,7 +1214,7 @@ function ConfigScreen() {
     <div>
       <label style={labelStyle}>{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} style={inputStyle} />
-      {hint && <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '4px' }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginTop: '4px' }}>{hint}</div>}
     </div>
   );
 
@@ -1222,7 +1222,7 @@ function ConfigScreen() {
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <PageHeader title="Configurações" subtitle="Gerencie integrações e parâmetros do sistema"
         actions={
-          <button onClick={saveConfig} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+          <button onClick={saveConfig} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
             {saving ? <><Spinner size={12} />&nbsp; Salvando...</> : <><i className="fas fa-save"></i>&nbsp; Salvar</>}
           </button>
         }
@@ -1231,12 +1231,12 @@ function ConfigScreen() {
 
         <DsCard style={{ padding: '16px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: (healthStatus?.status === 'ok' || healthStatus?.status === 'healthy') ? '#22c55e' : healthStatus?.status === 'error' ? '#ef4444' : '#94a3b8', flexShrink: 0 }}></div>
+            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: (healthStatus?.status === 'ok' || healthStatus?.status === 'healthy') ? '#22c55e' : healthStatus?.status === 'error' ? '#ef4444' : 'var(--color-text-secondary)', flexShrink: 0 }}></div>
             <div>
               <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                 Status do Backend: {(healthStatus?.status === 'ok' || healthStatus?.status === 'healthy') ? '✅ Online' : healthStatus?.status === 'error' ? '❌ Offline' : '⏳ Verificando...'}
               </div>
-              {healthStatus?.version && <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8' }}>Versão {healthStatus.version} · {healthStatus.environment} · DB: {healthStatus.database}</div>}
+              {healthStatus?.version && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>Versão {healthStatus.version} · {healthStatus.environment} · DB: {healthStatus.database}</div>}
             </div>
           </div>
         </DsCard>
@@ -1246,8 +1246,8 @@ function ConfigScreen() {
         <Section icon="whatsapp fab" title="Conexão WhatsApp (WPPConnect)">
           <div>
             <label style={labelStyle}>Sessão (atribuída automaticamente)</label>
-            <input type="text" value={wppSession} readOnly style={{ ...inputStyle, background: '#f8fafc', color: '#64748b' }} />
-            <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '4px' }}>Identificador único desta conta no WppConnect. Não pode ser alterado.</div>
+            <input type="text" value={wppSession} readOnly style={{ ...inputStyle, background: 'var(--color-bg-page)', color: 'var(--color-text-muted)' }} />
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginTop: '4px' }}>Identificador único desta conta no WppConnect. Não pode ser alterado.</div>
           </div>
           <Field label="URL do servidor WPPConnect" value={wppUrl} onChange={setWppUrl} hint="Mude apenas se usar um servidor WPPConnect próprio" />
           <Field label="Token secreto" value={wppSecret} onChange={setWppSecret} type="password" hint="Secret configurado no WPPConnect" />
@@ -1268,17 +1268,17 @@ function ConfigScreen() {
         <Section icon="globe" title="Domínio / Acesso">
           <Field label="Domínio da aplicação" value={domain} onChange={setDomain} hint="Ex: intel.envox.com.br ou 187.127.6.191:8080" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <a href="/docs" target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#f8fafc', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', color: '#334155', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
-              <i className="fas fa-book" style={{ color: '#0d9488' }}></i> Swagger UI (API Docs)
+            <a href="/docs" target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', color: 'var(--color-text-primary)', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+              <i className="fas fa-book" style={{ color: 'var(--color-brand-600)' }}></i> Swagger UI (API Docs)
             </a>
-            <a href="/api/v1/health" target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#f8fafc', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', color: '#334155', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+            <a href="/api/v1/health" target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', color: 'var(--color-text-primary)', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
               <i className="fas fa-heartbeat" style={{ color: '#22c55e' }}></i> Health Check
             </a>
           </div>
         </Section>
 
         <Section icon="sliders-h" title="Thresholds de Alerta">
-          <div style={{ background: '#f8fafc', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
+          <div style={{ background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', marginBottom: '12px', fontWeight: 500 }}>Configurados via arquivo .env no servidor:</div>
             {[
               { label: 'Threshold de Risco', key: 'ALERT_RISK_THRESHOLD', value: '65' },
@@ -1289,7 +1289,7 @@ function ConfigScreen() {
             ].map(item => (
               <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border-card)' }}>
                 <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>{item.label}</span>
-                <code style={{ fontSize: '13px', color: '#334155', background: 'white', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--color-border-card)' }}>{item.key}={item.value}</code>
+                <code style={{ fontSize: '13px', color: 'var(--color-text-primary)', background: 'var(--color-bg-card)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--color-border-card)' }}>{item.key}={item.value}</code>
               </div>
             ))}
           </div>
@@ -1313,9 +1313,9 @@ function ConversationScreen({ group, onBack }) {
   const tabStyle = (id) => ({
     padding: '12px 20px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
     fontSize: 'var(--text-sm)', border: 'none', background: 'none',
-    color: tab === id ? '#0d9488' : '#8696a0',
+    color: tab === id ? 'var(--color-brand-600)' : 'var(--color-text-placeholder)',
     fontWeight: tab === id ? 600 : 400,
-    borderBottom: tab === id ? '2px solid #0d9488' : '2px solid transparent',
+    borderBottom: tab === id ? '2px solid var(--color-brand-600)' : '2px solid transparent',
     transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px',
   });
 
@@ -1323,15 +1323,15 @@ function ConversationScreen({ group, onBack }) {
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Header WhatsApp-style */}
       <div style={{ padding: '10px 16px', background: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#aebac3', padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={onBack} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-on-sidebar-muted)', padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <i className="fas fa-arrow-left" style={{ fontSize: '16px' }}></i>
         </button>
-        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#0d9488', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '14px', flexShrink: 0 }}>
+        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--color-brand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '14px', flexShrink: 0 }}>
           {initials(groupName)}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: '#e9edef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{groupName}</div>
-          <div style={{ fontSize: '12px', color: '#8696a0' }}>
+          <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-on-sidebar)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{groupName}</div>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-placeholder)' }}>
             {group.open_alerts > 0 && <span style={{ color: '#ef9a9a', marginRight: '8px' }}>{group.open_alerts} alerta{group.open_alerts > 1 ? 's' : ''}</span>}
             {group.followups_pending > 0 && <span style={{ color: '#ffd54f', marginRight: '8px' }}>{group.followups_pending} follow-up</span>}
             <span>Temp: <strong style={{ color: group.temperature_score >= 60 ? '#4caf50' : group.temperature_score >= 40 ? '#ffd54f' : '#ef9a9a' }}>{group.temperature_score || 0}</strong></span>
@@ -1340,7 +1340,7 @@ function ConversationScreen({ group, onBack }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-card)', background: 'white', padding: '0 16px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border-card)', background: 'var(--color-bg-card)', padding: '0 16px', flexShrink: 0 }}>
         <button style={tabStyle('messages')} onClick={() => setTab('messages')}>
           <i className="fas fa-comments"></i> Conversa
         </button>
@@ -1387,7 +1387,7 @@ function ConvMessagesTab({ convId, group }) {
   }, [loading]);
 
   const filters = [
-    { id: 'all',         label: 'Todas',     icon: 'comments',           color: '#0d9488' },
+    { id: 'all',         label: 'Todas',     icon: 'comments',           color: 'var(--color-brand-600)' },
     { id: 'followup',    label: 'Follow-up', icon: 'clock',              color: '#ca8a04' },
     { id: 'churn',       label: 'Churn',     icon: 'user-minus',         color: '#ea580c' },
     { id: 'opportunity', label: 'Oportun.',  icon: 'lightbulb',          color: '#16a34a' },
@@ -1413,12 +1413,12 @@ function ConvMessagesTab({ convId, group }) {
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Filter pills */}
-      <div style={{ padding: '8px 16px', borderBottom: '1px solid #e9edef', background: 'white', display: 'flex', gap: '6px', flexWrap: 'wrap', flexShrink: 0 }}>
+      <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--color-border-sidebar)', background: 'var(--color-bg-card)', display: 'flex', gap: '6px', flexWrap: 'wrap', flexShrink: 0 }}>
         {filters.map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)} style={{
             display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 12px',
             borderRadius: '9999px', fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--font-sans)', border: 'none',
-            background: filter === f.id ? f.color : '#f0f2f5', color: filter === f.id ? 'white' : '#54656f',
+            background: filter === f.id ? f.color : 'var(--color-bg-page)', color: filter === f.id ? 'white' : 'var(--color-text-muted)',
             fontWeight: filter === f.id ? 600 : 400, transition: 'all 0.15s',
           }}>
             <i className={`fas fa-${f.icon}`} style={{ fontSize: '11px' }}></i>{f.label}
@@ -1429,12 +1429,12 @@ function ConvMessagesTab({ convId, group }) {
 
       {/* Chat area com fundo WhatsApp */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: '2px', background: '#e5ddd5' }}>
-        {loading ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>
+        {loading ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
           : !data || data.messages.length === 0
             ? <div style={{ textAlign: 'center', padding: '64px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '12px', padding: '20px 28px', display: 'inline-block' }}>
-                  <i className="fas fa-comments" style={{ fontSize: '32px', color: '#aebac3', display: 'block', marginBottom: '10px' }}></i>
-                  <span style={{ color: '#54656f', fontSize: 'var(--text-sm)' }}>
+                  <i className="fas fa-comments" style={{ fontSize: '32px', color: 'var(--color-text-on-sidebar-muted)', display: 'block', marginBottom: '10px' }}></i>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
                     {filter !== 'all' ? 'Nenhuma mensagem com este filtro.' : 'Ainda não há mensagens neste grupo.'}
                   </span>
                 </div>
@@ -1442,8 +1442,8 @@ function ConvMessagesTab({ convId, group }) {
             : <>
                 {hasMore && <div style={{ textAlign: 'center', marginBottom: '8px' }}>
                   <button onClick={() => load(filter, false)} disabled={loadingMore}
-                    style={{ padding: '6px 16px', background: 'rgba(255,255,255,0.85)', color: '#0d9488', border: 'none', borderRadius: '9999px', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-sans)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    {loadingMore ? <><Spinner size={12} color="#0d9488" />&nbsp; Carregando...</> : '↑ Carregar anteriores'}
+                    style={{ padding: '6px 16px', background: 'rgba(255,255,255,0.85)', color: 'var(--color-brand-600)', border: 'none', borderRadius: '9999px', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-sans)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    {loadingMore ? <><Spinner size={12} color="var(--color-brand-600)" />&nbsp; Carregando...</> : '↑ Carregar anteriores'}
                   </button>
                 </div>}
                 {(() => {
@@ -1461,7 +1461,7 @@ function ConvMessagesTab({ convId, group }) {
                       <React.Fragment key={msg.id}>
                         {showDate && (
                           <div style={{ textAlign: 'center', padding: '10px 0 6px' }}>
-                            <span style={{ background: 'rgba(255,255,255,0.88)', color: '#54656f', fontSize: '12px', padding: '4px 12px', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}>{msgDate}</span>
+                            <span style={{ background: 'rgba(255,255,255,0.88)', color: 'var(--color-text-muted)', fontSize: '12px', padding: '4px 12px', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }}>{msgDate}</span>
                           </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', marginBottom: '2px' }}>
@@ -1475,15 +1475,15 @@ function ConvMessagesTab({ convId, group }) {
                             borderRight: isMe && signalBorder ? `3px solid ${signalBorder}` : 'none',
                           }}>
                             {!isMe && (
-                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#0d9488', marginBottom: '2px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-brand-600)', marginBottom: '2px' }}>
                                 {msg.type_icon} {msg.sender}
                               </div>
                             )}
                             {msg.content && (
-                              <div style={{ fontSize: '13px', color: '#111b21', lineHeight: 1.5, wordBreak: 'break-word' }}>{msg.content}</div>
+                              <div style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: 1.5, wordBreak: 'break-word' }}>{msg.content}</div>
                             )}
                             {!msg.content && msg.message_type !== 'text' && (
-                              <div style={{ fontSize: '13px', color: '#54656f', fontStyle: 'italic' }}>{msg.type_icon} [{msg.message_type}]</div>
+                              <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>{msg.type_icon} [{msg.message_type}]</div>
                             )}
                             {/* Signals */}
                             {(msg.signals.length > 0 || msg.alerts.length > 0) && (
@@ -1495,10 +1495,10 @@ function ConvMessagesTab({ convId, group }) {
                             )}
                             {msg.tags?.length > 0 && (
                               <div style={{ display: 'flex', gap: '3px', marginTop: '4px', flexWrap: 'wrap' }}>
-                                {msg.tags.map(tag => <span key={tag} style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '9999px', background: isMe ? 'rgba(0,0,0,0.08)' : '#f0f2f5', color: '#54656f' }}>{tag}</span>)}
+                                {msg.tags.map(tag => <span key={tag} style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '9999px', background: isMe ? 'rgba(0,0,0,0.08)' : 'var(--color-bg-page)', color: 'var(--color-text-muted)' }}>{tag}</span>)}
                               </div>
                             )}
-                            <div style={{ fontSize: '11px', color: '#8696a0', textAlign: 'right', marginTop: '3px' }}>{t}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', textAlign: 'right', marginTop: '3px' }}>{t}</div>
                           </div>
                         </div>
                       </React.Fragment>
@@ -1645,8 +1645,8 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
 
   if (!wppGroupId) {
     return (
-      <div style={{ padding: '10px 16px', background: '#f0f2f5', borderTop: '1px solid #d1d7db', flexShrink: 0, textAlign: 'center' }}>
-        <span style={{ fontSize: '12px', color: '#8696a0' }}>
+      <div style={{ padding: '10px 16px', background: 'var(--color-bg-page)', borderTop: '1px solid var(--color-border-default)', flexShrink: 0, textAlign: 'center' }}>
+        <span style={{ fontSize: '12px', color: 'var(--color-text-placeholder)' }}>
           <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
           Este grupo não está vinculado a um grupo do WhatsApp — associe o <strong>wpp_group_id</strong> na tela de Seleção de Grupos para enviar mensagens por aqui.
         </span>
@@ -1655,15 +1655,15 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
   }
 
   return (
-    <div style={{ flexShrink: 0, background: '#f0f2f5', borderTop: '1px solid #d1d7db' }}>
+    <div style={{ flexShrink: 0, background: 'var(--color-bg-page)', borderTop: '1px solid var(--color-border-default)' }}>
       {showAssist && (
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e9edef', background: 'white' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border-sidebar)', background: 'var(--color-bg-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#111b21' }}>
-              <i className="fas fa-wand-magic-sparkles" style={{ color: '#0d9488', marginRight: '6px' }}></i>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+              <i className="fas fa-wand-magic-sparkles" style={{ color: 'var(--color-brand-600)', marginRight: '6px' }}></i>
               Sugestão de mensagem com IA
             </span>
-            <button onClick={closeAssist} style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer', fontSize: '14px' }}>
+            <button onClick={closeAssist} style={{ background: 'none', border: 'none', color: 'var(--color-text-placeholder)', cursor: 'pointer', fontSize: '14px' }}>
               <i className="fas fa-times"></i>
             </button>
           </div>
@@ -1677,11 +1677,11 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
                   ? 'O que você quer dizer? Deixe em branco para a IA melhorar o rascunho que você já escreveu.'
                   : 'O que você quer dizer ao cliente? (opcional — deixe em branco para a IA sugerir a melhor continuação da conversa)'}
                 rows={2}
-                style={{ width: '100%', resize: 'none', border: '1px solid #d1d7db', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', fontFamily: 'var(--font-sans)', outline: 'none' }}
+                style={{ width: '100%', resize: 'none', border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '8px 10px', fontSize: '13px', fontFamily: 'var(--font-sans)', outline: 'none' }}
               />
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button onClick={handleAssist} disabled={assistLoading}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: assistLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: assistLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
                   {assistLoading ? <><Spinner size={12} color="white" />&nbsp;Gerando...</> : <><i className="fas fa-sparkles"></i> Gerar sugestão</>}
                 </button>
               </div>
@@ -1690,15 +1690,15 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
 
           {assistResult && (
             <div>
-              <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: '#111b21', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                 {assistResult.suggestion}
               </div>
               {assistResult.why && (
-                <div style={{ fontSize: '12px', color: '#54656f', marginTop: '6px', fontStyle: 'italic' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px', fontStyle: 'italic' }}>
                   <i className="fas fa-lightbulb" style={{ marginRight: '5px' }}></i>{assistResult.why}
                 </div>
               )}
-              <div style={{ fontSize: '11px', color: '#8696a0', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', marginTop: '4px' }}>
                 {assistResult.participant_used
                   ? (assistResult.based_on_profile
                       ? `Baseado no perfil de IA de ${assistResult.participant_used.name}`
@@ -1707,11 +1707,11 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
               </div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
                 <button onClick={() => setAssistResult(null)}
-                  style={{ padding: '6px 14px', background: '#f0f2f5', color: '#54656f', border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  style={{ padding: '6px 14px', background: 'var(--color-bg-page)', color: 'var(--color-text-muted)', border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                   Tentar de novo
                 </button>
                 <button onClick={useSuggestion}
-                  style={{ padding: '6px 14px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  style={{ padding: '6px 14px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                   Usar esta mensagem
                 </button>
               </div>
@@ -1720,19 +1720,19 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
         </div>
       )}
       {attachment && (
-        <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #e9edef', background: 'white' }}>
+        <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid var(--color-border-sidebar)', background: 'var(--color-bg-card)' }}>
           {attachment.kind === 'image' && <img src={attachment.previewUrl} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} alt="preview" />}
           {attachment.kind === 'document' && (
-            <div style={{ width: 40, height: 40, borderRadius: 6, background: '#eef2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#54656f', flexShrink: 0 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 6, background: '#eef2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', flexShrink: 0 }}>
               <i className="fas fa-file-alt"></i>
             </div>
           )}
           {attachment.kind === 'audio' && <audio controls src={attachment.previewUrl} style={{ height: 32, maxWidth: '220px' }} />}
-          <div style={{ flex: 1, fontSize: '12px', color: '#54656f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ flex: 1, fontSize: '12px', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {attachment.kind === 'audio' ? `Nota de voz (${attachment.duration || 0}s)` : attachment.name}
           </div>
           <button onClick={() => setAtt(null)} title="Remover anexo"
-            style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer', fontSize: '14px' }}>
+            style={{ background: 'none', border: 'none', color: 'var(--color-text-placeholder)', cursor: 'pointer', fontSize: '14px' }}>
             <i className="fas fa-times"></i>
           </button>
         </div>
@@ -1741,11 +1741,11 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
         <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFilePick}
           accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
         <button onClick={() => fileInputRef.current?.click()} disabled={recording || sending} title="Anexar arquivo"
-          style={{ background: 'none', border: 'none', color: '#54656f', fontSize: '20px', cursor: recording ? 'not-allowed' : 'pointer', padding: '6px', flexShrink: 0 }}>
+          style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '20px', cursor: recording ? 'not-allowed' : 'pointer', padding: '6px', flexShrink: 0 }}>
           <i className="fas fa-paperclip"></i>
         </button>
         <button onClick={openAssist} disabled={recording || sending} title="Sugerir mensagem com IA"
-          style={{ background: 'none', border: 'none', color: showAssist ? '#0d9488' : '#54656f', fontSize: '20px', cursor: recording ? 'not-allowed' : 'pointer', padding: '6px', flexShrink: 0 }}>
+          style={{ background: 'none', border: 'none', color: showAssist ? 'var(--color-brand-600)' : 'var(--color-text-muted)', fontSize: '20px', cursor: recording ? 'not-allowed' : 'pointer', padding: '6px', flexShrink: 0 }}>
           <i className="fas fa-wand-magic-sparkles"></i>
         </button>
         <textarea
@@ -1759,7 +1759,7 @@ function MessageComposer({ convId, wppGroupId, onSent }) {
           style={{
             flex: 1, resize: 'none', border: 'none', outline: 'none', borderRadius: '20px',
             padding: '9px 14px', fontSize: '14px', fontFamily: 'var(--font-sans)', maxHeight: '120px',
-            background: 'white', lineHeight: 1.4,
+            background: 'var(--color-bg-card)', lineHeight: 1.4,
           }}
         />
         {recording && (
@@ -1831,7 +1831,7 @@ function ConvProfileTab({ convId, onNameChange }) {
     finally { setSaving(false); }
   };
 
-  const inp = { width: '100%', padding: '9px 12px', boxSizing: 'border-box', border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none', background: 'white' };
+  const inp = { width: '100%', padding: '9px 12px', boxSizing: 'border-box', border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none', background: 'var(--color-bg-card)' };
   const lbl = { display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '.05em' };
   const grpTypes = [
     { value: 'client',     label: '🤝 Clientes' },
@@ -1842,7 +1842,7 @@ function ConvProfileTab({ convId, onNameChange }) {
     { value: 'other',      label: '📁 Outro' },
   ];
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={24} color="#0d9488" /></div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>;
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1854,7 +1854,7 @@ function ConvProfileTab({ convId, onNameChange }) {
           <div>
             <label style={lbl}>Nome no sistema</label>
             <input value={form.custom_name} onChange={e => set('custom_name', e.target.value)} placeholder={profile?.original_name || 'Nome do grupo'} style={inp} />
-            {profile?.original_name && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Nome original no WhatsApp: {profile.original_name}</div>}
+            {profile?.original_name && <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>Nome original no WhatsApp: {profile.original_name}</div>}
           </div>
           <div>
             <label style={lbl}>Tipo do grupo</label>
@@ -1865,7 +1865,7 @@ function ConvProfileTab({ convId, onNameChange }) {
           </div>
         </div>
         <div style={{ marginTop: '16px' }}>
-          <label style={lbl}>Contexto para a IA <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>— ajuda a IA entender o propósito deste grupo</span></label>
+          <label style={lbl}>Contexto para a IA <span style={{ color: 'var(--color-text-secondary)', textTransform: 'none', fontWeight: 400 }}>— ajuda a IA entender o propósito deste grupo</span></label>
           <textarea value={form.ai_context} onChange={e => set('ai_context', e.target.value)} placeholder="Ex: Grupo de suporte ao cliente XYZ, empresa de e-commerce de moda. Clientes geralmente têm dúvidas sobre pedidos, trocas e devoluções..." rows={4}
             style={{ ...inp, resize: 'vertical', lineHeight: 1.5 }} />
         </div>
@@ -1880,7 +1880,7 @@ function ConvProfileTab({ convId, onNameChange }) {
             <input value={form.website} onChange={e => set('website', e.target.value)} placeholder="https://..." style={inp} />
           </div>
           <div>
-            <label style={lbl}>Link do Cérebro GPT <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>— link do ChatGPT customizado do cliente</span></label>
+            <label style={lbl}>Link do Cérebro GPT <span style={{ color: 'var(--color-text-secondary)', textTransform: 'none', fontWeight: 400 }}>— link do ChatGPT customizado do cliente</span></label>
             <input value={form.gpt_brain_url} onChange={e => set('gpt_brain_url', e.target.value)} placeholder="https://chatgpt.com/g/..." style={inp} />
           </div>
           <div>
@@ -1894,7 +1894,7 @@ function ConvProfileTab({ convId, onNameChange }) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <label style={lbl}>Documentos e links úteis</label>
-              <button onClick={addDoc} style={{ fontSize: '12px', padding: '4px 10px', background: '#f0fdfa', color: '#0d9488', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer' }}>
+              <button onClick={addDoc} style={{ fontSize: '12px', padding: '4px 10px', background: '#f0fdfa', color: 'var(--color-brand-600)', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer' }}>
                 <i className="fas fa-plus"></i> Adicionar
               </button>
             </div>
@@ -1913,8 +1913,8 @@ function ConvProfileTab({ convId, onNameChange }) {
 
       {/* Contrato (apenas para clientes) */}
       {(form.group_type === 'client' || form.contract_scope) && (
-        <DsCard style={{ borderLeft: '4px solid #0d9488' }}>
-          <SectionTitle icon="file-contract" label="Contrato e Escopo" color="#0d9488" />
+        <DsCard style={{ borderLeft: '4px solid var(--color-brand-600)' }}>
+          <SectionTitle icon="file-contract" label="Contrato e Escopo" color="var(--color-brand-600)" />
           <div style={{ background: '#f0fdfa', borderRadius: 'var(--radius-lg)', padding: '10px 14px', fontSize: 'var(--text-xs)', color: '#0f766e', marginBottom: '16px' }}>
             <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
             O escopo do contrato é usado para detectar automaticamente quando o cliente solicita algo fora do combinado ou quando há promessas não cumpridas.
@@ -1931,7 +1931,7 @@ function ConvProfileTab({ convId, onNameChange }) {
               </div>
             </div>
             <div>
-              <label style={lbl}>Escopo contratado <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>— liste o que está incluído no contrato</span></label>
+              <label style={lbl}>Escopo contratado <span style={{ color: 'var(--color-text-secondary)', textTransform: 'none', fontWeight: 400 }}>— liste o que está incluído no contrato</span></label>
               <textarea value={form.contract_scope} onChange={e => set('contract_scope', e.target.value)}
                 placeholder="Ex: Gestão de Instagram (3 posts/semana) + Stories diários + Relatório mensal. NÃO inclui: criação de site, tráfego pago, atendimento ao cliente..."
                 rows={5} style={{ ...inp, resize: 'vertical', lineHeight: 1.5 }} />
@@ -1942,7 +1942,7 @@ function ConvProfileTab({ convId, onNameChange }) {
 
       {/* Botão salvar */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: '8px' }}>
-        <button onClick={save} disabled={saving} style={{ padding: '10px 28px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button onClick={save} disabled={saving} style={{ padding: '10px 28px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
           {saving ? <><Spinner size={14} />&nbsp; Salvando...</> : <><i className="fas fa-save"></i>&nbsp; Salvar Perfil</>}
         </button>
       </div>
@@ -2037,11 +2037,11 @@ function ConvParticipantsTab({ convId }) {
     { value: 'bot',          label: '🤖 Bot' },
     { value: 'unknown',      label: '❓ Desconhecido' },
   ];
-  const roleColors = { customer: '#0d9488', collaborator: '#16a34a', manager: '#7c3aed', bot: '#64748b', unknown: '#94a3b8' };
+  const roleColors = { customer: 'var(--color-brand-600)', collaborator: '#16a34a', manager: '#7c3aed', bot: 'var(--color-text-muted)', unknown: 'var(--color-text-secondary)' };
   const roleLabels = { customer: 'Cliente', collaborator: 'Colaborador', manager: 'Gestor', bot: 'Bot', unknown: '—' };
-  const inp = { width: '100%', padding: '7px 10px', boxSizing: 'border-box', border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none', background: 'white' };
+  const inp = { width: '100%', padding: '7px 10px', boxSizing: 'border-box', border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none', background: 'var(--color-bg-card)' };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={24} color="#0d9488" /></div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>;
   const parts = profile?.participants || [];
 
   return (
@@ -2051,7 +2051,7 @@ function ConvParticipantsTab({ convId }) {
         {parts.length > 0 && (
           <button onClick={analyzeAll} disabled={analyzingAll} style={{
             display: 'flex', alignItems: 'center', gap: '6px',
-            background: analyzingAll ? '#334155' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+            background: analyzingAll ? 'var(--color-border-default)' : 'linear-gradient(135deg,#7c3aed,#4f46e5)',
             color: 'white', border: 'none', borderRadius: '8px',
             padding: '6px 14px', cursor: analyzingAll ? 'not-allowed' : 'pointer',
             fontSize: '12px', fontWeight: 600,
@@ -2073,14 +2073,14 @@ function ConvParticipantsTab({ convId }) {
                 <div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>Nome customizado</label>
+                      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>Nome customizado</label>
                       <input value={editForm.custom_name} onChange={e => setEditForm(f => ({ ...f, custom_name: e.target.value }))} placeholder={p.original_name} style={inp} autoFocus
                         onKeyDown={e => { if (e.key === 'Enter') savePart(p); if (e.key === 'Escape') setEditId(null); }}
                       />
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px' }}>Original: {p.original_name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '3px' }}>Original: {p.original_name}</div>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: '#64748b', marginBottom: '4px' }}>Papel</label>
+                      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>Papel</label>
                       <select value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))} style={{ ...inp, cursor: 'pointer' }}>
                         {roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </select>
@@ -2093,10 +2093,10 @@ function ConvParticipantsTab({ convId }) {
                     </label>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => savePart(p)} disabled={saving} style={{ padding: '7px 18px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
+                    <button onClick={() => savePart(p)} disabled={saving} style={{ padding: '7px 18px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
                       {saving ? <Spinner size={12} /> : 'Salvar'}
                     </button>
-                    <button onClick={() => setEditId(null)} style={{ padding: '7px 14px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>Cancelar</button>
+                    <button onClick={() => setEditId(null)} style={{ padding: '7px 14px', background: 'var(--color-bg-page)', color: 'var(--color-text-muted)', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: 'var(--text-sm)' }}>Cancelar</button>
                   </div>
                 </div>
               )
@@ -2110,8 +2110,8 @@ function ConvParticipantsTab({ convId }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>{p.name}</span>
-                        {p.custom_name && <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>(orig: {p.original_name})</span>}
-                        <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: (roleColors[p.role] || '#94a3b8') + '20', color: roleColors[p.role] || '#94a3b8', fontWeight: 600 }}>
+                        {p.custom_name && <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>(orig: {p.original_name})</span>}
+                        <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: (roleColors[p.role] || 'var(--color-text-secondary)') + '20', color: roleColors[p.role] || 'var(--color-text-secondary)', fontWeight: 600 }}>
                           {roleLabels[p.role] || p.role}
                         </span>
                         {p.is_internal && <span style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: '#f0fdf4', color: '#16a34a', fontWeight: 600 }}>Interno</span>}
@@ -2122,7 +2122,7 @@ function ConvParticipantsTab({ convId }) {
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         <span><i className="fas fa-comment" style={{ marginRight: '3px' }}></i>{p.message_count} msg</span>
                         {p.last_seen && <span><i className="fas fa-clock" style={{ marginRight: '3px' }}></i>{new Date(p.last_seen).toLocaleDateString('pt-BR')}</span>}
                         {p.group_count > 1 && (
@@ -2140,7 +2140,7 @@ function ConvParticipantsTab({ convId }) {
                     </div>
                     <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                       <button onClick={() => analyzeParticipant(p)} disabled={analyzing[p.id]} title="Gerar/atualizar perfil IA" style={{
-                        padding: '7px 12px', background: analyzing[p.id] ? '#334155' : '#ede9fe',
+                        padding: '7px 12px', background: analyzing[p.id] ? 'var(--color-border-default)' : '#ede9fe',
                         color: analyzing[p.id] ? 'white' : '#7c3aed', border: 'none',
                         borderRadius: 'var(--radius-lg)', cursor: analyzing[p.id] ? 'not-allowed' : 'pointer',
                         fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px',
@@ -2148,7 +2148,7 @@ function ConvParticipantsTab({ convId }) {
                         {analyzing[p.id] ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-robot" />}
                         {analyzing[p.id] ? '' : 'IA'}
                       </button>
-                      <button onClick={() => startEdit(p)} style={{ padding: '7px 14px', background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <button onClick={() => startEdit(p)} style={{ padding: '7px 14px', background: 'var(--color-bg-page)', color: 'var(--color-text-primary)', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <i className="fas fa-pencil-alt"></i> Editar
                       </button>
                     </div>
@@ -2158,7 +2158,7 @@ function ConvParticipantsTab({ convId }) {
                   {p.ai_profile && expanded[p.id] && (() => {
                     const ap = p.ai_profile;
                     const sections = [
-                      { key: 'communication_style', icon: 'comments', label: 'Estilo de Comunicação', color: '#0d9488' },
+                      { key: 'communication_style', icon: 'comments', label: 'Estilo de Comunicação', color: 'var(--color-brand-600)' },
                       { key: 'behavior_patterns',   icon: 'chart-bar', label: 'Padrões de Comportamento', color: '#2563eb' },
                       { key: 'engagement_level',    icon: 'signal',    label: 'Nível de Engajamento', color: '#16a34a' },
                       { key: 'attention_points',    icon: 'exclamation-triangle', label: 'Pontos de Atenção', color: '#dc2626' },
@@ -2166,26 +2166,26 @@ function ConvParticipantsTab({ convId }) {
                       { key: 'missing_info',        icon: 'question-circle', label: 'Informações que Faltam', color: '#ea580c' },
                     ];
                     return (
-                      <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                      <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--color-border-card)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                             <i className="fas fa-robot" style={{ marginRight: '6px' }}></i>Perfil Gerado por IA
                           </span>
-                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{ap.message_count} msgs analisadas</span>
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>{ap.message_count} msgs analisadas</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                           {sections.map(s => ap[s.key] ? (
-                            <div key={s.key} style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px 14px', borderLeft: `3px solid ${s.color}` }}>
+                            <div key={s.key} style={{ background: 'var(--color-bg-page)', borderRadius: '8px', padding: '10px 14px', borderLeft: `3px solid ${s.color}` }}>
                               <div style={{ fontSize: '11px', fontWeight: 700, color: s.color, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                 <i className={`fas fa-${s.icon}`} style={{ marginRight: '5px' }}></i>{s.label}
                               </div>
-                              <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.55 }}>{ap[s.key]}</div>
+                              <div style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: 1.55 }}>{ap[s.key]}</div>
                             </div>
                           ) : null)}
                         </div>
                         <button onClick={() => setExpanded(e => ({ ...e, [p.id]: false }))} style={{
                           marginTop: '10px', width: '100%', padding: '6px', background: 'transparent',
-                          border: '1px solid #e2e8f0', borderRadius: '6px', color: '#94a3b8',
+                          border: '1px solid var(--color-border-card)', borderRadius: '6px', color: 'var(--color-text-secondary)',
                           cursor: 'pointer', fontSize: '12px',
                         }}>
                           <i className="fas fa-chevron-up" style={{ marginRight: '5px' }}></i>Recolher
@@ -2261,7 +2261,7 @@ function TagsScreen({ onSelectGroup }) {
     escalada_emocional:  { label: 'Escalada Emocional',  color: '#dc2626', bg: '#fef2f2', icon: 'fire-alt'          },
   };
 
-  const getMeta = (tag) => tagMeta[tag] || { label: tag, color: '#64748b', bg: '#f1f5f9', icon: 'tag' };
+  const getMeta = (tag) => tagMeta[tag] || { label: tag, color: 'var(--color-text-muted)', bg: 'var(--color-bg-page)', icon: 'tag' };
 
   const maxCount = data?.tags?.length ? Math.max(...data.tags.map(t => t.count)) : 1;
 
@@ -2278,8 +2278,8 @@ function TagsScreen({ onSelectGroup }) {
               <button key={d} onClick={() => setDays(d)} style={{
                 padding: '6px 12px', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)',
                 cursor: 'pointer', fontFamily: 'var(--font-sans)', border: 'none',
-                background: days === d ? 'var(--color-brand-600)' : '#e2e8f0',
-                color: days === d ? 'white' : '#475569',
+                background: days === d ? 'var(--color-brand-600)' : 'var(--color-border-default)',
+                color: days === d ? 'white' : 'var(--color-text-placeholder)',
                 fontWeight: days === d ? 600 : 400,
               }}>{d}d</button>
             ))}
@@ -2291,11 +2291,11 @@ function TagsScreen({ onSelectGroup }) {
         {/* Lista de tags com barras */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {loading
-            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="#0d9488" /></div>
+            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="var(--color-brand-600)" /></div>
             : !data || data.tags.length === 0
               ? (
                 <div style={{ textAlign: 'center', padding: '64px 32px' }}>
-                  <i className="fas fa-tags" style={{ fontSize: '48px', color: '#cbd5e1', display: 'block', marginBottom: '16px' }}></i>
+                  <i className="fas fa-tags" style={{ fontSize: '48px', color: 'var(--color-text-placeholder)', display: 'block', marginBottom: '16px' }}></i>
                   <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
                     Nenhuma tag detectada nos últimos {days} dias.
                   </p>
@@ -2339,14 +2339,14 @@ function TagsScreen({ onSelectGroup }) {
                               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-primary)', flex: 1 }}>{meta.label}</span>
                               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: meta.color, minWidth: '32px', textAlign: 'right' }}>{t.count}</span>
                             </div>
-                            <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' }}>
+                            <div style={{ height: '8px', background: 'var(--color-border-default)', borderRadius: '999px', overflow: 'hidden' }}>
                               <div style={{ height: '100%', width: pct + '%', background: meta.color, borderRadius: '999px', transition: 'width 0.5s ease' }}></div>
                             </div>
                             {/* Top grupos para esta tag */}
                             {t.groups?.length > 0 && (
                               <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
                                 {t.groups.slice(0, 4).map(g => (
-                                  <span key={g.conv_id} style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: '#f1f5f9', color: '#475569' }}>
+                                  <span key={g.conv_id} style={{ fontSize: '11px', padding: '1px 8px', borderRadius: '9999px', background: 'var(--color-bg-page)', color: 'var(--color-text-placeholder)' }}>
                                     {g.name} ({g.count})
                                   </span>
                                 ))}
@@ -2379,7 +2379,7 @@ function TagsScreen({ onSelectGroup }) {
                           </thead>
                           <tbody>
                             {data.daily_series.slice(-14).map((row, i) => (
-                              <tr key={row.date} style={{ borderBottom: '1px solid var(--color-border-card)', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
+                              <tr key={row.date} style={{ borderBottom: '1px solid var(--color-border-card)', background: i % 2 === 0 ? '#fafafa' : 'var(--color-bg-card)' }}>
                                 <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
                                   {new Date(row.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                                 </td>
@@ -2390,7 +2390,7 @@ function TagsScreen({ onSelectGroup }) {
                                     <td key={t.tag} style={{ padding: '8px 12px', textAlign: 'center' }}>
                                       {v > 0
                                         ? <span style={{ fontWeight: 700, color: m.color, background: m.bg, padding: '2px 8px', borderRadius: '9999px' }}>{v}</span>
-                                        : <span style={{ color: '#cbd5e1' }}>—</span>
+                                        : <span style={{ color: 'var(--color-text-placeholder)' }}>—</span>
                                       }
                                     </td>
                                   );
@@ -2409,7 +2409,7 @@ function TagsScreen({ onSelectGroup }) {
         {/* Painel lateral: mensagens da tag selecionada */}
         {activeTag && (
           <div style={{ width: '420px', flexShrink: 0, borderLeft: '1px solid var(--color-border-card)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadeIn 0.2s ease' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-card)', background: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-card)', background: 'var(--color-bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 {(() => { const m = getMeta(activeTag); return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2418,20 +2418,20 @@ function TagsScreen({ onSelectGroup }) {
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>{m.label}</div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>últimos {days} dias</div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>últimos {days} dias</div>
                     </div>
                   </div>
                 ); })()}
               </div>
               <button onClick={() => { setActiveTag(null); setTagMsgs(null); }}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: 'var(--radius-lg)', padding: '6px 10px', cursor: 'pointer', color: '#64748b', fontSize: '12px' }}>
+                style={{ background: 'var(--color-bg-page)', border: 'none', borderRadius: 'var(--radius-lg)', padding: '6px 10px', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: '12px' }}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {msgsLoading
-                ? <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={20} color="#0d9488" /></div>
+                ? <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={20} color="var(--color-brand-600)" /></div>
                 : !tagMsgs || tagMsgs.messages.length === 0
                   ? <div style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
                       Nenhuma mensagem encontrada.
@@ -2444,13 +2444,13 @@ function TagsScreen({ onSelectGroup }) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                             <span style={{ fontSize: '13px' }}>{msg.type_icon}</span>
                             <span style={{ fontWeight: 600, fontSize: '11px', color: 'var(--color-text-primary)' }}>{msg.sender}</span>
-                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>em</span>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>em</span>
                             <button
                               onClick={() => onSelectGroup && onSelectGroup({ conversation_id: msg.conv_id, conversation_name: msg.group_name, temperature_score: 0, open_alerts: 0, followups_pending: 0 })}
                               style={{ fontSize: '11px', color: 'var(--color-brand-600)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)' }}>
                               {msg.group_name}
                             </button>
-                            <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#94a3b8', whiteSpace: 'nowrap' }}>{timeStr}</span>
+                            <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{timeStr}</span>
                           </div>
                           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
                             {msg.content || ('[' + msg.message_type + ']')}
@@ -2506,7 +2506,7 @@ function UserProfileModal({ onClose, onSaved }) {
     width: '100%', padding: '9px 12px', boxSizing: 'border-box',
     border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)',
     fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none',
-    background: 'white', color: 'var(--color-text-primary)',
+    background: 'var(--color-bg-card)', color: 'var(--color-text-primary)',
   };
   const labelStyle = { display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '5px' };
 
@@ -2542,26 +2542,26 @@ function UserProfileModal({ onClose, onSaved }) {
     flex: 1, padding: '8px', textAlign: 'center', cursor: 'pointer', fontFamily: 'var(--font-sans)',
     fontSize: 'var(--text-sm)', fontWeight: tab === id ? 600 : 400, border: 'none',
     background: tab === id ? '#f0fdfa' : 'transparent',
-    color: tab === id ? '#0d9488' : 'var(--color-text-secondary)',
-    borderBottom: tab === id ? '2px solid #0d9488' : '2px solid transparent',
+    color: tab === id ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
+    borderBottom: tab === id ? '2px solid var(--color-brand-600)' : '2px solid transparent',
     transition: 'all 0.15s',
   });
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: '16px', width: '420px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--color-bg-card)', borderRadius: '16px', width: '420px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--color-border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '40px', height: '40px', background: '#f0fdfa', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="fas fa-user-circle" style={{ color: '#0d9488', fontSize: '18px' }}></i>
+              <i className="fas fa-user-circle" style={{ color: 'var(--color-brand-600)', fontSize: '18px' }}></i>
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}>Meu Perfil</div>
-              {profile && <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8' }}>@{profile.username}</div>}
+              {profile && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>@{profile.username}</div>}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: '18px' }}>
             <i className="fas fa-times"></i>
           </button>
         </div>
@@ -2578,7 +2578,7 @@ function UserProfileModal({ onClose, onSaved }) {
 
         <div style={{ padding: '24px' }}>
           {!profile ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Spinner size={24} color="#0d9488" /></div>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
           ) : tab === 'profile' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
@@ -2588,13 +2588,13 @@ function UserProfileModal({ onClose, onSaved }) {
               <div>
                 <label style={labelStyle}>E-mail de recuperação</label>
                 <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" />
-                <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', marginTop: '4px' }}>Usado para recuperação de acesso</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginTop: '4px' }}>Usado para recuperação de acesso</div>
               </div>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                <button onClick={onClose} style={{ padding: '9px 18px', background: '#f1f5f9', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: '#374151', fontFamily: 'var(--font-sans)' }}>
+                <button onClick={onClose} style={{ padding: '9px 18px', background: 'var(--color-bg-page)', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}>
                   Cancelar
                 </button>
-                <button onClick={handleSaveProfile} disabled={saving} style={{ padding: '9px 18px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button onClick={handleSaveProfile} disabled={saving} style={{ padding: '9px 18px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {saving ? <><Spinner size={12} /> Salvando...</> : <><i className="fas fa-check"></i> Salvar</>}
                 </button>
               </div>
@@ -2610,10 +2610,10 @@ function UserProfileModal({ onClose, onSaved }) {
                 <input style={inputStyle} type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha" autoComplete="new-password" />
               </div>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                <button onClick={onClose} style={{ padding: '9px 18px', background: '#f1f5f9', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: '#374151', fontFamily: 'var(--font-sans)' }}>
+                <button onClick={onClose} style={{ padding: '9px 18px', background: 'var(--color-bg-page)', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}>
                   Cancelar
                 </button>
-                <button onClick={handleSavePassword} disabled={saving} style={{ padding: '9px 18px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button onClick={handleSavePassword} disabled={saving} style={{ padding: '9px 18px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {saving ? <><Spinner size={12} /> Salvando...</> : <><i className="fas fa-key"></i> Alterar Senha</>}
                 </button>
               </div>
@@ -2679,7 +2679,7 @@ function UsersScreen({ onBack }) {
   };
 
   const statCards = [
-    { label: 'Total de usuários', value: users.length, icon: 'users', color: '#0d9488', bg: '#f0fdfa' },
+    { label: 'Total de usuários', value: users.length, icon: 'users', color: 'var(--color-brand-600)', bg: '#f0fdfa' },
     { label: 'Ativos',            value: totalActive,  icon: 'user-check', color: '#16a34a', bg: '#f0fdf4' },
     { label: 'Inativos',          value: totalInactive, icon: 'user-slash', color: '#dc2626', bg: '#fef2f2' },
   ];
@@ -2690,7 +2690,7 @@ function UsersScreen({ onBack }) {
         title="Gestão de Usuários"
         subtitle="Gerencie contas, acesso e status de cada usuário"
         actions={
-          <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+          <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
             <i className="fas fa-plus"></i> {!isMobile && 'Novo Usuário'}
           </button>
         }
@@ -2724,9 +2724,9 @@ function UsersScreen({ onBack }) {
           ].map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)} style={{
               padding: '6px 14px', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)',
-              cursor: 'pointer', fontFamily: 'var(--font-sans)', border: '1px solid ' + (filter === f.id ? '#0d9488' : 'var(--color-border-default)'),
-              background: filter === f.id ? '#f0fdfa' : 'white',
-              color: filter === f.id ? '#0d9488' : 'var(--color-text-secondary)',
+              cursor: 'pointer', fontFamily: 'var(--font-sans)', border: '1px solid ' + (filter === f.id ? 'var(--color-brand-600)' : 'var(--color-border-default)'),
+              background: filter === f.id ? '#f0fdfa' : 'var(--color-bg-card)',
+              color: filter === f.id ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
               fontWeight: filter === f.id ? 600 : 400,
             }}>{f.label}</button>
           ))}
@@ -2735,9 +2735,9 @@ function UsersScreen({ onBack }) {
         {/* Lista de usuários */}
         <DsCard style={{ padding: 0, overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}><Spinner size={28} color="#0d9488" /></div>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}><Spinner size={28} color="var(--color-brand-600)" /></div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px', color: '#94a3b8', fontSize: 'var(--text-sm)' }}>
+            <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
               <i className="fas fa-users" style={{ fontSize: '32px', display: 'block', marginBottom: '12px', opacity: 0.3 }}></i>
               Nenhum usuário encontrado.
             </div>
@@ -2745,9 +2745,9 @@ function UsersScreen({ onBack }) {
             <div>
               {/* Header da tabela (desktop) */}
               {!isMobile && (
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '12px', padding: '10px 20px', borderBottom: '1px solid var(--color-border-default)', background: '#f8fafc' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '12px', padding: '10px 20px', borderBottom: '1px solid var(--color-border-default)', background: 'var(--color-bg-page)' }}>
                   {['Usuário', 'Status', 'Conversas', 'Último acesso', ''].map(h => (
-                    <div key={h} style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
+                    <div key={h} style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
                   ))}
                 </div>
               )}
@@ -2764,7 +2764,7 @@ function UsersScreen({ onBack }) {
                   {/* Usuário */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '9999px', background: u.is_active ? '#ccfbf1' : '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
-                      <i className="fas fa-user" style={{ color: u.is_active ? '#0d9488' : '#ef4444', fontSize: '14px' }}></i>
+                      <i className="fas fa-user" style={{ color: u.is_active ? 'var(--color-brand-600)' : '#ef4444', fontSize: '14px' }}></i>
                       {u.is_admin && (
                         <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '13px', height: '13px', background: '#f59e0b', borderRadius: '9999px', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <i className="fas fa-star" style={{ fontSize: '6px', color: 'white' }}></i>
@@ -2776,7 +2776,7 @@ function UsersScreen({ onBack }) {
                         <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>{u.full_name || u.username}</span>
                         {u.is_admin && <span style={{ background: '#ede9fe', color: '#7c3aed', fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '9999px' }}>Admin</span>}
                       </div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8' }}>@{u.username}{u.email ? ` · ${u.email}` : ''}</div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>@{u.username}{u.email ? ` · ${u.email}` : ''}</div>
                     </div>
                   </div>
 
@@ -2795,16 +2795,16 @@ function UsersScreen({ onBack }) {
 
                   {/* Conversas */}
                   {!isMobile && (
-                    <div style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--text-sm)', color: '#374151' }}>
-                      <i className="fas fa-comments" style={{ color: '#94a3b8', marginRight: '6px', fontSize: '12px' }}></i>
+                    <div style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>
+                      <i className="fas fa-comments" style={{ color: 'var(--color-text-secondary)', marginRight: '6px', fontSize: '12px' }}></i>
                       {u.conversations_count ?? '—'}
-                      {u.messages_count > 0 && <span style={{ color: '#94a3b8', fontSize: 'var(--text-xs)', marginLeft: '4px' }}>({u.messages_count} msgs)</span>}
+                      {u.messages_count > 0 && <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-xs)', marginLeft: '4px' }}>({u.messages_count} msgs)</span>}
                     </div>
                   )}
 
                   {/* Último acesso */}
                   {!isMobile && (
-                    <div style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <i className="fas fa-clock" style={{ fontSize: '11px' }}></i>
                       {formatDate(u.last_login_at)}
                     </div>
@@ -2812,7 +2812,7 @@ function UsersScreen({ onBack }) {
 
                   {/* Ações */}
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: isMobile ? 'flex-end' : undefined }}>
-                    <button onClick={() => setModal(u)} title="Editar" style={{ padding: '6px 10px', background: 'white', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', cursor: 'pointer', color: '#374151', fontSize: '13px' }}>
+                    <button onClick={() => setModal(u)} title="Editar" style={{ padding: '6px 10px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', cursor: 'pointer', color: 'var(--color-text-primary)', fontSize: '13px' }}>
                       <i className="fas fa-pen"></i>
                     </button>
                     <button
@@ -2922,24 +2922,24 @@ function EmailAccountsSection() {
     width: '100%', padding: '10px 14px', boxSizing: 'border-box',
     border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)',
     fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none',
-    background: 'white', color: 'var(--color-text-primary)',
+    background: 'var(--color-bg-card)', color: 'var(--color-text-primary)',
   };
   const labelStyle = { display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '6px' };
 
   return (
     <DsCard>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <SectionTitle icon="envelope" label="Contas de E-mail Monitoradas" color="#0d9488" />
+        <SectionTitle icon="envelope" label="Contas de E-mail Monitoradas" color="var(--color-brand-600)" />
         <button
           onClick={() => setShowForm(v => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: showForm ? '#f1f5f9' : '#0d9488', color: showForm ? '#374151' : 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontWeight: 500, fontFamily: 'var(--font-sans)' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: showForm ? 'var(--color-bg-page)' : 'var(--color-brand-600)', color: showForm ? 'var(--color-text-primary)' : 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontWeight: 500, fontFamily: 'var(--font-sans)' }}
         >
           <i className={`fas fa-${showForm ? 'times' : 'plus'}`}></i> {showForm ? 'Cancelar' : 'Adicionar conta'}
         </button>
       </div>
 
       {showForm && (
-        <div style={{ background: '#f8fafc', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
               <label style={labelStyle}>Nome / Rótulo *</label>
@@ -2962,7 +2962,7 @@ function EmailAccountsSection() {
               <input style={inputStyle} type="number" value={form.port} onChange={e => setForm(f => ({...f, port: e.target.value}))} placeholder="993" />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '26px' }}>
-              <input type="checkbox" id="use_ssl" checked={form.use_ssl} onChange={e => setForm(f => ({...f, use_ssl: e.target.checked}))} style={{ width: '16px', height: '16px', accentColor: '#0d9488', cursor: 'pointer' }} />
+              <input type="checkbox" id="use_ssl" checked={form.use_ssl} onChange={e => setForm(f => ({...f, use_ssl: e.target.checked}))} style={{ width: '16px', height: '16px', accentColor: 'var(--color-brand-600)', cursor: 'pointer' }} />
               <label htmlFor="use_ssl" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>Usar SSL/TLS</label>
             </div>
           </div>
@@ -2971,7 +2971,7 @@ function EmailAccountsSection() {
             Para Gmail, use uma <strong>App Password</strong> (Configurações → Segurança → Senhas de app). Porta padrão IMAP SSL: 993.
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button onClick={handleSave} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 20px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'var(--font-sans)' }}>
+            <button onClick={handleSave} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 20px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'var(--font-sans)' }}>
               {saving ? <><Spinner size={12} />&nbsp; Salvando...</> : <><i className="fas fa-check"></i>&nbsp; Salvar conta</>}
             </button>
           </div>
@@ -2989,9 +2989,9 @@ function EmailAccountsSection() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {accounts.map(acc => (
-            <div key={acc.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: '#f8fafc', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)' }}>
+            <div key={acc.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ccfbf1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <i className="fas fa-envelope" style={{ color: '#0d9488', fontSize: '16px' }}></i>
+                <i className="fas fa-envelope" style={{ color: 'var(--color-brand-600)', fontSize: '16px' }}></i>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: 'var(--text-sm)' }}>{acc.label}</div>
@@ -3002,7 +3002,7 @@ function EmailAccountsSection() {
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   onClick={() => handleTest(acc.id)} disabled={testing === acc.id}
-                  style={{ padding: '6px 12px', background: '#f0fdfa', color: '#0d9488', border: '1px solid #99f6e4', borderRadius: '8px', fontSize: '12px', cursor: testing === acc.id ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}
+                  style={{ padding: '6px 12px', background: '#f0fdfa', color: 'var(--color-brand-600)', border: '1px solid #99f6e4', borderRadius: '8px', fontSize: '12px', cursor: testing === acc.id ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500 }}
                   title="Testar conexão IMAP"
                 >
                   {testing === acc.id ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-plug"></i> Testar</>}
@@ -3043,13 +3043,13 @@ function EmailScreen({ onNavigateConfig }) {
   }, []);
 
   const initials = (label) => label.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  const colors   = ['#0d9488', '#0891b2', '#7c3aed', '#be185d', '#d97706', '#15803d'];
+  const colors   = ['var(--color-brand-600)', '#0891b2', '#7c3aed', '#be185d', '#d97706', '#15803d'];
   const colorFor = (i) => colors[i % colors.length];
 
   const EmptyAccounts = () => (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center' }}>
       <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-        <i className="fas fa-envelope" style={{ fontSize: '28px', color: '#0d9488' }}></i>
+        <i className="fas fa-envelope" style={{ fontSize: '28px', color: 'var(--color-brand-600)' }}></i>
       </div>
       <div style={{ fontWeight: 700, fontSize: 'var(--text-xl)', color: 'var(--color-text-primary)', marginBottom: '8px' }}>Nenhuma conta configurada</div>
       <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', maxWidth: '320px', lineHeight: 1.6 }}>
@@ -3057,7 +3057,7 @@ function EmailScreen({ onNavigateConfig }) {
       </div>
       <button
         onClick={() => onNavigateConfig && onNavigateConfig()}
-        style={{ marginTop: '24px', padding: '10px 22px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '8px' }}
+        style={{ marginTop: '24px', padding: '10px 22px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '8px' }}
       >
         <i className="fas fa-cog"></i> Ir para Configurações
       </button>
@@ -3065,8 +3065,8 @@ function EmailScreen({ onNavigateConfig }) {
   );
 
   const AccountList = () => (
-    <div style={{ width: isMobile ? '100%' : '320px', borderRight: isMobile ? 'none' : '1px solid var(--color-border-default)', display: 'flex', flexDirection: 'column', flexShrink: 0, background: 'white', height: '100%' }}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-default)', background: '#f0f2f5' }}>
+    <div style={{ width: isMobile ? '100%' : '320px', borderRight: isMobile ? 'none' : '1px solid var(--color-border-default)', display: 'flex', flexDirection: 'column', flexShrink: 0, background: 'var(--color-bg-card)', height: '100%' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-default)', background: 'var(--color-bg-page)' }}>
         <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Contas monitoradas</div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -3077,7 +3077,7 @@ function EmailScreen({ onNavigateConfig }) {
             style={{
               display: 'flex', alignItems: 'center', gap: '14px',
               padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid var(--color-border-default)',
-              background: selected?.id === acc.id ? '#f0fdfa' : 'white',
+              background: selected?.id === acc.id ? '#f0fdfa' : 'var(--color-bg-card)',
               borderLeft: selected?.id === acc.id ? `3px solid ${colorFor(i)}` : '3px solid transparent',
               transition: 'background 0.12s',
             }}
@@ -3104,16 +3104,16 @@ function EmailScreen({ onNavigateConfig }) {
   );
 
   const InboxPanel = () => (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f0f2f5', height: '100%' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--color-bg-page)', height: '100%' }}>
       {!selected ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-          <i className="fas fa-envelope-open" style={{ fontSize: '48px', color: '#aebac3', marginBottom: '16px' }}></i>
-          <div style={{ fontSize: 'var(--text-sm)', color: '#54656f' }}>Selecione uma conta para ver os e-mails</div>
+          <i className="fas fa-envelope-open" style={{ fontSize: '48px', color: 'var(--color-text-on-sidebar-muted)', marginBottom: '16px' }}></i>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Selecione uma conta para ver os e-mails</div>
         </div>
       ) : (
         <>
-          <div style={{ padding: '16px 24px', background: 'white', borderBottom: '1px solid var(--color-border-default)', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#0d9488', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>
+          <div style={{ padding: '16px 24px', background: 'var(--color-bg-card)', borderBottom: '1px solid var(--color-border-default)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--color-brand-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>
               {initials(selected.label)}
             </div>
             <div>
@@ -3123,9 +3123,9 @@ function EmailScreen({ onNavigateConfig }) {
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center' }}>
-            <div style={{ background: 'white', borderRadius: '16px', padding: '32px 40px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', maxWidth: '440px' }}>
+            <div style={{ background: 'var(--color-bg-card)', borderRadius: '16px', padding: '32px 40px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', maxWidth: '440px' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <i className="fas fa-cogs" style={{ fontSize: '22px', color: '#0d9488' }}></i>
+                <i className="fas fa-cogs" style={{ fontSize: '22px', color: 'var(--color-brand-600)' }}></i>
               </div>
               <div style={{ fontWeight: 700, fontSize: 'var(--text-lg)', color: 'var(--color-text-primary)', marginBottom: '8px' }}>
                 Leitura de e-mails em breve
@@ -3152,16 +3152,16 @@ function EmailScreen({ onNavigateConfig }) {
         actions={
           <button
             onClick={() => onNavigateConfig && onNavigateConfig()}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#f8fafc', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-sans)' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-sans)' }}
           >
-            <i className="fas fa-plus" style={{ color: '#0d9488' }}></i> Adicionar conta
+            <i className="fas fa-plus" style={{ color: 'var(--color-brand-600)' }}></i> Adicionar conta
           </button>
         }
       />
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
         {loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: '#0d9488' }}></i>
+            <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--color-brand-600)' }}></i>
           </div>
         ) : accounts.length === 0 ? (
           <EmptyAccounts />
@@ -3331,8 +3331,8 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
         onMouseEnter={canNavigate ? () => setHoveredId(g.wpp_id) : undefined}
         onMouseLeave={canNavigate ? () => setHoveredId(null) : undefined}
         style={{
-          background: isHovered ? '#243447' : '#1e293b',
-          border: `1px solid ${g.is_monitored ? '#0d9488' : '#334155'}`,
+          background: isHovered ? 'var(--color-bg-hover-sidebar)' : 'var(--color-bg-card)',
+          border: `1px solid ${g.is_monitored ? 'var(--color-brand-600)' : 'var(--color-border-default)'}`,
           borderRadius: '12px', padding: '14px 16px',
           display: 'flex', alignItems: 'flex-start', gap: '14px',
           transition: 'border-color 0.2s, background 0.12s',
@@ -3342,7 +3342,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
         {/* Avatar */}
         <div style={{
           width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
-          background: g.is_monitored ? 'linear-gradient(135deg,#0d9488,#075e54)' : '#374151',
+          background: g.is_monitored ? 'linear-gradient(135deg,var(--color-brand-600),#075e54)' : 'var(--color-border-default)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '15px', fontWeight: 700, color: 'white',
         }}>
@@ -3359,23 +3359,23 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
                 onChange={e => setEditName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') saveCustomName(g); if (e.key === 'Escape') setEditingId(null); }}
                 style={{
-                  flex: 1, background: '#0f172a', border: '1px solid #0d9488', borderRadius: '6px',
-                  color: '#f1f5f9', padding: '4px 8px', fontSize: '14px',
+                  flex: 1, background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-600)', borderRadius: '6px',
+                  color: 'var(--color-text-primary)', padding: '4px 8px', fontSize: '14px',
                 }}
               />
-              <button onClick={() => saveCustomName(g)} style={{ background: '#0d9488', border: 'none', borderRadius: '6px', color: 'white', padding: '4px 10px', cursor: 'pointer', fontSize: '13px' }}>OK</button>
-              <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}>✕</button>
+              <button onClick={() => saveCustomName(g)} style={{ background: 'var(--color-brand-600)', border: 'none', borderRadius: '6px', color: 'white', padding: '4px 10px', cursor: 'pointer', fontSize: '13px' }}>OK</button>
+              <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '13px' }}>✕</button>
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {wppName}
               </span>
               {g.is_monitored && (
                 <button
                   onClick={e => { e.stopPropagation(); setEditingId(g.wpp_id); setEditName(g.custom_name || g.name || ''); }}
                   title="Editar apelido"
-                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px', fontSize: '11px', flexShrink: 0 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '2px', fontSize: '11px', flexShrink: 0 }}
                 >
                   <i className="fas fa-pen" />
                 </button>
@@ -3383,16 +3383,16 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
             </div>
           )}
           {g.custom_name && !isEditing && (
-            <div style={{ fontSize: '11px', color: '#0d9488', marginTop: '1px', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-brand-600)', marginTop: '1px', fontStyle: 'italic' }}>
               Apelido: {g.custom_name}
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
               <i className="fas fa-users" style={{ marginRight: '4px' }}></i>{g.participant_count} participantes
             </span>
             {g.is_monitored && (
-              <span style={{ fontSize: '11px', background: 'rgba(13,148,136,0.15)', color: '#0d9488', padding: '1px 8px', borderRadius: '999px', fontWeight: 600 }}>
+              <span style={{ fontSize: '11px', background: 'rgba(13,148,136,0.15)', color: 'var(--color-brand-600)', padding: '1px 8px', borderRadius: '999px', fontWeight: 600 }}>
                 Monitorado
               </span>
             )}
@@ -3414,7 +3414,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
                 </span>
               )}
               {canNavigate && (
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: isHovered ? '#0d9488' : '#475569', transition: 'color 0.15s' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: isHovered ? 'var(--color-brand-600)' : 'var(--color-text-placeholder)', transition: 'color 0.15s' }}>
                   Ver detalhes <i className="fas fa-chevron-right" style={{ fontSize: '9px' }} />
                 </span>
               )}
@@ -3424,13 +3424,13 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
             <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
               {showParticipants.map((name, i) => (
                 <span key={i} style={{
-                  fontSize: '11px', background: '#0f172a', color: '#94a3b8',
-                  padding: '2px 8px', borderRadius: '999px', border: '1px solid #334155',
+                  fontSize: '11px', background: 'var(--color-bg-card)', color: 'var(--color-text-secondary)',
+                  padding: '2px 8px', borderRadius: '999px', border: '1px solid var(--color-border-default)',
                   maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{name}</span>
               ))}
               {extraCount > 0 && (
-                <span style={{ fontSize: '11px', color: '#64748b', padding: '2px 4px' }}>+{extraCount}</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', padding: '2px 4px' }}>+{extraCount}</span>
               )}
             </div>
           )}
@@ -3441,7 +3441,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
           onClick={e => { e.stopPropagation(); handleToggle(g); }}
           disabled={isToggling}
           style={{
-            background: g.is_monitored ? '#0d9488' : '#374151',
+            background: g.is_monitored ? 'var(--color-brand-600)' : 'var(--color-border-default)',
             border: 'none', borderRadius: '8px', cursor: isToggling ? 'wait' : 'pointer',
             color: 'white', padding: '8px 14px', fontSize: '12px', fontWeight: 600,
             flexShrink: 0, opacity: isToggling ? 0.6 : 1, transition: 'background 0.2s',
@@ -3462,7 +3462,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
           ? `${monitoredCount} monitorado(s) de ${groups.length} disponíveis · Grupos ilimitados`
           : `${monitoredCount} / ${maxGroups} grupos do plano · ${groups.length} disponíveis`}
         actions={
-          <button onClick={load} style={{ background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px' }}>
+          <button onClick={load} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-secondary)', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px' }}>
             <i className="fas fa-sync-alt" style={{ marginRight: '6px' }}></i>Atualizar
           </button>
         }
@@ -3474,15 +3474,15 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Buscar grupo..."
           style={{
-            flex: 1, minWidth: '200px', background: '#1e293b', border: '1px solid #334155',
-            borderRadius: '8px', color: '#f1f5f9', padding: '9px 14px', fontSize: '14px',
+            flex: 1, minWidth: '200px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)',
+            borderRadius: '8px', color: 'var(--color-text-primary)', padding: '9px 14px', fontSize: '14px',
           }}
         />
         {['all', 'monitored', 'unmonitored'].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
-            background: filter === f ? '#0d9488' : '#1e293b',
-            border: `1px solid ${filter === f ? '#0d9488' : '#334155'}`,
-            borderRadius: '8px', color: filter === f ? 'white' : '#94a3b8',
+            background: filter === f ? 'var(--color-brand-600)' : 'var(--color-bg-card)',
+            border: `1px solid ${filter === f ? 'var(--color-brand-600)' : 'var(--color-border-default)'}`,
+            borderRadius: '8px', color: filter === f ? 'white' : 'var(--color-text-secondary)',
             padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: 500,
           }}>
             {f === 'all' ? 'Todos' : f === 'monitored' ? 'Monitorados' : 'Não monitorados'}
@@ -3494,11 +3494,11 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '80px', gap: '12px' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: '#0d9488' }}></i>
-            <span style={{ color: '#94a3b8' }}>Carregando grupos...</span>
+            <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: 'var(--color-brand-600)' }}></i>
+            <span style={{ color: 'var(--color-text-secondary)' }}>Carregando grupos...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--color-text-muted)' }}>
             <i className="fas fa-users-slash" style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}></i>
             Nenhum grupo encontrado.
           </div>
@@ -3513,7 +3513,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
       {pendingToggle && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
           onClick={() => setPendingToggle(null)}>
-          <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '28px', width: 'min(460px, 100%)', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+          <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '16px', padding: '28px', width: 'min(460px, 100%)', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
             onClick={e => e.stopPropagation()}>
 
             {/* Header */}
@@ -3522,9 +3522,9 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
                 <i className="fas fa-clock" style={{ color: '#14b8a6', fontSize: '18px' }}></i>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '16px', color: '#f1f5f9', marginBottom: '4px' }}>Recuperar histórico</div>
-                <div style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.4 }}>
-                  Quanto tempo de histórico deseja importar para <strong style={{ color: '#94a3b8' }}>{pendingToggle.name || pendingToggle.wpp_id}</strong>?
+                <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--color-text-primary)', marginBottom: '4px' }}>Recuperar histórico</div>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                  Quanto tempo de histórico deseja importar para <strong style={{ color: 'var(--color-text-secondary)' }}>{pendingToggle.name || pendingToggle.wpp_id}</strong>?
                 </div>
               </div>
             </div>
@@ -3545,17 +3545,17 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
                   onClick={() => !locked && confirmToggle(pendingToggle, opt.days)}
                   style={{
                     background: locked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
-                    border: '1px solid ' + (locked ? '#1e293b' : '#334155'),
+                    border: '1px solid ' + (locked ? 'var(--color-border-card)' : 'var(--color-border-default)'),
                     borderRadius: '10px', padding: '12px 16px', cursor: locked ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     transition: 'background 0.15s, border-color 0.15s',
                     opacity: locked ? 0.5 : 1,
                   }}
                   onMouseEnter={e => { if (!locked) { e.currentTarget.style.background = 'rgba(20,184,166,0.1)'; e.currentTarget.style.borderColor = '#14b8a6'; } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = locked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = locked ? '#1e293b' : '#334155'; }}>
+                  onMouseLeave={e => { e.currentTarget.style.background = locked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = locked ? 'var(--color-border-card)' : 'var(--color-border-default)'; }}>
                   <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: locked ? '#475569' : '#f1f5f9' }}>{opt.label}</div>
-                    <div style={{ fontSize: '12px', color: locked ? '#334155' : '#64748b', marginTop: '2px' }}>{opt.sub}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: locked ? 'var(--color-text-placeholder)' : 'var(--color-text-primary)' }}>{opt.label}</div>
+                    <div style={{ fontSize: '12px', color: locked ? 'var(--color-text-primary)' : 'var(--color-text-muted)', marginTop: '2px' }}>{opt.sub}</div>
                   </div>
                   {locked ? (
                     <div style={{ position: 'relative', display: 'inline-block' }}
@@ -3566,18 +3566,18 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
                       </span>
                       <div className="hist-tip" style={{
                         position: 'absolute', bottom: 'calc(100% + 6px)', right: 0,
-                        background: '#0f172a', border: '1px solid #334155', borderRadius: '8px',
-                        padding: '6px 10px', fontSize: '11px', color: '#94a3b8',
+                        background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '8px',
+                        padding: '6px 10px', fontSize: '11px', color: 'var(--color-text-secondary)',
                         whiteSpace: 'nowrap', pointerEvents: 'none',
                         opacity: 0, transition: 'opacity 0.15s', zIndex: 10,
                         boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                       }}>
                         Faça upgrade do seu plano para desbloquear
-                        <div style={{ position: 'absolute', bottom: '-5px', right: '14px', width: '8px', height: '8px', background: '#0f172a', border: '1px solid #334155', borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg)' }}></div>
+                        <div style={{ position: 'absolute', bottom: '-5px', right: '14px', width: '8px', height: '8px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderTop: 'none', borderLeft: 'none', transform: 'rotate(45deg)' }}></div>
                       </div>
                     </div>
                   ) : (
-                    <i className="fas fa-chevron-right" style={{ color: '#475569', fontSize: '12px' }}></i>
+                    <i className="fas fa-chevron-right" style={{ color: 'var(--color-text-placeholder)', fontSize: '12px' }}></i>
                   )}
                 </button>
                 );
@@ -3585,7 +3585,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
             </div>
 
             <button onClick={() => setPendingToggle(null)}
-              style={{ width: '100%', background: 'transparent', border: '1px solid #334155', borderRadius: '10px', padding: '10px', color: '#64748b', cursor: 'pointer', fontSize: '13px' }}>
+              style={{ width: '100%', background: 'transparent', border: '1px solid var(--color-border-default)', borderRadius: '10px', padding: '10px', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '13px' }}>
               Cancelar
             </button>
           </div>
@@ -3711,11 +3711,11 @@ function RangeSummaryScreen() {
 
   function StatBox({ label, value, color, icon }) {
     return (
-      <div style={{ background: '#1e293b', borderRadius: '10px', padding: '14px 16px', border: '1px solid #334155' }}>
-        <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '6px' }}>
+      <div style={{ background: 'var(--color-bg-card)', borderRadius: '10px', padding: '14px 16px', border: '1px solid var(--color-border-default)' }}>
+        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: '6px' }}>
           <i className={`fas fa-${icon}`} style={{ marginRight: '5px' }}></i>{label}
         </div>
-        <div style={{ fontSize: '24px', fontWeight: 700, color: color || '#f1f5f9' }}>{value}</div>
+        <div style={{ fontSize: '24px', fontWeight: 700, color: color || 'var(--color-text-primary)' }}>{value}</div>
       </div>
     );
   }
@@ -3728,7 +3728,7 @@ function RangeSummaryScreen() {
 
         {/* ── Formulário ── */}
         <div style={{
-          background: '#1e293b', border: '1px solid #334155', borderRadius: '14px',
+          background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '14px',
           padding: '20px', marginBottom: '24px',
           display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '16px',
           alignItems: 'end',
@@ -3736,26 +3736,26 @@ function RangeSummaryScreen() {
 
           {/* Seleção de grupo */}
           <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
               <i className="fas fa-users" style={{ marginRight: '6px' }}></i>Grupo / Conversa
             </label>
             <div style={{ position: 'relative' }}>
               <div
                 onClick={() => setShowConvList(v => !v)}
                 style={{
-                  background: '#0f172a', border: `1px solid ${showConvList ? '#0d9488' : '#475569'}`,
+                  background: 'var(--color-bg-card)', border: `1px solid ${showConvList ? 'var(--color-brand-600)' : 'var(--color-border-input)'}`,
                   borderRadius: '8px', padding: '10px 14px', cursor: 'pointer',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  color: selectedConv ? '#f1f5f9' : '#64748b', fontSize: '14px',
+                  color: selectedConv ? 'var(--color-text-primary)' : 'var(--color-text-muted)', fontSize: '14px',
                 }}
               >
                 <span>{selectedConv ? selectedConv.name : 'Selecionar grupo...'}</span>
-                <i className={`fas fa-chevron-${showConvList ? 'up' : 'down'}`} style={{ fontSize: '11px', color: '#64748b' }} />
+                <i className={`fas fa-chevron-${showConvList ? 'up' : 'down'}`} style={{ fontSize: '11px', color: 'var(--color-text-muted)' }} />
               </div>
               {showConvList && (
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-                  background: '#1e293b', border: '1px solid #334155', borderRadius: '8px',
+                  background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '8px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: '4px',
                 }}>
                   <div style={{ padding: '8px' }}>
@@ -3765,26 +3765,26 @@ function RangeSummaryScreen() {
                       onChange={e => setConvSearch(e.target.value)}
                       placeholder="Buscar..."
                       style={{
-                        width: '100%', background: '#0f172a', border: '1px solid #334155',
-                        borderRadius: '6px', color: '#f1f5f9', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box',
+                        width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)',
+                        borderRadius: '6px', color: 'var(--color-text-primary)', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box',
                       }}
                     />
                   </div>
                   <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
                     {loadingConvs ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Carregando...</div>
+                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px' }}>Carregando...</div>
                     ) : filteredConvs.length === 0 ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
+                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
                     ) : filteredConvs.map(c => (
                       <div
                         key={c.id}
                         onClick={() => { setSelectedConv(c); setShowConvList(false); setConvSearch(''); }}
                         style={{
                           padding: '10px 14px', cursor: 'pointer', fontSize: '14px',
-                          color: selectedConv?.id === c.id ? '#0d9488' : '#d1d5db',
+                          color: selectedConv?.id === c.id ? 'var(--color-brand-600)' : 'var(--color-text-primary)',
                           background: selectedConv?.id === c.id ? 'rgba(13,148,136,0.1)' : 'transparent',
                         }}
-                        onMouseEnter={e => { if (selectedConv?.id !== c.id) e.currentTarget.style.background = '#334155'; }}
+                        onMouseEnter={e => { if (selectedConv?.id !== c.id) e.currentTarget.style.background = 'var(--color-border-default)'; }}
                         onMouseLeave={e => { if (selectedConv?.id !== c.id) e.currentTarget.style.background = 'transparent'; }}
                       >
                         {c.name}
@@ -3798,31 +3798,31 @@ function RangeSummaryScreen() {
 
           {/* Data início */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
               <i className="fas fa-calendar-alt" style={{ marginRight: '6px' }}></i>Data Inicial
             </label>
             <input
               type="date" value={startDate} max={endDate}
               onChange={e => setStartDate(e.target.value)}
-              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
             />
           </div>
 
           {/* Data fim */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
               <i className="fas fa-calendar-check" style={{ marginRight: '6px' }}></i>Data Final
             </label>
             <input
               type="date" value={endDate} min={startDate} max={today}
               onChange={e => setEndDate(e.target.value)}
-              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
             />
           </div>
 
           {/* Tipo de resumo */}
           <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '8px', fontWeight: 500 }}>
               <i className="fas fa-file-alt" style={{ marginRight: '6px' }}></i>Tipo de Resumo
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -3834,17 +3834,17 @@ function RangeSummaryScreen() {
                   key={key}
                   onClick={() => { setSummaryType(key); setResult(null); setEditingText(null); }}
                   style={{
-                    flex: 1, background: summaryType === key ? 'rgba(13,148,136,0.15)' : '#0f172a',
-                    border: `2px solid ${summaryType === key ? '#0d9488' : '#334155'}`,
+                    flex: 1, background: summaryType === key ? 'rgba(13,148,136,0.15)' : 'var(--color-bg-card)',
+                    border: `2px solid ${summaryType === key ? 'var(--color-brand-600)' : 'var(--color-border-default)'}`,
                     borderRadius: '10px', padding: '10px 14px', cursor: 'pointer',
                     textAlign: 'left', transition: 'all .15s',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
-                    <i className={`fas fa-${icon}`} style={{ color: summaryType === key ? '#0d9488' : '#64748b', fontSize: '13px' }} />
-                    <span style={{ fontWeight: 600, fontSize: '13px', color: summaryType === key ? '#0d9488' : '#d1d5db' }}>{label}</span>
+                    <i className={`fas fa-${icon}`} style={{ color: summaryType === key ? 'var(--color-brand-600)' : 'var(--color-text-muted)', fontSize: '13px' }} />
+                    <span style={{ fontWeight: 600, fontSize: '13px', color: summaryType === key ? 'var(--color-brand-600)' : 'var(--color-text-primary)' }}>{label}</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{desc}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{desc}</div>
                 </button>
               ))}
             </div>
@@ -3852,24 +3852,24 @@ function RangeSummaryScreen() {
 
           {/* Atalhos + botão */}
           <div style={{ gridColumn: isMobile ? '1' : '1 / -1', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>Atalhos:</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Atalhos:</span>
             {[['hoje', 'Hoje', setTodayRange], ['ontem', 'Ontem', setYesterdayRange]].map(([k, label, fn]) => (
               <button key={k} onClick={fn} style={{
-                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
-                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+                background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '6px',
+                color: 'var(--color-text-secondary)', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
               }}>{label}</button>
             ))}
             {[[7,'7 dias'],[14,'14 dias'],[30,'30 dias'],[90,'3 meses']].map(([d, label]) => (
               <button key={d} onClick={() => setQuickRange(d)} style={{
-                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
-                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+                background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '6px',
+                color: 'var(--color-text-secondary)', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
               }}>{label}</button>
             ))}
             <button
               onClick={handleGenerate}
               disabled={loading || !selectedConv}
               style={{
-                marginLeft: 'auto', background: loading || !selectedConv ? '#334155' : '#0d9488',
+                marginLeft: 'auto', background: loading || !selectedConv ? 'var(--color-border-default)' : 'var(--color-brand-600)',
                 border: 'none', borderRadius: '8px', color: 'white',
                 padding: '10px 24px', cursor: loading || !selectedConv ? 'not-allowed' : 'pointer',
                 fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
@@ -3892,8 +3892,8 @@ function RangeSummaryScreen() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
               <div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9' }}>{result.conversation.name}</div>
-                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{result.conversation.name}</div>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                   {result.period.start} → {result.period.end}
                   {!result.conversation.wpp_group_id && (
                     <span style={{ marginLeft: '10px', color: '#f59e0b', fontSize: '12px' }}>
@@ -3910,7 +3910,7 @@ function RangeSummaryScreen() {
                 title={!result.conversation.wpp_group_id ? 'Configure o wpp_group_id na tela de Grupos WhatsApp' : 'Enviar este resumo para o grupo WhatsApp'}
                 style={{
                   marginLeft: 'auto',
-                  background: sending || !result.conversation.wpp_group_id ? '#334155' : '#25d366',
+                  background: sending || !result.conversation.wpp_group_id ? 'var(--color-border-default)' : '#25d366',
                   border: 'none', borderRadius: '10px', color: 'white',
                   padding: '10px 22px', cursor: sending || !result.conversation.wpp_group_id ? 'not-allowed' : 'pointer',
                   fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
@@ -3925,15 +3925,15 @@ function RangeSummaryScreen() {
             </div>
 
             {/* Card de texto editável */}
-            <div style={{ background: '#1e293b', borderRadius: '14px', border: '1px solid #334155', overflow: 'hidden', marginBottom: '16px' }}>
+            <div style={{ background: 'var(--color-bg-card)', borderRadius: '14px', border: '1px solid var(--color-border-default)', overflow: 'hidden', marginBottom: '16px' }}>
               <div style={{
-                padding: '14px 18px', borderBottom: '1px solid #334155',
+                padding: '14px 18px', borderBottom: '1px solid var(--color-border-default)',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-                  <i className="fas fa-comments" style={{ marginRight: '6px', color: '#0d9488' }}></i>Resumo Geral
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                  <i className="fas fa-comments" style={{ marginRight: '6px', color: 'var(--color-brand-600)' }}></i>Resumo Geral
                 </div>
-                <div style={{ fontSize: '11px', color: '#475569' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)' }}>
                   <i className="fas fa-edit" style={{ marginRight: '4px' }} />Editável antes de enviar
                 </div>
               </div>
@@ -3944,13 +3944,13 @@ function RangeSummaryScreen() {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   background: 'transparent', border: 'none', outline: 'none',
-                  color: '#d1d5db', fontSize: '14px', lineHeight: 1.75,
+                  color: 'var(--color-text-primary)', fontSize: '14px', lineHeight: 1.75,
                   padding: '18px', resize: 'vertical', fontFamily: 'inherit',
                 }}
               />
             </div>
 
-            <div style={{ fontSize: '12px', color: '#475569', textAlign: 'right' }}>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-placeholder)', textAlign: 'right' }}>
               {result.conversation.wpp_group_id
                 ? <><i className="fas fa-check-circle" style={{ color: '#10b981', marginRight: '4px' }} />Grupo vinculado — pronto para envio</>
                 : <><i className="fas fa-info-circle" style={{ marginRight: '4px' }} />Para enviar, vincule este grupo na tela de Grupos WhatsApp</>
@@ -3965,21 +3965,21 @@ function RangeSummaryScreen() {
             {/* Header do resultado */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
               <div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9' }}>{result.conversation.name}</div>
-                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{result.conversation.name}</div>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                   {result.period.start} → {result.period.end}
                 </div>
               </div>
               <div style={{
                 marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px',
-                background: '#1e293b', border: `2px solid ${TEMP_COLORS[result.temperature_label] || '#94a3b8'}`,
+                background: 'var(--color-bg-card)', border: `2px solid ${TEMP_COLORS[result.temperature_label] || 'var(--color-text-secondary)'}`,
                 borderRadius: '12px', padding: '10px 18px',
               }}>
-                <div style={{ fontSize: '28px', fontWeight: 800, color: TEMP_COLORS[result.temperature_label] || '#94a3b8' }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: TEMP_COLORS[result.temperature_label] || 'var(--color-text-secondary)' }}>
                   {result.temperature_score}
                 </div>
                 <div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Temperatura</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Temperatura</div>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: TEMP_COLORS[result.temperature_label] }}>
                     {TEMP_LABELS[result.temperature_label] || result.temperature_label}
                   </div>
@@ -4005,20 +4005,20 @@ function RangeSummaryScreen() {
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 280px', gap: '16px', marginBottom: '20px' }}>
 
               {/* Texto executivo */}
-              <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+              <div style={{ background: 'var(--color-bg-card)', borderRadius: '12px', padding: '20px', border: '1px solid var(--color-border-default)' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
                   <i className="fas fa-file-alt" style={{ marginRight: '6px' }}></i>Análise Executiva
                 </div>
                 <div
-                  style={{ fontSize: '14px', lineHeight: 1.7, color: '#d1d5db' }}
+                  style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text-primary)' }}
                   dangerouslySetInnerHTML={{ __html: renderMd(result.executive_text) }}
                 />
               </div>
 
               {/* Distribuição de tags */}
               {Object.keys(result.tag_distribution || {}).length > 0 && (
-                <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+                <div style={{ background: 'var(--color-bg-card)', borderRadius: '12px', padding: '20px', border: '1px solid var(--color-border-default)' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
                     <i className="fas fa-tags" style={{ marginRight: '6px' }}></i>Tags Detectadas
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -4030,14 +4030,14 @@ function RangeSummaryScreen() {
                         reclamacao: '#f59e0b', followup_necessario: '#3b82f6', oportunidade_comercial: '#10b981',
                         promessa_detectada: '#8b5cf6', atrito_interno: '#ec4899', urgencia_alta: '#f97316',
                       };
-                      const color = TAG_COLORS[tag] || '#64748b';
+                      const color = TAG_COLORS[tag] || 'var(--color-text-muted)';
                       return (
                         <div key={tag}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '3px' }}>
-                            <span style={{ color: '#d1d5db' }}>{tag.replace(/_/g, ' ')}</span>
-                            <span style={{ color: '#64748b' }}>{count}x</span>
+                            <span style={{ color: 'var(--color-text-primary)' }}>{tag.replace(/_/g, ' ')}</span>
+                            <span style={{ color: 'var(--color-text-muted)' }}>{count}x</span>
                           </div>
-                          <div style={{ height: '5px', background: '#334155', borderRadius: '3px' }}>
+                          <div style={{ height: '5px', background: 'var(--color-border-default)', borderRadius: '3px' }}>
                             <div style={{ height: '100%', width: pct + '%', background: color, borderRadius: '3px', transition: 'width 0.4s' }} />
                           </div>
                         </div>
@@ -4050,23 +4050,23 @@ function RangeSummaryScreen() {
 
             {/* Mensagens de destaque */}
             {result.top_messages?.length > 0 && (
-              <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+              <div style={{ background: 'var(--color-bg-card)', borderRadius: '12px', padding: '20px', border: '1px solid var(--color-border-default)' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
                   <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>Mensagens de Maior Risco
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {result.top_messages.map((m, i) => (
-                    <div key={m.id || i} style={{ background: '#0f172a', borderRadius: '8px', padding: '12px 14px', borderLeft: `3px solid ${m.risk_score >= 70 ? '#ef4444' : m.risk_score >= 40 ? '#f59e0b' : '#64748b'}` }}>
+                    <div key={m.id || i} style={{ background: 'var(--color-bg-card)', borderRadius: '8px', padding: '12px 14px', borderLeft: `3px solid ${m.risk_score >= 70 ? '#ef4444' : m.risk_score >= 40 ? '#f59e0b' : 'var(--color-text-muted)'}` }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>{m.sent_at ? new Date(m.sent_at).toLocaleString('pt-BR') : ''}</span>
-                        <span style={{ fontSize: '11px', background: m.risk_score >= 70 ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)', color: m.risk_score >= 70 ? '#ef4444' : '#94a3b8', padding: '1px 7px', borderRadius: '999px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{m.sent_at ? new Date(m.sent_at).toLocaleString('pt-BR') : ''}</span>
+                        <span style={{ fontSize: '11px', background: m.risk_score >= 70 ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.15)', color: m.risk_score >= 70 ? '#ef4444' : 'var(--color-text-secondary)', padding: '1px 7px', borderRadius: '999px' }}>
                           Risco {m.risk_score}/100
                         </span>
                         {(m.tags || []).slice(0, 3).map(t => (
-                          <span key={t} style={{ fontSize: '10px', background: '#1e293b', color: '#94a3b8', padding: '1px 7px', borderRadius: '999px', border: '1px solid #334155' }}>{t.replace(/_/g,' ')}</span>
+                          <span key={t} style={{ fontSize: '10px', background: 'var(--color-bg-card)', color: 'var(--color-text-secondary)', padding: '1px 7px', borderRadius: '999px', border: '1px solid var(--color-border-default)' }}>{t.replace(/_/g,' ')}</span>
                         ))}
                       </div>
-                      <div style={{ fontSize: '13px', color: '#d1d5db', lineHeight: 1.5 }}>{m.content}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>{m.content}</div>
                     </div>
                   ))}
                 </div>
@@ -4076,9 +4076,9 @@ function RangeSummaryScreen() {
         )}
 
         {!result && !loading && (
-          <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
-            <i className={`fas fa-${summaryType === 'general' ? 'comments' : 'chart-line'}`} style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Selecione um grupo e um período</div>
+          <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--color-text-muted)' }}>
+            <i className={`fas fa-${summaryType === 'general' ? 'comments' : 'chart-line'}`} style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: 'var(--color-text-primary)' }}></i>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text-placeholder)', marginBottom: '8px' }}>Selecione um grupo e um período</div>
             <div style={{ fontSize: '14px' }}>
               {summaryType === 'general'
                 ? 'O Resumo Geral será gerado como uma ata de reunião, pronto para envio no grupo.'
@@ -4255,12 +4255,12 @@ function CustomAnalysisScreen() {
       <PageHeader title="Análise Personalizada" subtitle="Peça qualquer análise sobre um ou mais grupos, no período que quiser" />
 
       {/* ── Abas ── */}
-      <div style={{ display: 'flex', gap: '4px', padding: '16px 24px 0', borderBottom: '1px solid #334155' }}>
+      <div style={{ display: 'flex', gap: '4px', padding: '16px 24px 0', borderBottom: '1px solid var(--color-border-default)' }}>
         {[['new', 'Nova Análise', 'wand-magic-sparkles'], ['history', 'Histórico de Análises', 'clock-rotate-left']].map(([id, label, icon]) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: activeTab === id ? '#2dd4bf' : '#94a3b8', fontSize: '13px', fontWeight: 600,
-            padding: '10px 16px', borderBottom: activeTab === id ? '2px solid #0d9488' : '2px solid transparent',
+            color: activeTab === id ? '#2dd4bf' : 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 600,
+            padding: '10px 16px', borderBottom: activeTab === id ? '2px solid var(--color-brand-600)' : '2px solid transparent',
             display: 'flex', alignItems: 'center', gap: '8px',
           }}>
             <i className={`fas fa-${icon}`} />{label}
@@ -4275,45 +4275,45 @@ function CustomAnalysisScreen() {
             {historyDetail ? (
               <div>
                 <button onClick={() => setHistoryDetail(null)} style={{
-                  background: 'transparent', border: '1px solid #334155', borderRadius: '6px',
-                  color: '#94a3b8', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', marginBottom: '16px',
+                  background: 'transparent', border: '1px solid var(--color-border-default)', borderRadius: '6px',
+                  color: 'var(--color-text-secondary)', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', marginBottom: '16px',
                   display: 'flex', alignItems: 'center', gap: '6px',
                 }}>
                   <i className="fas fa-arrow-left" />Voltar ao histórico
                 </button>
 
-                <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '10px' }}>Detalhes da Análise</div>
+                <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '12px', padding: '18px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '10px' }}>Detalhes da Análise</div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '10px', fontSize: '13px' }}>
-                    <div><span style={{ color: '#64748b' }}>Data/hora realizada: </span><span style={{ color: '#f1f5f9' }}>{formatDateTime(historyDetail.created_at)}</span></div>
-                    <div><span style={{ color: '#64748b' }}>Período analisado: </span><span style={{ color: '#f1f5f9' }}>{historyDetail.period.start} → {historyDetail.period.end}</span></div>
-                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Grupos analisados: </span><span style={{ color: '#f1f5f9' }}>{(historyDetail.groups_stats || []).map(g => g.name).join(', ') || '—'}</span></div>
-                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Descrição/pergunta utilizada: </span><span style={{ color: '#f1f5f9', fontStyle: 'italic' }}>"{historyDetail.question}"</span></div>
+                    <div><span style={{ color: 'var(--color-text-muted)' }}>Data/hora realizada: </span><span style={{ color: 'var(--color-text-primary)' }}>{formatDateTime(historyDetail.created_at)}</span></div>
+                    <div><span style={{ color: 'var(--color-text-muted)' }}>Período analisado: </span><span style={{ color: 'var(--color-text-primary)' }}>{historyDetail.period.start} → {historyDetail.period.end}</span></div>
+                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--color-text-muted)' }}>Grupos analisados: </span><span style={{ color: 'var(--color-text-primary)' }}>{(historyDetail.groups_stats || []).map(g => g.name).join(', ') || '—'}</span></div>
+                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--color-text-muted)' }}>Descrição/pergunta utilizada: </span><span style={{ color: 'var(--color-text-primary)', fontStyle: 'italic' }}>"{historyDetail.question}"</span></div>
                   </div>
                 </div>
 
                 {historyDetail.groups_stats?.length > 0 && (
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px', marginBottom: '20px' }}>
                     {historyDetail.groups_stats.map(g => (
-                      <div key={g.id} style={{ background: '#1e293b', borderRadius: '10px', padding: '14px 16px', border: '1px solid #334155' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px' }}>{g.name}</div>
+                      <div key={g.id} style={{ background: 'var(--color-bg-card)', borderRadius: '10px', padding: '14px 16px', border: '1px solid var(--color-border-default)' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '8px' }}>{g.name}</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
-                          <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#94a3b8' }}>
+                          <span style={{ background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px', color: 'var(--color-text-secondary)' }}>
                             <i className="fas fa-comment" style={{ marginRight: '4px' }} />{g.stats.total_messages} msgs
                           </span>
                           <span style={{
-                            background: '#0f172a', borderRadius: '6px', padding: '3px 8px',
+                            background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px',
                             color: g.stats.avg_risk_score >= 60 ? '#ef4444' : g.stats.avg_risk_score >= 30 ? '#f59e0b' : '#10b981',
                           }}>
                             <i className="fas fa-exclamation-triangle" style={{ marginRight: '4px' }} />{g.stats.avg_risk_score}/100
                           </span>
                           {g.stats.churn_risk_count > 0 && (
-                            <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#ef4444' }}>
+                            <span style={{ background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px', color: '#ef4444' }}>
                               <i className="fas fa-user-minus" style={{ marginRight: '4px' }} />{g.stats.churn_risk_count} churn
                             </span>
                           )}
                           {g.stats.opportunity_count > 0 && (
-                            <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#10b981' }}>
+                            <span style={{ background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px', color: '#10b981' }}>
                               <i className="fas fa-lightbulb" style={{ marginRight: '4px' }} />{g.stats.opportunity_count} oport.
                             </span>
                           )}
@@ -4323,53 +4323,53 @@ function CustomAnalysisScreen() {
                   </div>
                 )}
 
-                <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+                <div style={{ background: 'var(--color-bg-card)', borderRadius: '12px', padding: '20px', border: '1px solid var(--color-border-default)' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
                     <i className="fas fa-sparkles" style={{ marginRight: '6px' }}></i>Resposta Gerada
                   </div>
                   <div
-                    style={{ fontSize: '14px', lineHeight: 1.7, color: '#d1d5db' }}
+                    style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text-primary)' }}
                     dangerouslySetInnerHTML={{ __html: renderMd(historyDetail.answer_text) }}
                   />
                 </div>
               </div>
             ) : loadingDetail ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}><i className="fas fa-spinner fa-spin" /> Carregando...</div>
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-secondary)' }}><i className="fas fa-spinner fa-spin" /> Carregando...</div>
             ) : loadingHistory ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}><i className="fas fa-spinner fa-spin" /> Carregando histórico...</div>
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-secondary)' }}><i className="fas fa-spinner fa-spin" /> Carregando histórico...</div>
             ) : history.length === 0 ? (
-              <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
-                <i className="fas fa-clock-rotate-left" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
-                <div style={{ fontSize: '16px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Nenhuma análise salva ainda</div>
+              <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--color-text-muted)' }}>
+                <i className="fas fa-clock-rotate-left" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: 'var(--color-text-primary)' }}></i>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text-placeholder)', marginBottom: '8px' }}>Nenhuma análise salva ainda</div>
                 <div style={{ fontSize: '14px' }}>Toda análise gerada na aba "Nova Análise" fica salva aqui automaticamente.</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {history.map(h => (
                   <div key={h.id} onClick={() => openHistoryItem(h.id)} style={{
-                    background: '#1e293b', border: '1px solid #334155', borderRadius: '10px',
+                    background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '10px',
                     padding: '14px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
                     alignItems: 'flex-start', gap: '12px',
                   }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#243447'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#1e293b'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--color-bg-card)'}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
                         {formatDateTime(h.created_at)} · {h.start_date} → {h.end_date} · {h.total_messages} msgs
                       </div>
-                      <div style={{ fontSize: '14px', color: '#f1f5f9', fontStyle: 'italic', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '14px', color: 'var(--color-text-primary)', fontStyle: 'italic', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         "{h.question}"
                       </div>
-                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                         <i className="fas fa-users" style={{ marginRight: '6px' }} />{h.group_names.join(', ') || '—'}
                       </div>
                     </div>
                     <button onClick={(e) => deleteHistoryItem(h.id, e)} title="Excluir" style={{
-                      background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px', flexShrink: 0,
+                      background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '13px', flexShrink: 0,
                     }}
                       onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                      onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}
                     >
                       <i className="fas fa-trash" />
                     </button>
@@ -4383,24 +4383,24 @@ function CustomAnalysisScreen() {
 
         {/* ── Formulário ── */}
         <div style={{
-          background: '#1e293b', border: '1px solid #334155', borderRadius: '14px',
+          background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '14px',
           padding: '20px', marginBottom: '24px',
           display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px',
         }}>
 
           {/* Seleção de grupos (múltipla) */}
           <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
               <i className="fas fa-users" style={{ marginRight: '6px' }}></i>Grupo(s) / Conversa(s)
             </label>
             <div style={{ position: 'relative' }}>
               <div
                 onClick={() => setShowConvList(v => !v)}
                 style={{
-                  background: '#0f172a', border: `1px solid ${showConvList ? '#0d9488' : '#475569'}`,
+                  background: 'var(--color-bg-card)', border: `1px solid ${showConvList ? 'var(--color-brand-600)' : 'var(--color-border-input)'}`,
                   borderRadius: '8px', padding: '10px 14px', cursor: 'pointer',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px',
-                  color: selectedIds.length ? '#f1f5f9' : '#64748b', fontSize: '14px', minHeight: '20px',
+                  color: selectedIds.length ? 'var(--color-text-primary)' : 'var(--color-text-muted)', fontSize: '14px', minHeight: '20px',
                 }}
               >
                 {selectedIds.length === 0 ? (
@@ -4419,12 +4419,12 @@ function CustomAnalysisScreen() {
                     ))}
                   </div>
                 )}
-                <i className={`fas fa-chevron-${showConvList ? 'up' : 'down'}`} style={{ fontSize: '11px', color: '#64748b', flexShrink: 0 }} />
+                <i className={`fas fa-chevron-${showConvList ? 'up' : 'down'}`} style={{ fontSize: '11px', color: 'var(--color-text-muted)', flexShrink: 0 }} />
               </div>
               {showConvList && (
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-                  background: '#1e293b', border: '1px solid #334155', borderRadius: '8px',
+                  background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '8px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: '4px',
                 }}>
                   <div style={{ padding: '8px' }}>
@@ -4434,16 +4434,16 @@ function CustomAnalysisScreen() {
                       onChange={e => setConvSearch(e.target.value)}
                       placeholder="Buscar..."
                       style={{
-                        width: '100%', background: '#0f172a', border: '1px solid #334155',
-                        borderRadius: '6px', color: '#f1f5f9', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box',
+                        width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)',
+                        borderRadius: '6px', color: 'var(--color-text-primary)', padding: '8px 10px', fontSize: '13px', boxSizing: 'border-box',
                       }}
                     />
                   </div>
                   <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
                     {loadingConvs ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Carregando...</div>
+                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px' }}>Carregando...</div>
                     ) : filteredConvs.length === 0 ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
+                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
                     ) : filteredConvs.map(c => {
                       const checked = selectedIds.includes(c.id);
                       return (
@@ -4452,27 +4452,27 @@ function CustomAnalysisScreen() {
                           onClick={() => toggleConv(c.id)}
                           style={{
                             padding: '10px 14px', cursor: 'pointer', fontSize: '14px',
-                            color: checked ? '#2dd4bf' : '#d1d5db',
+                            color: checked ? '#2dd4bf' : 'var(--color-text-primary)',
                             background: checked ? 'rgba(13,148,136,0.1)' : 'transparent',
                             display: 'flex', alignItems: 'center', gap: '10px',
                           }}
-                          onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#334155'; }}
+                          onMouseEnter={e => { if (!checked) e.currentTarget.style.background = 'var(--color-border-default)'; }}
                           onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <i className={`fas fa-${checked ? 'check-square' : 'square'}`} style={{ color: checked ? '#0d9488' : '#475569', fontSize: '13px' }} />
+                          <i className={`fas fa-${checked ? 'check-square' : 'square'}`} style={{ color: checked ? 'var(--color-brand-600)' : 'var(--color-text-placeholder)', fontSize: '13px' }} />
                           {c.name}
                         </div>
                       );
                     })}
                   </div>
                   {filteredConvs.length > 0 && (
-                    <div style={{ borderTop: '1px solid #334155', padding: '8px 14px', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ borderTop: '1px solid var(--color-border-default)', padding: '8px 14px', display: 'flex', justifyContent: 'space-between' }}>
                       <button onClick={() => setSelectedIds(filteredConvs.map(c => c.id))}
-                        style={{ background: 'transparent', border: 'none', color: '#0d9488', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
+                        style={{ background: 'transparent', border: 'none', color: 'var(--color-brand-600)', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
                         Selecionar todos
                       </button>
                       <button onClick={() => setSelectedIds([])}
-                        style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
+                        style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
                         Limpar
                       </button>
                     </div>
@@ -4484,41 +4484,41 @@ function CustomAnalysisScreen() {
 
           {/* Data início */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
               <i className="fas fa-calendar-alt" style={{ marginRight: '6px' }}></i>Data Inicial
             </label>
             <input
               type="date" value={startDate} max={endDate}
               onChange={e => setStartDate(e.target.value)}
-              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
             />
           </div>
 
           {/* Data fim */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px', fontWeight: 500 }}>
               <i className="fas fa-calendar-check" style={{ marginRight: '6px' }}></i>Data Final
             </label>
             <input
               type="date" value={endDate} min={startDate} max={today}
               onChange={e => setEndDate(e.target.value)}
-              style={{ width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
             />
           </div>
 
           {/* Atalhos de período */}
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>Atalhos:</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Atalhos:</span>
             {[['hoje', 'Hoje', setTodayRange], ['ontem', 'Ontem', setYesterdayRange]].map(([k, label, fn]) => (
               <button key={k} onClick={fn} style={{
-                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
-                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+                background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '6px',
+                color: 'var(--color-text-secondary)', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
               }}>{label}</button>
             ))}
             {[[7,'7 dias'],[14,'14 dias'],[30,'30 dias'],[90,'3 meses']].map(([d, label]) => (
               <button key={d} onClick={() => setQuickRange(d)} style={{
-                background: '#0f172a', border: '1px solid #475569', borderRadius: '6px',
-                color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
+                background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '6px',
+                color: 'var(--color-text-secondary)', padding: '5px 12px', cursor: 'pointer', fontSize: '12px',
               }}>{label}</button>
             ))}
           </div>
@@ -4526,15 +4526,15 @@ function CustomAnalysisScreen() {
           {/* Pergunta livre + sugestões */}
           <div style={{ gridColumn: '1 / -1' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>
+              <label style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
                 <i className="fas fa-comment-dots" style={{ marginRight: '6px' }}></i>O que você quer saber?
               </label>
               <button
                 onClick={handleSuggestWithAI}
                 disabled={suggesting}
                 style={{
-                  background: 'transparent', border: '1px solid #475569', borderRadius: '6px',
-                  color: suggesting ? '#475569' : '#a78bfa', padding: '4px 10px', cursor: suggesting ? 'not-allowed' : 'pointer',
+                  background: 'transparent', border: '1px solid var(--color-border-input)', borderRadius: '6px',
+                  color: suggesting ? 'var(--color-text-placeholder)' : '#a78bfa', padding: '4px 10px', cursor: suggesting ? 'not-allowed' : 'pointer',
                   fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px',
                 }}
               >
@@ -4550,16 +4550,16 @@ function CustomAnalysisScreen() {
               rows={3}
               placeholder='Ex: "Quais clientes estão insatisfeitos e por quê?" ou "Faça um raio-x comercial desse grupo no período"'
               style={{
-                width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #475569',
-                borderRadius: '8px', color: '#f1f5f9', padding: '10px 12px', fontSize: '14px',
+                width: '100%', boxSizing: 'border-box', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)',
+                borderRadius: '8px', color: 'var(--color-text-primary)', padding: '10px 12px', fontSize: '14px',
                 fontFamily: 'inherit', resize: 'vertical',
               }}
             />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
               {suggestionChips.map((s, i) => (
                 <button key={i} onClick={() => setQuestion(s)} title={s} style={{
-                  background: '#0f172a', border: '1px solid #334155', borderRadius: '999px',
-                  color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '11px',
+                  background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '999px',
+                  color: 'var(--color-text-secondary)', padding: '5px 12px', cursor: 'pointer', fontSize: '11px',
                   maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{s}</button>
               ))}
@@ -4572,7 +4572,7 @@ function CustomAnalysisScreen() {
               onClick={handleGenerate}
               disabled={loading || selectedIds.length === 0 || !question.trim()}
               style={{
-                background: loading || selectedIds.length === 0 || !question.trim() ? '#334155' : '#0d9488',
+                background: loading || selectedIds.length === 0 || !question.trim() ? 'var(--color-border-default)' : 'var(--color-brand-600)',
                 border: 'none', borderRadius: '8px', color: 'white',
                 padding: '10px 24px', cursor: loading || selectedIds.length === 0 || !question.trim() ? 'not-allowed' : 'pointer',
                 fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
@@ -4590,35 +4590,35 @@ function CustomAnalysisScreen() {
         {result && (
           <div>
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
                 {result.period.start} → {result.period.end} · {result.groups_stats?.length || 0} grupo(s)
               </div>
-              <div style={{ fontSize: '15px', color: '#94a3b8', fontStyle: 'italic' }}>"{result.question}"</div>
+              <div style={{ fontSize: '15px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>"{result.question}"</div>
             </div>
 
             {/* Stats por grupo */}
             {result.groups_stats?.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px', marginBottom: '20px' }}>
                 {result.groups_stats.map(g => (
-                  <div key={g.id} style={{ background: '#1e293b', borderRadius: '10px', padding: '14px 16px', border: '1px solid #334155' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px' }}>{g.name}</div>
+                  <div key={g.id} style={{ background: 'var(--color-bg-card)', borderRadius: '10px', padding: '14px 16px', border: '1px solid var(--color-border-default)' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '8px' }}>{g.name}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
-                      <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#94a3b8' }}>
+                      <span style={{ background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px', color: 'var(--color-text-secondary)' }}>
                         <i className="fas fa-comment" style={{ marginRight: '4px' }} />{g.stats.total_messages} msgs
                       </span>
                       <span style={{
-                        background: '#0f172a', borderRadius: '6px', padding: '3px 8px',
+                        background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px',
                         color: g.stats.avg_risk_score >= 60 ? '#ef4444' : g.stats.avg_risk_score >= 30 ? '#f59e0b' : '#10b981',
                       }}>
                         <i className="fas fa-exclamation-triangle" style={{ marginRight: '4px' }} />{g.stats.avg_risk_score}/100
                       </span>
                       {g.stats.churn_risk_count > 0 && (
-                        <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#ef4444' }}>
+                        <span style={{ background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px', color: '#ef4444' }}>
                           <i className="fas fa-user-minus" style={{ marginRight: '4px' }} />{g.stats.churn_risk_count} churn
                         </span>
                       )}
                       {g.stats.opportunity_count > 0 && (
-                        <span style={{ background: '#0f172a', borderRadius: '6px', padding: '3px 8px', color: '#10b981' }}>
+                        <span style={{ background: 'var(--color-bg-card)', borderRadius: '6px', padding: '3px 8px', color: '#10b981' }}>
                           <i className="fas fa-lightbulb" style={{ marginRight: '4px' }} />{g.stats.opportunity_count} oport.
                         </span>
                       )}
@@ -4629,12 +4629,12 @@ function CustomAnalysisScreen() {
             )}
 
             {/* Resposta da IA */}
-            <div style={{ background: '#1e293b', borderRadius: '12px', padding: '20px', border: '1px solid #334155' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
+            <div style={{ background: 'var(--color-bg-card)', borderRadius: '12px', padding: '20px', border: '1px solid var(--color-border-default)' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '14px' }}>
                 <i className="fas fa-sparkles" style={{ marginRight: '6px' }}></i>Resultado da Análise
               </div>
               <div
-                style={{ fontSize: '14px', lineHeight: 1.7, color: '#d1d5db' }}
+                style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--color-text-primary)' }}
                 dangerouslySetInnerHTML={{ __html: renderMd(result.answer_text) }}
               />
             </div>
@@ -4642,9 +4642,9 @@ function CustomAnalysisScreen() {
         )}
 
         {!result && !loading && (
-          <div style={{ textAlign: 'center', paddingTop: '60px', color: '#64748b' }}>
-            <i className="fas fa-wand-magic-sparkles" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: '#334155' }}></i>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Peça qualquer análise sobre seus grupos</div>
+          <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--color-text-muted)' }}>
+            <i className="fas fa-wand-magic-sparkles" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: 'var(--color-text-primary)' }}></i>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text-placeholder)', marginBottom: '8px' }}>Peça qualquer análise sobre seus grupos</div>
             <div style={{ fontSize: '14px' }}>
               Selecione um ou mais grupos, um período e escreva o que você quer saber — a IA responde com base nas conversas reais.
             </div>
@@ -4664,10 +4664,10 @@ function renderMd(text) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^>\s(.+)$/gm, '<blockquote style="border-left:3px solid #0d9488;margin:8px 0;padding:8px 12px;background:rgba(13,148,136,0.08);color:#94a3b8;border-radius:0 6px 6px 0">$1</blockquote>')
-    .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;color:#f1f5f9;margin:12px 0 6px">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 style="font-size:15px;color:#f1f5f9;margin:14px 0 8px">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 style="font-size:16px;color:#f1f5f9;margin:14px 0 8px">$1</h1>')
+    .replace(/^>\s(.+)$/gm, '<blockquote style="border-left:3px solid var(--color-brand-600);margin:8px 0;padding:8px 12px;background:rgba(13,148,136,0.08);color:var(--color-text-secondary);border-radius:0 6px 6px 0">$1</blockquote>')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;color:var(--color-text-primary);margin:12px 0 6px">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:15px;color:var(--color-text-primary);margin:14px 0 8px">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size:16px;color:var(--color-text-primary);margin:14px 0 8px">$1</h1>')
     .replace(/\n/g, '<br>');
 }
 
@@ -4683,18 +4683,18 @@ function ExprCard({ expr, uploadingExpr, onUpload, onRemoveImage, onRemove, onCh
   const showImg = expr.image_url && !imgError;
   return (
     <div style={{
-      background: '#1e293b', border: '1px solid #334155', borderRadius: '12px',
+      background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '12px',
       padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center',
       position: 'relative',
     }}>
       {/* Botão deletar expressão */}
       <button onClick={() => onRemove(expr.type)} title="Remover expressão"
         style={{ position: 'absolute', top: '8px', right: '8px', width: '20px', height: '20px',
-          background: '#374151', border: 'none', borderRadius: '50%', color: '#94a3b8',
+          background: 'var(--color-border-default)', border: 'none', borderRadius: '50%', color: 'var(--color-text-secondary)',
           cursor: 'pointer', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s' }}
         onMouseEnter={e => e.currentTarget.style.background = '#ef4444'}
-        onMouseLeave={e => e.currentTarget.style.background = '#374151'}>
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--color-border-default)'}>
         <i className="fas fa-trash" />
       </button>
 
@@ -4703,11 +4703,11 @@ function ExprCard({ expr, uploadingExpr, onUpload, onRemoveImage, onRemove, onCh
         {showImg ? (
           <img src={expr.image_url} alt={expr.label}
             onError={() => setImgError(true)}
-            style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0d9488' }} />
+            style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-brand-600)' }} />
         ) : (
           <div style={{
-            width: '72px', height: '72px', borderRadius: '50%', background: '#0f172a',
-            border: '2px dashed #475569', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '72px', height: '72px', borderRadius: '50%', background: 'var(--color-bg-card)',
+            border: '2px dashed var(--color-border-input)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '28px',
           }}>{expr.emoji}</div>
         )}
@@ -4727,8 +4727,8 @@ function ExprCard({ expr, uploadingExpr, onUpload, onRemoveImage, onRemove, onCh
         onChange={e => onChangeField(expr.type, 'label', e.target.value)}
         maxLength={30}
         style={{
-          width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px',
-          color: '#f1f5f9', padding: '5px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 600,
+          width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '6px',
+          color: 'var(--color-text-primary)', padding: '5px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 600,
           boxSizing: 'border-box',
         }}
         placeholder="Rótulo"
@@ -4740,8 +4740,8 @@ function ExprCard({ expr, uploadingExpr, onUpload, onRemoveImage, onRemove, onCh
         onChange={e => onChangeField(expr.type, 'emoji', e.target.value.slice(-2))}
         maxLength={2}
         style={{
-          width: '52px', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px',
-          color: '#f1f5f9', padding: '6px', textAlign: 'center', fontSize: '20px',
+          width: '52px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px',
+          color: 'var(--color-text-primary)', padding: '6px', textAlign: 'center', fontSize: '20px',
         }}
         title="Emoji padrão (quando sem imagem)"
       />
@@ -4758,9 +4758,9 @@ function ExprCard({ expr, uploadingExpr, onUpload, onRemoveImage, onRemove, onCh
         onClick={() => inputRef.current && inputRef.current.click()}
         disabled={busy}
         style={{
-          background: busy ? '#0d9488' : '#0f172a',
-          border: '1px solid ' + (busy ? '#0d9488' : '#475569'),
-          borderRadius: '8px', color: busy ? 'white' : '#94a3b8',
+          background: busy ? 'var(--color-brand-600)' : 'var(--color-bg-card)',
+          border: '1px solid ' + (busy ? 'var(--color-brand-600)' : 'var(--color-border-input)'),
+          borderRadius: '8px', color: busy ? 'white' : 'var(--color-text-secondary)',
           padding: '5px 10px', cursor: busy ? 'wait' : 'pointer',
           fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px',
           transition: 'all 0.15s',
@@ -4769,7 +4769,7 @@ function ExprCard({ expr, uploadingExpr, onUpload, onRemoveImage, onRemove, onCh
         {busy ? 'Enviando...' : showImg ? 'Trocar imagem' : 'Adicionar foto'}
       </button>
       {!showImg && (
-        <div style={{ fontSize: '10px', color: '#475569', textAlign: 'center', lineHeight: 1.3 }}>
+        <div style={{ fontSize: '10px', color: 'var(--color-text-placeholder)', textAlign: 'center', lineHeight: 1.3 }}>
           PNG, JPG, GIF, WebP<br/>Sticker do WhatsApp (.webp)
         </div>
       )}
@@ -4927,16 +4927,16 @@ function AgentConfigScreen() {
   const previewMsg = `${previewEmoji} *${previewName}${previewRole}*\n━━━━━━━━━━━━━━━━━\n_Aqui virá o conteúdo do resumo gerado automaticamente..._\n━━━━━━━━━━━━━━━━━\n📝 _Gerado por ${previewName} · ATENX_${previewSig}`;
 
   const S = { // shared styles
-    label: { display: 'block', fontSize: '12px', color: '#94a3b8', fontWeight: 500, marginBottom: '6px' },
-    input: { width: '100%', background: '#0f172a', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '10px 14px', fontSize: '14px', boxSizing: 'border-box', fontFamily: 'var(--font-sans)' },
-    card: { background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
-    sectionTitle: { fontSize: '15px', fontWeight: 700, color: '#f1f5f9', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' },
+    label: { display: 'block', fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500, marginBottom: '6px' },
+    input: { width: '100%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '10px 14px', fontSize: '14px', boxSizing: 'border-box', fontFamily: 'var(--font-sans)' },
+    card: { background: 'var(--color-bg-card)', border: '1px solid var(--color-border-default)', borderRadius: '14px', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
+    sectionTitle: { fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' },
   };
 
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-      <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: '#0d9488' }} />
-      <span style={{ color: '#94a3b8' }}>Carregando configurações...</span>
+      <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: 'var(--color-brand-600)' }} />
+      <span style={{ color: 'var(--color-text-secondary)' }}>Carregando configurações...</span>
     </div>
   );
 
@@ -4947,7 +4947,7 @@ function AgentConfigScreen() {
         subtitle="Defina identidade, personalidade e expressões do agente automático"
         actions={
           <button onClick={handleSave} disabled={saving} style={{
-            background: saving ? '#334155' : '#0d9488', border: 'none', borderRadius: '8px',
+            background: saving ? 'var(--color-border-default)' : 'var(--color-brand-600)', border: 'none', borderRadius: '8px',
             color: 'white', padding: '8px 20px', cursor: saving ? 'not-allowed' : 'pointer',
             fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
           }}>
@@ -4964,7 +4964,7 @@ function AgentConfigScreen() {
 
             {/* ── Identidade ── */}
             <div style={S.card}>
-              <div style={S.sectionTitle}><i className="fas fa-id-badge" style={{ color: '#0d9488' }} />Identidade do Agente</div>
+              <div style={S.sectionTitle}><i className="fas fa-id-badge" style={{ color: 'var(--color-brand-600)' }} />Identidade do Agente</div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
@@ -4978,7 +4978,7 @@ function AgentConfigScreen() {
               </div>
 
               <div>
-                <label style={S.label}>Personalidade <span style={{ color: '#64748b', fontWeight: 400 }}>(usado nos prompts de IA)</span></label>
+                <label style={S.label}>Personalidade <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(usado nos prompts de IA)</span></label>
                 <textarea value={personality} onChange={e => setPersonality(e.target.value)}
                   rows={4} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }}
                   placeholder="Ex: Sou analítico, objetivo e empático. Priorizo clareza nas informações e destaco pontos críticos com urgência adequada. Evito linguagem técnica desnecessária." />
@@ -4989,20 +4989,20 @@ function AgentConfigScreen() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                   {TONES.map(t => (
                     <div key={t.value} onClick={() => setTone(t.value)} style={{
-                      border: `2px solid ${tone === t.value ? '#0d9488' : '#334155'}`,
-                      background: tone === t.value ? 'rgba(13,148,136,0.12)' : '#0f172a',
+                      border: `2px solid ${tone === t.value ? 'var(--color-brand-600)' : 'var(--color-border-default)'}`,
+                      background: tone === t.value ? 'rgba(13,148,136,0.12)' : 'var(--color-bg-card)',
                       borderRadius: '10px', padding: '10px 8px', cursor: 'pointer', textAlign: 'center',
                       transition: 'all 0.15s',
                     }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: tone === t.value ? '#0d9488' : '#f1f5f9' }}>{t.label}</div>
-                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>{t.desc}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: tone === t.value ? 'var(--color-brand-600)' : 'var(--color-text-primary)' }}>{t.label}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '3px' }}>{t.desc}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label style={S.label}>Assinatura <span style={{ color: '#64748b', fontWeight: 400 }}>(texto no rodapé das mensagens automáticas)</span></label>
+                <label style={S.label}>Assinatura <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(texto no rodapé das mensagens automáticas)</span></label>
                 <input value={signature} onChange={e => setSignature(e.target.value)} style={S.input}
                   placeholder="ex: Este relatório foi gerado automaticamente. Dúvidas? Contate seu gestor." />
               </div>
@@ -5011,8 +5011,8 @@ function AgentConfigScreen() {
             {/* ── Expressões ── */}
             <div style={S.card}>
               <div>
-                <div style={S.sectionTitle}><i className="fas fa-theater-masks" style={{ color: '#0d9488' }} />Expressões</div>
-                <div style={{ fontSize: '13px', color: '#64748b' }}>Crie, edite e remova expressões. Alterações são salvas pelo botão <strong style={{ color: '#94a3b8' }}>Salvar</strong> no topo.</div>
+                <div style={S.sectionTitle}><i className="fas fa-theater-masks" style={{ color: 'var(--color-brand-600)' }} />Expressões</div>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Crie, edite e remova expressões. Alterações são salvas pelo botão <strong style={{ color: 'var(--color-text-secondary)' }}>Salvar</strong> no topo.</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
                 {expressions.map(expr => (
@@ -5031,36 +5031,36 @@ function AgentConfigScreen() {
               </div>
               {/* Nova expressão */}
               {newExprForm.open ? (
-                <div style={{ background: '#0f172a', border: '1px dashed #475569', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Nova Expressão</div>
+                <div style={{ background: 'var(--color-bg-card)', border: '1px dashed var(--color-border-input)', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Nova Expressão</div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <input value={newExprForm.emoji}
                       onChange={e => setNewExprForm(f => ({ ...f, emoji: e.target.value.slice(-2) }))}
                       maxLength={2}
-                      style={{ width: '48px', background: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '6px', textAlign: 'center', fontSize: '18px' }}
+                      style={{ width: '48px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '6px', textAlign: 'center', fontSize: '18px' }}
                       placeholder="😊" />
                     <input value={newExprForm.label}
                       onChange={e => setNewExprForm(f => ({ ...f, label: e.target.value }))}
                       maxLength={30}
                       onKeyDown={e => e.key === 'Enter' && addExpression()}
-                      style={{ flex: 1, background: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#f1f5f9', padding: '7px 10px', fontSize: '13px' }}
+                      style={{ flex: 1, background: 'var(--color-bg-card)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '7px 10px', fontSize: '13px' }}
                       placeholder="Nome da expressão (ex: Animado)"
                       autoFocus />
                   </div>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                     <button onClick={() => setNewExprForm({ open: false, label: '', emoji: '😊' })}
-                      style={{ background: 'transparent', border: '1px solid #475569', borderRadius: '8px', color: '#94a3b8', padding: '5px 12px', cursor: 'pointer', fontSize: '12px' }}>
+                      style={{ background: 'transparent', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-secondary)', padding: '5px 12px', cursor: 'pointer', fontSize: '12px' }}>
                       Cancelar
                     </button>
                     <button onClick={addExpression} disabled={!newExprForm.label.trim()}
-                      style={{ background: newExprForm.label.trim() ? '#0d9488' : '#334155', border: 'none', borderRadius: '8px', color: 'white', padding: '5px 12px', cursor: newExprForm.label.trim() ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 600 }}>
+                      style={{ background: newExprForm.label.trim() ? 'var(--color-brand-600)' : 'var(--color-border-default)', border: 'none', borderRadius: '8px', color: 'white', padding: '5px 12px', cursor: newExprForm.label.trim() ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 600 }}>
                       Adicionar
                     </button>
                   </div>
                 </div>
               ) : (
                 <button onClick={() => setNewExprForm(f => ({ ...f, open: true }))}
-                  style={{ background: 'transparent', border: '1px dashed #475569', borderRadius: '10px', color: '#64748b', padding: '10px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', transition: 'border-color 0.15s' }}>
+                  style={{ background: 'transparent', border: '1px dashed var(--color-border-input)', borderRadius: '10px', color: 'var(--color-text-muted)', padding: '10px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', transition: 'border-color 0.15s' }}>
                   <i className="fas fa-plus" /> Nova Expressão
                 </button>
               )}
@@ -5072,18 +5072,18 @@ function AgentConfigScreen() {
 
             {/* ── Avatar ── */}
             <div style={{ ...S.card, alignItems: 'center' }}>
-              <div style={S.sectionTitle}><i className="fas fa-user-circle" style={{ color: '#0d9488' }} />Avatar</div>
+              <div style={S.sectionTitle}><i className="fas fa-user-circle" style={{ color: 'var(--color-brand-600)' }} />Avatar</div>
 
               {/* Círculo de avatar */}
               <div style={{ position: 'relative', width: '120px', height: '120px' }}>
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar"
-                    style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0d9488' }} />
+                    style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--color-brand-600)' }} />
                 ) : (
                   <div style={{
                     width: '120px', height: '120px', borderRadius: '50%',
-                    background: 'linear-gradient(135deg,#0d9488,#075e54)',
-                    border: '3px solid #0d9488', display: 'flex', flexDirection: 'column',
+                    background: 'linear-gradient(135deg,var(--color-brand-600),#075e54)',
+                    border: '3px solid var(--color-brand-600)', display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center', gap: '4px',
                   }}>
                     <span style={{ fontSize: '36px', fontWeight: 800, color: 'white', lineHeight: 1 }}>
@@ -5101,7 +5101,7 @@ function AgentConfigScreen() {
 
               <div style={{ display: 'flex', gap: '8px' }}>
                 <label style={{
-                  background: '#0d9488', border: 'none', borderRadius: '8px', color: 'white',
+                  background: 'var(--color-brand-600)', border: 'none', borderRadius: '8px', color: 'white',
                   padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
                   display: 'flex', alignItems: 'center', gap: '6px',
                 }}>
@@ -5111,38 +5111,38 @@ function AgentConfigScreen() {
                 </label>
                 {avatarUrl && (
                   <button onClick={handleRemoveAvatar} style={{
-                    background: '#0f172a', border: '1px solid #ef4444', borderRadius: '8px',
+                    background: 'var(--color-bg-card)', border: '1px solid #ef4444', borderRadius: '8px',
                     color: '#ef4444', padding: '8px 14px', cursor: 'pointer', fontSize: '13px',
                   }}>
                     <i className="fas fa-trash" />
                   </button>
                 )}
               </div>
-              <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center' }}>PNG, JPEG ou WebP · máx. 3MB</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textAlign: 'center' }}>PNG, JPEG ou WebP · máx. 3MB</div>
             </div>
 
             {/* ── Preview ── */}
             <div style={{ ...S.card, gap: '12px' }}>
-              <div style={S.sectionTitle}><i className="fas fa-eye" style={{ color: '#0d9488' }} />Preview da Mensagem</div>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>Como o agente se identificará nos resumos enviados:</div>
+              <div style={S.sectionTitle}><i className="fas fa-eye" style={{ color: 'var(--color-brand-600)' }} />Preview da Mensagem</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Como o agente se identificará nos resumos enviados:</div>
 
               {/* Mock WhatsApp-style bubble */}
-              <div style={{ background: '#0f172a', borderRadius: '10px', padding: '14px', border: '1px solid #1e293b' }}>
+              <div style={{ background: 'var(--color-bg-card)', borderRadius: '10px', padding: '14px', border: '1px solid var(--color-border-card)' }}>
                 {/* Avatar + nome */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   {avatarUrl ? (
                     <img src={avatarUrl} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                   ) : (
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg,#0d9488,#075e54)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: 'white' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg,var(--color-brand-600),#075e54)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: 'white' }}>
                       {(name || 'A').slice(0, 1).toUpperCase()}
                     </div>
                   )}
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#0d9488' }}>{name || 'Agente ENVOX'}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-brand-600)' }}>{name || 'Agente ENVOX'}</span>
                 </div>
                 {/* Balão */}
                 <div style={{
-                  background: '#1e293b', borderRadius: '0 10px 10px 10px',
-                  padding: '12px 14px', fontSize: '12px', color: '#d1d5db', lineHeight: 1.7,
+                  background: 'var(--color-bg-card)', borderRadius: '0 10px 10px 10px',
+                  padding: '12px 14px', fontSize: '12px', color: 'var(--color-text-primary)', lineHeight: 1.7,
                   whiteSpace: 'pre-line',
                 }}>
                   {previewMsg}
@@ -5151,11 +5151,11 @@ function AgentConfigScreen() {
                 {previewExpr?.image_url ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                     <img src={previewExpr.image_url} alt={previewExpr.label}
-                      style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #0d9488' }} />
-                    <span style={{ fontSize: '10px', color: '#475569' }}>Imagem da expressão enviada após a mensagem</span>
+                      style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-brand-600)' }} />
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-placeholder)' }}>Imagem da expressão enviada após a mensagem</span>
                   </div>
                 ) : (
-                  <div style={{ marginTop: '8px', fontSize: '10px', color: '#334155', fontStyle: 'italic' }}>
+                  <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--color-text-primary)', fontStyle: 'italic' }}>
                     {previewExpr?.emoji} Adicione uma foto à expressão "{previewExpr?.label}" para ela aparecer aqui
                   </div>
                 )}
@@ -5175,7 +5175,7 @@ const AUTOM_DOW_OPTIONS = [
 ];
 
 const AUTOM_SEVERITY_OPTIONS = [
-  ['low', 'Baixa', '#64748b'],
+  ['low', 'Baixa', 'var(--color-text-muted)'],
   ['medium', 'Média', '#ca8a04'],
   ['high', 'Alta', '#ea580c'],
   ['critical', 'Crítica', '#dc2626'],
@@ -5236,50 +5236,50 @@ function AutomJobRow({ job, onSaved }) {
               <i className="fab fa-whatsapp" style={{ marginRight: '4px' }}></i>Envia WhatsApp
             </span>
           )}
-          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', background: '#e0f2f1', color: '#0d9488', fontWeight: 600 }}>{job.quando}</span>
-          <button onClick={() => setEditing(v => !v)} title="Editar agendamento" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0d9488', fontSize: '13px', padding: '2px 6px' }}>
+          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', background: '#e0f2f1', color: 'var(--color-brand-600)', fontWeight: 600 }}>{job.quando}</span>
+          <button onClick={() => setEditing(v => !v)} title="Editar agendamento" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-brand-600)', fontSize: '13px', padding: '2px 6px' }}>
             <i className="fas fa-pen"></i>
           </button>
-          <button onClick={toggleEnabled} disabled={toggling} title={job.enabled ? 'Desativar' : 'Ativar'} style={{ background: 'none', border: 'none', cursor: toggling ? 'wait' : 'pointer', fontSize: '18px', color: job.enabled ? '#16a34a' : '#94a3b8', padding: '2px 4px' }}>
+          <button onClick={toggleEnabled} disabled={toggling} title={job.enabled ? 'Desativar' : 'Ativar'} style={{ background: 'none', border: 'none', cursor: toggling ? 'wait' : 'pointer', fontSize: '18px', color: job.enabled ? '#16a34a' : 'var(--color-text-secondary)', padding: '2px 4px' }}>
             <i className={job.enabled ? 'fas fa-toggle-on' : 'fas fa-toggle-off'}></i>
           </button>
         </div>
       </div>
       <div style={descStyle}>{job.descricao}</div>
-      {job.detalhe && <div style={{ ...descStyle, marginTop: '4px', fontStyle: 'italic', color: 'var(--color-text-tertiary, #94a3b8)' }}>{job.detalhe}</div>}
+      {job.detalhe && <div style={{ ...descStyle, marginTop: '4px', fontStyle: 'italic', color: 'var(--color-text-tertiary, var(--color-text-secondary))' }}>{job.detalhe}</div>}
       {job.proxima_execucao && (
-        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '6px' }}>
           Próxima execução: {new Date(job.proxima_execucao).toLocaleString('pt-BR')}
         </div>
       )}
       {editing && (
-        <div style={{ marginTop: '10px', padding: '10px 12px', background: 'white', border: '1px solid var(--color-border-card)', borderRadius: '8px', display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '8px', display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           {ed.tipo === 'interval' ? (
             <div>
-              <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Intervalo (minutos)</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', marginBottom: '4px' }}>Intervalo (minutos)</div>
               <input type="number" min="1" style={numInput} value={intervalMin} onChange={e => setIntervalMin(e.target.value)} />
             </div>
           ) : (
             <>
               {ed.tipo === 'cron_weekly' && (
                 <div>
-                  <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Dia da semana</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', marginBottom: '4px' }}>Dia da semana</div>
                   <select style={numInput} value={dow} onChange={e => setDow(e.target.value)}>
                     {AUTOM_DOW_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
               )}
               <div>
-                <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Hora</div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', marginBottom: '4px' }}>Hora</div>
                 <input type="number" min="0" max="23" style={numInput} value={hour} onChange={e => setHour(e.target.value)} />
               </div>
               <div>
-                <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>Minuto</div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', marginBottom: '4px' }}>Minuto</div>
                 <input type="number" min="0" max="59" style={numInput} value={minute} onChange={e => setMinute(e.target.value)} />
               </div>
             </>
           )}
-          <button onClick={saveSchedule} disabled={saving} style={{ padding: '7px 14px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
+          <button onClick={saveSchedule} disabled={saving} style={{ padding: '7px 14px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '8px', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}>
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
@@ -5308,7 +5308,7 @@ function AutomThresholdInput({ item, onSaved }) {
 
   return (
     <div style={{ padding: '8px 12px', background: 'var(--color-bg-page)', borderRadius: '8px', border: '1px solid var(--color-border-card)' }}>
-      <div style={{ fontSize: '11px', color: '#8696a0', marginBottom: '4px' }}>{item.label}</div>
+      <div style={{ fontSize: '11px', color: 'var(--color-text-placeholder)', marginBottom: '4px' }}>{item.label}</div>
       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
         <input
           type="number"
@@ -5317,7 +5317,7 @@ function AutomThresholdInput({ item, onSaved }) {
           style={{ width: '76px', padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--color-border-input)', fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}
         />
         {dirty && (
-          <button onClick={save} disabled={saving} title="Salvar" style={{ background: '#0d9488', border: 'none', color: 'white', borderRadius: '6px', width: '26px', height: '26px', cursor: saving ? 'not-allowed' : 'pointer' }}>
+          <button onClick={save} disabled={saving} title="Salvar" style={{ background: 'var(--color-brand-600)', border: 'none', color: 'white', borderRadius: '6px', width: '26px', height: '26px', cursor: saving ? 'not-allowed' : 'pointer' }}>
             <i className="fas fa-check" style={{ fontSize: '11px' }}></i>
           </button>
         )}
@@ -5339,7 +5339,7 @@ function AutomAlertRuleModal({ rule, onClose, onSaved }) {
     width: '100%', padding: '9px 12px', boxSizing: 'border-box',
     border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)',
     fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none',
-    background: 'white', color: 'var(--color-text-primary)',
+    background: 'var(--color-bg-card)', color: 'var(--color-text-primary)',
   };
   const labelStyle = { display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: '5px' };
 
@@ -5372,13 +5372,13 @@ function AutomAlertRuleModal({ rule, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: '16px', padding: '28px', width: '460px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+      <div style={{ background: 'var(--color-bg-card)', borderRadius: '16px', padding: '28px', width: '460px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ fontWeight: 700, fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}>
-            <i className="fas fa-bell" style={{ marginRight: '8px', color: '#0d9488' }}></i>
+            <i className="fas fa-bell" style={{ marginRight: '8px', color: 'var(--color-brand-600)' }}></i>
             {isNew ? 'Nova Regra de Alerta' : 'Editar Regra de Alerta'}
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: '18px' }}>
             <i className="fas fa-times"></i>
           </button>
         </div>
@@ -5396,13 +5396,13 @@ function AutomAlertRuleModal({ rule, onClose, onSaved }) {
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
                 placeholder="Digite e pressione Enter"
               />
-              <button onClick={addKeyword} style={{ padding: '0 14px', background: '#e0f2f1', color: '#0d9488', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontWeight: 600 }}>+</button>
+              <button onClick={addKeyword} style={{ padding: '0 14px', background: '#e0f2f1', color: 'var(--color-brand-600)', border: 'none', borderRadius: 'var(--radius-lg)', cursor: 'pointer', fontWeight: 600 }}>+</button>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
               {keywords.map(kw => (
-                <span key={kw} style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '9999px', background: '#f1f5f9', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span key={kw} style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '9999px', background: 'var(--color-bg-page)', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {kw}
-                  <i className="fas fa-times" style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setKeywords(k => k.filter(x => x !== kw))}></i>
+                  <i className="fas fa-times" style={{ cursor: 'pointer', color: 'var(--color-text-secondary)' }} onClick={() => setKeywords(k => k.filter(x => x !== kw))}></i>
                 </span>
               ))}
             </div>
@@ -5414,16 +5414,16 @@ function AutomAlertRuleModal({ rule, onClose, onSaved }) {
             </select>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
-            <input type="checkbox" checked={ativo} onChange={e => setAtivo(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: '#0d9488' }} />
+            <input type="checkbox" checked={ativo} onChange={e => setAtivo(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--color-brand-600)' }} />
             <span>Regra ativa</span>
           </label>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: '#f1f5f9', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: '#374151', fontFamily: 'var(--font-sans)' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: 'var(--color-bg-page)', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)' }}>
             Cancelar
           </button>
-          <button onClick={save} disabled={saving} style={{ padding: '9px 18px', background: '#0d9488', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={save} disabled={saving} style={{ padding: '9px 18px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
             {saving ? <><Spinner size={12} /> Salvando...</> : <><i className="fas fa-check"></i> {isNew ? 'Criar' : 'Salvar'}</>}
           </button>
         </div>
@@ -5462,7 +5462,7 @@ function AutomationsScreen() {
     }
   }
 
-  const card = { background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border-card)', padding: '18px 20px', marginBottom: '16px' };
+  const card = { background: 'var(--color-bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border-card)', padding: '18px 20px', marginBottom: '16px' };
   const cardTitle = { fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' };
   const descStyle = { fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.6 };
 
@@ -5470,7 +5470,7 @@ function AutomationsScreen() {
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <PageHeader title="Automações do Sistema" subtitle="Tudo que roda sozinho — jobs, regras e limites, agora editáveis por aqui" />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: 'var(--color-bg-page)' }}>
-        {loading && <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="#0d9488" /></div>}
+        {loading && <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>}
         {error && <div style={{ padding: '16px', color: '#dc2626' }}>{error}</div>}
 
         {data && (
@@ -5504,7 +5504,7 @@ function AutomationsScreen() {
             )}
 
             <div style={card}>
-              <div style={cardTitle}><span><i className="fas fa-clock" style={{ color: '#0d9488' }}></i> Jobs agendados</span></div>
+              <div style={cardTitle}><span><i className="fas fa-clock" style={{ color: 'var(--color-brand-600)' }}></i> Jobs agendados</span></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {(data.jobs_agendados || []).map(job => (
                   <AutomJobRow key={job.id} job={job} onSaved={load} />
@@ -5524,8 +5524,8 @@ function AutomationsScreen() {
 
             <div style={card}>
               <div style={cardTitle}>
-                <span><i className="fas fa-bullseye" style={{ color: '#0d9488' }}></i> Regras de Alerta Customizadas</span>
-                <button onClick={() => setRuleModal('new')} style={{ padding: '6px 12px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '8px', fontSize: 'var(--text-xs)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span><i className="fas fa-bullseye" style={{ color: 'var(--color-brand-600)' }}></i> Regras de Alerta Customizadas</span>
+                <button onClick={() => setRuleModal('new')} style={{ padding: '6px 12px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '8px', fontSize: 'var(--text-xs)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <i className="fas fa-plus"></i> Nova regra
                 </button>
               </div>
@@ -5544,10 +5544,10 @@ function AutomationsScreen() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-primary)' }}>{rule.nome}</span>
                           <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '9999px', background: sevInfo[2] + '22', color: sevInfo[2], fontWeight: 700 }}>{sevInfo[1]}</span>
-                          {!rule.ativo && <span style={{ fontSize: '10px', color: '#94a3b8' }}>(inativa)</span>}
+                          {!rule.ativo && <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>(inativa)</span>}
                         </div>
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          <button onClick={() => setRuleModal(rule)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0d9488', fontSize: '13px', padding: '4px 8px' }}>
+                          <button onClick={() => setRuleModal(rule)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-brand-600)', fontSize: '13px', padding: '4px 8px' }}>
                             <i className="fas fa-pen"></i>
                           </button>
                           <button onClick={() => deleteRule(rule)} disabled={deletingId === rule.id} title="Excluir" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '13px', padding: '4px 8px' }}>
@@ -5557,7 +5557,7 @@ function AutomationsScreen() {
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
                         {(rule.keywords || []).map(kw => (
-                          <span key={kw} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', background: '#f1f5f9', color: '#64748b' }}>{kw}</span>
+                          <span key={kw} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '9999px', background: 'var(--color-bg-page)', color: 'var(--color-text-muted)' }}>{kw}</span>
                         ))}
                       </div>
                     </div>
@@ -5572,12 +5572,12 @@ function AutomationsScreen() {
             </div>
 
             <div style={card}>
-              <div style={cardTitle}><span><i className="fas fa-mobile-screen" style={{ color: '#0d9488' }}></i> Push notifications automáticas</span></div>
+              <div style={cardTitle}><span><i className="fas fa-mobile-screen" style={{ color: 'var(--color-brand-600)' }}></i> Push notifications automáticas</span></div>
               <div style={descStyle}>{data.push_notifications?.descricao}</div>
             </div>
 
             <div style={card}>
-              <div style={cardTitle}><span><i className="fas fa-rocket" style={{ color: '#0d9488' }}></i> Ao ativar um grupo</span></div>
+              <div style={cardTitle}><span><i className="fas fa-rocket" style={{ color: 'var(--color-brand-600)' }}></i> Ao ativar um grupo</span></div>
               <div style={descStyle}>{data.ativacao_de_grupo?.descricao}</div>
               <ul style={{ margin: '10px 0 0', paddingLeft: '20px' }}>
                 {(data.ativacao_de_grupo?.itens || []).map((it, i) => (
@@ -5587,7 +5587,7 @@ function AutomationsScreen() {
             </div>
 
             <div style={card}>
-              <div style={cardTitle}><span><i className="fas fa-database" style={{ color: '#64748b' }}></i> Retenção de dados (LGPD)</span></div>
+              <div style={cardTitle}><span><i className="fas fa-database" style={{ color: 'var(--color-text-muted)' }}></i> Retenção de dados (LGPD)</span></div>
               <div style={descStyle}>{data.retencao_dados?.descricao}</div>
               {data.retencao_dados?.editavel && (
                 <div style={{ marginTop: '10px' }}>

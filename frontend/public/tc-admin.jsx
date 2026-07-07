@@ -62,31 +62,31 @@ function AdminPanel({ onBack }) {
   ];
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0a0f1a', fontFamily: 'var(--font-sans)' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-page)', fontFamily: 'var(--font-sans)' }}>
       {/* Header */}
-      <div style={{ background: '#111b21', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 24px', display: 'flex', alignItems: 'center', height: '56px', flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px 10px', marginRight: '8px', fontSize: '16px' }}>
+      <div style={{ background: 'var(--color-bg-header)', borderBottom: '1px solid var(--color-border-card)', padding: '0 24px', display: 'flex', alignItems: 'center', height: '56px', flexShrink: 0 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '6px 10px', marginRight: '8px', fontSize: '16px' }}>
           <i className="fas fa-arrow-left" />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-          <i className="fas fa-shield-halved" style={{ color: '#0d9488', fontSize: '18px' }} />
-          <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '16px' }}>Painel Administrativo</span>
+          <i className="fas fa-shield-halved" style={{ color: 'var(--color-brand-600)', fontSize: '18px' }} />
+          <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '16px' }}>Painel Administrativo</span>
         </div>
-        <button onClick={load} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', padding: '6px 10px' }}>
+        <button onClick={load} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '14px', padding: '6px 10px' }}>
           <i className="fas fa-rotate" />
         </button>
       </div>
 
       {/* Tab bar */}
-      <div style={{ background: '#111b21', borderBottom: '1px solid rgba(255,255,255,0.04)', padding: '0 24px', display: 'flex', gap: '2px', flexShrink: 0 }}>
+      <div style={{ background: 'var(--color-bg-header)', borderBottom: '1px solid var(--color-border-card)', padding: '0 24px', display: 'flex', gap: '2px', flexShrink: 0 }}>
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px',
-              color: tab === t.id ? '#0d9488' : '#64748b', fontSize: '13px', fontWeight: tab === t.id ? 600 : 400,
-              borderBottom: `2px solid ${tab === t.id ? '#0d9488' : 'transparent'}`, display: 'flex', alignItems: 'center', gap: '7px', transition: 'color 0.15s',
+              color: tab === t.id ? 'var(--color-brand-600)' : 'var(--color-text-muted)', fontSize: '13px', fontWeight: tab === t.id ? 600 : 400,
+              borderBottom: `2px solid ${tab === t.id ? 'var(--color-brand-600)' : 'transparent'}`, display: 'flex', alignItems: 'center', gap: '7px', transition: 'color 0.15s',
             }}
           >
             <i className={`fas fa-${t.icon}`} style={{ fontSize: '12px' }} />{t.label}
@@ -122,35 +122,35 @@ function AdminDashboard({ stats, users, subs }) {
     { icon: 'flask',        label: 'Em período trial',     value: s.trial_subscriptions || 0,  color: '#f59e0b' },
     { icon: 'circle-xmark', label: 'Canceladas',           value: s.cancelled_subscriptions || 0, color: '#ef4444' },
     { icon: 'layer-group',  label: 'Planos ativos',        value: s.total_active_plans || 0,   color: '#a855f7' },
-    { icon: 'dollar-sign',  label: 'MRR simulado',         value: `R$ ${(s.mrr || 0).toFixed(0)}`, color: '#0d9488' },
+    { icon: 'dollar-sign',  label: 'MRR simulado',         value: `R$ ${(s.mrr || 0).toFixed(0)}`, color: 'var(--color-brand-600)' },
   ];
   return (
     <div>
-      <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>Visão Geral do Sistema</h2>
+      <h2 style={{ color: 'var(--color-text-primary)', fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>Visão Geral do Sistema</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '14px', marginBottom: '32px' }}>
         {kpis.map(k => (
-          <div key={k.label} style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '18px 16px' }}>
+          <div key={k.label} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', padding: '18px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: `${k.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <i className={`fas fa-${k.icon}`} style={{ color: k.color, fontSize: '14px' }} />
               </div>
-              <span style={{ color: '#64748b', fontSize: '12px' }}>{k.label}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>{k.label}</span>
             </div>
-            <div style={{ color: '#f1f5f9', fontSize: '26px', fontWeight: 800 }}>{k.value}</div>
+            <div style={{ color: 'var(--color-text-primary)', fontSize: '26px', fontWeight: 800 }}>{k.value}</div>
           </div>
         ))}
       </div>
 
       {/* Recent users */}
-      <div style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px' }}>
-        <h3 style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: 700, marginBottom: '16px' }}>Usuários recentes</h3>
+      <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', padding: '20px' }}>
+        <h3 style={{ color: 'var(--color-text-primary)', fontSize: '14px', fontWeight: 700, marginBottom: '16px' }}>Usuários recentes</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {users.slice(0, 8).map(u => (
-            <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: '1px solid var(--color-border-card)' }}>
               <UserAvatar name={u.full_name || u.username} size={32} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 500 }}>{u.full_name || u.username}</div>
-                <div style={{ color: '#475569', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 500 }}>{u.full_name || u.username}</div>
+                <div style={{ color: 'var(--color-text-placeholder)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 {u.is_admin && <span style={{ background: '#7c3aed20', color: '#a855f7', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '12px' }}>ADMIN</span>}
@@ -181,47 +181,47 @@ function AdminUsers({ users, subs, plans, onRefresh }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700, margin: 0 }}>Usuários ({users.length})</h2>
+        <h2 style={{ color: 'var(--color-text-primary)', fontSize: '18px', fontWeight: 700, margin: 0 }}>Usuários ({users.length})</h2>
         <input
           type="text" placeholder="Buscar por nome, email, usuário..."
           value={search} onChange={e => setSearch(e.target.value)}
-          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#f1f5f9', padding: '8px 14px', fontSize: '13px', width: '260px', outline: 'none' }}
+          style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '8px 14px', fontSize: '13px', width: '260px', outline: 'none' }}
         />
       </div>
 
-      <div style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', overflow: 'hidden' }}>
         {/* Table header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 140px 120px 100px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#475569', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 140px 120px 100px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', color: 'var(--color-text-placeholder)', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           <span>Usuário</span><span>E-mail</span><span>Plano</span><span>Status</span><span>Ação</span>
         </div>
 
         {filtered.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#475569', fontSize: '14px' }}>Nenhum usuário encontrado</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-placeholder)', fontSize: '14px' }}>Nenhum usuário encontrado</div>
         ) : filtered.map(u => {
           const sub = subMap[u.id];
           return (
-            <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 140px 120px 100px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
+            <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 140px 120px 100px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                 <UserAvatar name={u.full_name || u.username} size={28} />
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name || u.username}</div>
-                  <div style={{ color: '#475569', fontSize: '12px' }}>@{u.username}</div>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name || u.username}</div>
+                  <div style={{ color: 'var(--color-text-placeholder)', fontSize: '12px' }}>@{u.username}</div>
                 </div>
               </div>
-              <div style={{ color: '#64748b', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email || '—'}</div>
+              <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email || '—'}</div>
               <div>
                 {sub ? (
-                  <span style={{ background: 'rgba(13,148,136,0.1)', color: '#0d9488', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px' }}>
+                  <span style={{ background: 'rgba(13,148,136,0.1)', color: 'var(--color-brand-600)', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px' }}>
                     {sub.plan_name}
                   </span>
-                ) : <span style={{ color: '#475569', fontSize: '12px' }}>—</span>}
+                ) : <span style={{ color: 'var(--color-text-placeholder)', fontSize: '12px' }}>—</span>}
               </div>
               <div>
                 <SubStatusBadge status={sub?.status} active={u.is_active} isAdmin={u.is_admin} />
               </div>
               <button
                 onClick={() => setEditUser(u)}
-                style={{ background: 'rgba(13,148,136,0.1)', border: 'none', color: '#0d9488', cursor: 'pointer', padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}
+                style={{ background: 'rgba(13,148,136,0.1)', border: 'none', color: 'var(--color-brand-600)', cursor: 'pointer', padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}
               >
                 Editar
               </button>
@@ -270,13 +270,13 @@ function EditUserModal({ user, sub, plans, onClose, onRefresh }) {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <div style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', width: 'min(480px, 95vw)' }}>
+      <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '16px', padding: '24px', width: 'min(480px, 95vw)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
-            <h3 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 700, margin: 0 }}>{user.full_name || user.username}</h3>
-            <div style={{ color: '#475569', fontSize: '13px' }}>{user.email}</div>
+            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '16px', fontWeight: 700, margin: 0 }}>{user.full_name || user.username}</h3>
+            <div style={{ color: 'var(--color-text-placeholder)', fontSize: '13px' }}>{user.email}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '18px' }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -305,14 +305,14 @@ function EditUserModal({ user, sub, plans, onClose, onRefresh }) {
             </>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <input type="checkbox" checked={isActive} onChange={e => setActive(e.target.checked)} id="active_toggle" style={{ width: '16px', height: '16px', accentColor: '#0d9488' }} />
-            <label htmlFor="active_toggle" style={{ color: '#94a3b8', fontSize: '14px', cursor: 'pointer' }}>Conta ativa</label>
+            <input type="checkbox" checked={isActive} onChange={e => setActive(e.target.checked)} id="active_toggle" style={{ width: '16px', height: '16px', accentColor: 'var(--color-brand-600)' }} />
+            <label htmlFor="active_toggle" style={{ color: 'var(--color-text-secondary)', fontSize: '14px', cursor: 'pointer' }}>Conta ativa</label>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#94a3b8', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
-          <button onClick={save} disabled={loading} style={{ flex: 2, padding: '10px', background: '#0d9488', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-secondary)', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+          <button onClick={save} disabled={loading} style={{ flex: 2, padding: '10px', background: 'var(--color-brand-600)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
             {loading ? 'Salvando...' : 'Salvar alterações'}
           </button>
         </div>
@@ -329,10 +329,10 @@ function AdminPlans({ plans, onRefresh }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700, margin: 0 }}>Planos ({plans.length})</h2>
+        <h2 style={{ color: 'var(--color-text-primary)', fontSize: '18px', fontWeight: 700, margin: 0 }}>Planos ({plans.length})</h2>
         <button
           onClick={() => setCreating(true)}
-          style={{ background: '#0d9488', border: 'none', color: '#fff', padding: '9px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '7px' }}
+          style={{ background: 'var(--color-brand-600)', border: 'none', color: '#fff', padding: '9px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '7px' }}
         >
           <i className="fas fa-plus" /> Novo plano
         </button>
@@ -344,22 +344,22 @@ function AdminPlans({ plans, onRefresh }) {
           const catalogFeats = feats.filter(l => CATALOG_LABELS.has(l));
           const customFeats  = feats.filter(l => !CATALOG_LABELS.has(l));
           return (
-          <div key={plan.id} style={{ background: '#1e293b', border: `1px solid ${plan.is_active ? 'rgba(255,255,255,0.06)' : 'rgba(220,38,38,0.2)'}`, borderRadius: '12px', padding: '18px', opacity: plan.is_active ? 1 : 0.7 }}>
+          <div key={plan.id} style={{ background: 'var(--color-bg-card)', border: `1px solid ${plan.is_active ? 'var(--color-border-card)' : 'rgba(220,38,38,0.2)'}`, borderRadius: '12px', padding: '18px', opacity: plan.is_active ? 1 : 0.7 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '16px' }}>{plan.name}</span>
-                  {plan.is_featured && <span style={{ background: '#0d9488', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px' }}>POPULAR</span>}
+                  <span style={{ color: 'var(--color-text-primary)', fontWeight: 700, fontSize: '16px' }}>{plan.name}</span>
+                  {plan.is_featured && <span style={{ background: 'var(--color-brand-600)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px' }}>POPULAR</span>}
                   {!plan.is_active && <span style={{ background: '#dc262620', color: '#dc2626', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px' }}>INATIVO</span>}
                 </div>
-                <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>/{plan.slug}</div>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '2px' }}>/{plan.slug}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '20px' }}>R$ {plan.price_monthly.toFixed(0)}</div>
-                <div style={{ color: '#475569', fontSize: '11px' }}>/mês</div>
+                <div style={{ color: 'var(--color-text-primary)', fontWeight: 800, fontSize: '20px' }}>R$ {plan.price_monthly.toFixed(0)}</div>
+                <div style={{ color: 'var(--color-text-placeholder)', fontSize: '11px' }}>/mês</div>
               </div>
             </div>
-            <div style={{ color: '#475569', fontSize: '13px', marginBottom: '10px' }}>{plan.description}</div>
+            <div style={{ color: 'var(--color-text-placeholder)', fontSize: '13px', marginBottom: '10px' }}>{plan.description}</div>
 
             {/* Feature pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '14px' }}>
@@ -379,26 +379,26 @@ function AdminPlans({ plans, onRefresh }) {
                 </span>
               ))}
               {feats.length > 6 && (
-                <span style={{ background: 'rgba(255,255,255,0.04)', color: '#64748b', fontSize: '11px', padding: '2px 8px', borderRadius: '20px' }}>
+                <span style={{ background: 'var(--color-border-card)', color: 'var(--color-text-muted)', fontSize: '11px', padding: '2px 8px', borderRadius: '20px' }}>
                   +{feats.length - 6} mais
                 </span>
               )}
               {feats.length === 0 && (
-                <span style={{ color: '#334155', fontSize: '12px', fontStyle: 'italic' }}>Nenhuma funcionalidade configurada</span>
+                <span style={{ color: 'var(--color-border-default)', fontSize: '12px', fontStyle: 'italic' }}>Nenhuma funcionalidade configurada</span>
               )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontSize: '12px', color: '#475569' }}>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-placeholder)' }}>
                 {plan.max_groups === -1 ? 'Grupos ilimitados' : `Até ${plan.max_groups} grupos`}
               </span>
-              <span style={{ fontSize: '12px', color: '#475569' }}>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-placeholder)' }}>
                 {feats.length} funcionalidade{feats.length !== 1 ? 's' : ''}
               </span>
             </div>
             <button
               onClick={() => setEditing(plan)}
-              style={{ width: '100%', padding: '8px', background: 'rgba(13,148,136,0.1)', border: '1px solid rgba(13,148,136,0.2)', borderRadius: '8px', color: '#0d9488', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+              style={{ width: '100%', padding: '8px', background: 'rgba(13,148,136,0.1)', border: '1px solid rgba(13,148,136,0.2)', borderRadius: '8px', color: 'var(--color-brand-600)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
             >
               <i className="fas fa-pen" style={{ marginRight: '6px' }} />Editar plano
             </button>
@@ -508,22 +508,22 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
   return (
     <ModalOverlay onClose={onClose}>
       <div style={{
-        background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)',
         borderRadius: '16px', width: 'min(640px, 96vw)',
         maxHeight: '92vh', display: 'flex', flexDirection: 'column',
       }}>
         {/* Header fixo */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--color-border-card)', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 700, margin: 0 }}>
+              <h3 style={{ color: 'var(--color-text-primary)', fontSize: '16px', fontWeight: 700, margin: 0 }}>
                 {isNew ? 'Novo plano' : `Editar: ${plan.name}`}
               </h3>
-              <div style={{ color: '#475569', fontSize: '12px', marginTop: '3px' }}>
+              <div style={{ color: 'var(--color-text-placeholder)', fontSize: '12px', marginTop: '3px' }}>
                 {enabledCount} funcionalidade{enabledCount !== 1 ? 's' : ''} ativa{enabledCount !== 1 ? 's' : ''}
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '20px', lineHeight: 1 }}>×</button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '20px', lineHeight: 1 }}>×</button>
           </div>
         </div>
 
@@ -569,28 +569,28 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <ToggleSwitch checked={form.is_active} onChange={v => sf('is_active', v)} />
-              <span style={{ color: '#94a3b8', fontSize: '13px' }}>Plano ativo</span>
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Plano ativo</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <ToggleSwitch checked={form.is_featured} onChange={v => sf('is_featured', v)} color="#f59e0b" />
-              <span style={{ color: '#94a3b8', fontSize: '13px' }}>Destaque "Popular"</span>
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Destaque "Popular"</span>
             </div>
           </div>
 
           {/* ── Funcionalidades por categoria ── */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px' }}>
+          <div style={{ borderTop: '1px solid var(--color-border-card)', paddingTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <label style={{ ...labelStyle, margin: 0 }}>Funcionalidades incluídas</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => setEnabled(new Set(FEATURE_CATALOG.map(f => f.label)))}
-                  style={{ background: 'rgba(13,148,136,0.1)', border: '1px solid rgba(13,148,136,0.2)', color: '#0d9488', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{ background: 'rgba(13,148,136,0.1)', border: '1px solid rgba(13,148,136,0.2)', color: 'var(--color-brand-600)', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '6px', cursor: 'pointer' }}
                 >
                   Ativar todas
                 </button>
                 <button
                   onClick={() => setEnabled(new Set())}
-                  style={{ background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.2)', color: '#64748b', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{ background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '6px', cursor: 'pointer' }}
                 >
                   Limpar
                 </button>
@@ -599,10 +599,10 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
 
             {categories.map(cat => (
               <div key={cat} style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-placeholder)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--color-border-card)' }} />
                   {cat}
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+                  <div style={{ flex: 1, height: '1px', background: 'var(--color-border-card)' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {byCategory[cat].map(feat => {
@@ -614,21 +614,21 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
                         style={{
                           display: 'flex', alignItems: 'center', gap: '12px',
                           padding: '10px 14px', borderRadius: '10px', cursor: 'pointer',
-                          background: on ? 'rgba(13,148,136,0.08)' : 'rgba(255,255,255,0.02)',
-                          border: `1px solid ${on ? 'rgba(13,148,136,0.25)' : 'rgba(255,255,255,0.05)'}`,
+                          background: on ? 'rgba(13,148,136,0.08)' : 'var(--color-border-card)',
+                          border: `1px solid ${on ? 'rgba(13,148,136,0.25)' : 'var(--color-border-card)'}`,
                           transition: 'all 0.12s',
                           userSelect: 'none',
                         }}
                       >
                         <div style={{
                           width: '30px', height: '30px', borderRadius: '7px', flexShrink: 0,
-                          background: on ? 'rgba(13,148,136,0.18)' : 'rgba(255,255,255,0.04)',
+                          background: on ? 'rgba(13,148,136,0.18)' : 'var(--color-border-card)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'background 0.12s',
                         }}>
-                          <i className={`fas fa-${feat.icon}`} style={{ fontSize: '13px', color: on ? '#0d9488' : '#475569' }} />
+                          <i className={`fas fa-${feat.icon}`} style={{ fontSize: '13px', color: on ? 'var(--color-brand-600)' : 'var(--color-text-placeholder)' }} />
                         </div>
-                        <span style={{ flex: 1, fontSize: '13px', color: on ? '#e2e8f0' : '#64748b', fontWeight: on ? 500 : 400, transition: 'color 0.12s' }}>
+                        <span style={{ flex: 1, fontSize: '13px', color: on ? 'var(--color-text-primary)' : 'var(--color-text-muted)', fontWeight: on ? 500 : 400, transition: 'color 0.12s' }}>
                           {feat.label}
                         </span>
                         <ToggleSwitch checked={on} onChange={() => toggleFeature(feat.label)} small />
@@ -641,17 +641,17 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
 
             {/* Custom features */}
             <div style={{ marginTop: '8px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-placeholder)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--color-border-card)' }} />
                 Funcionalidades customizadas
-                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)' }} />
+                <div style={{ flex: 1, height: '1px', background: 'var(--color-border-card)' }} />
               </div>
 
               {custom.map((label, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', borderRadius: '10px', background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.18)', marginBottom: '6px' }}>
                   <i className="fas fa-sparkles" style={{ color: '#a855f7', fontSize: '12px', flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: '13px', color: '#e2e8f0' }}>{label}</span>
-                  <button onClick={() => removeCustom(label)} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: '14px', padding: '2px', lineHeight: 1 }}>×</button>
+                  <span style={{ flex: 1, fontSize: '13px', color: 'var(--color-text-primary)' }}>{label}</span>
+                  <button onClick={() => removeCustom(label)} style={{ background: 'none', border: 'none', color: 'var(--color-text-placeholder)', cursor: 'pointer', fontSize: '14px', padding: '2px', lineHeight: 1 }}>×</button>
                 </div>
               ))}
 
@@ -666,7 +666,7 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
                 <button
                   onClick={addCustom}
                   disabled={!newCustom.trim()}
-                  style={{ background: newCustom.trim() ? '#0d9488' : '#1e293b', border: 'none', color: newCustom.trim() ? '#fff' : '#475569', padding: '0 16px', borderRadius: '8px', cursor: newCustom.trim() ? 'pointer' : 'default', fontWeight: 600, fontSize: '13px', flexShrink: 0 }}
+                  style={{ background: newCustom.trim() ? 'var(--color-brand-600)' : 'var(--color-bg-card)', border: 'none', color: newCustom.trim() ? '#fff' : 'var(--color-text-placeholder)', padding: '0 16px', borderRadius: '8px', cursor: newCustom.trim() ? 'pointer' : 'default', fontWeight: 600, fontSize: '13px', flexShrink: 0 }}
                 >
                   + Adicionar
                 </button>
@@ -676,11 +676,11 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
         </div>
 
         {/* Footer fixo */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '10px', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '11px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#94a3b8', cursor: 'pointer', fontWeight: 600 }}>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border-card)', display: 'flex', gap: '10px', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-secondary)', cursor: 'pointer', fontWeight: 600 }}>
             Cancelar
           </button>
-          <button onClick={save} disabled={loading} style={{ flex: 2, padding: '11px', background: loading ? '#064e3b' : '#0d9488', border: 'none', borderRadius: '8px', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <button onClick={save} disabled={loading} style={{ flex: 2, padding: '11px', background: loading ? '#064e3b' : 'var(--color-brand-600)', border: 'none', borderRadius: '8px', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             {loading ? <><Spinner size={14} /> Salvando...</> : <>{isNew ? 'Criar plano' : 'Salvar alterações'} ({enabledCount} funcionalidades)</>}
           </button>
         </div>
@@ -690,7 +690,7 @@ function PlanFormModal({ plan, onClose, onRefresh }) {
 }
 
 // ── Toggle Switch component ───────────────────────────────────
-function ToggleSwitch({ checked, onChange, small = false, color = '#0d9488' }) {
+function ToggleSwitch({ checked, onChange, small = false, color = 'var(--color-brand-600)' }) {
   const w = small ? 32 : 40;
   const h = small ? 18 : 22;
   const r = h - 4;
@@ -699,7 +699,7 @@ function ToggleSwitch({ checked, onChange, small = false, color = '#0d9488' }) {
       onClick={e => { e.stopPropagation(); onChange(!checked); }}
       style={{
         width: w, height: h, borderRadius: h, flexShrink: 0,
-        background: checked ? color : '#334155',
+        background: checked ? color : 'var(--color-border-default)',
         position: 'relative', cursor: 'pointer',
         transition: 'background 0.2s',
       }}
@@ -732,14 +732,14 @@ function AdminSubscriptions({ subs, plans, onRefresh }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-        <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: 700, margin: 0 }}>Assinaturas ({subs.length})</h2>
+        <h2 style={{ color: 'var(--color-text-primary)', fontSize: '18px', fontWeight: 700, margin: 0 }}>Assinaturas ({subs.length})</h2>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <input
             type="text" placeholder="Buscar usuário..."
             value={search} onChange={e => setSearch(e.target.value)}
-            style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#f1f5f9', padding: '7px 12px', fontSize: '13px', width: '200px', outline: 'none' }}
+            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '7px 12px', fontSize: '13px', width: '200px', outline: 'none' }}
           />
-          <select value={filter} onChange={e => setFilter(e.target.value)} style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#94a3b8', padding: '7px 12px', fontSize: '13px', outline: 'none' }}>
+          <select value={filter} onChange={e => setFilter(e.target.value)} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-secondary)', padding: '7px 12px', fontSize: '13px', outline: 'none' }}>
             <option value="">Todos os status</option>
             <option value="active">Ativo ({statusCounts.active || 0})</option>
             <option value="trial">Trial ({statusCounts.trial || 0})</option>
@@ -750,24 +750,24 @@ function AdminSubscriptions({ subs, plans, onRefresh }) {
         </div>
       </div>
 
-      <div style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 120px 120px 140px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#475569', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
+      <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 120px 120px 140px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', color: 'var(--color-text-placeholder)', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
           <span>Usuário</span><span>Plano</span><span>Status</span><span>Criado em</span><span>Expira em</span>
         </div>
         {filtered.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#475569' }}>Nenhuma assinatura encontrada</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-placeholder)' }}>Nenhuma assinatura encontrada</div>
         ) : filtered.map(s => (
-          <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 120px 120px 140px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
+          <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 120px 120px 140px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', alignItems: 'center' }}>
             <div>
-              <div style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: 500 }}>{s.full_name || s.username}</div>
-              <div style={{ color: '#475569', fontSize: '12px' }}>{s.email}</div>
+              <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 500 }}>{s.full_name || s.username}</div>
+              <div style={{ color: 'var(--color-text-placeholder)', fontSize: '12px' }}>{s.email}</div>
             </div>
-            <span style={{ background: 'rgba(13,148,136,0.1)', color: '#0d9488', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px', display: 'inline-block' }}>
+            <span style={{ background: 'rgba(13,148,136,0.1)', color: 'var(--color-brand-600)', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px', display: 'inline-block' }}>
               {s.plan_name}
             </span>
             <SubStatusBadge status={s.status} active={true} />
-            <span style={{ color: '#64748b', fontSize: '12px' }}>{s.created_at ? new Date(s.created_at).toLocaleDateString('pt-BR') : '—'}</span>
-            <span style={{ color: '#64748b', fontSize: '12px' }}>{s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}</span>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>{s.created_at ? new Date(s.created_at).toLocaleDateString('pt-BR') : '—'}</span>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>{s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('pt-BR') : '—'}</span>
           </div>
         ))}
       </div>
@@ -778,7 +778,7 @@ function AdminSubscriptions({ subs, plans, onRefresh }) {
 // ── Shared helpers ────────────────────────────────────────────
 function UserAvatar({ name, size = 32 }) {
   const initials = (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-  const colors = ['#0d9488', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981'];
+  const colors = ['var(--color-brand-600)', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981'];
   const color = colors[(name || '').charCodeAt(0) % colors.length];
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: `${color}30`, border: `1px solid ${color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color, fontWeight: 700, fontSize: Math.floor(size * 0.38) + 'px', flexShrink: 0 }}>
@@ -789,7 +789,7 @@ function UserAvatar({ name, size = 32 }) {
 
 function ActiveDot({ active }) {
   return (
-    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: active ? '#22c55e' : '#475569', flexShrink: 0 }} title={active ? 'Ativo' : 'Inativo'} />
+    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: active ? '#22c55e' : 'var(--color-text-placeholder)', flexShrink: 0 }} title={active ? 'Ativo' : 'Inativo'} />
   );
 }
 
@@ -802,10 +802,10 @@ const STATUS_CONFIG = {
 };
 
 function SubStatusBadge({ status, active, isAdmin }) {
-  if (!active) return <span style={{ background: '#47556920', color: '#475569', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px' }}>Inativo</span>;
+  if (!active) return <span style={{ background: 'var(--color-text-placeholder)20', color: 'var(--color-text-placeholder)', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px' }}>Inativo</span>;
   if (isAdmin) return <span style={{ background: '#7c3aed20', color: '#a855f7', fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px' }}>Admin</span>;
-  if (!status) return <span style={{ color: '#475569', fontSize: '12px' }}>—</span>;
-  const cfg = STATUS_CONFIG[status] || { label: status, color: '#64748b', bg: '#64748b15' };
+  if (!status) return <span style={{ color: 'var(--color-text-placeholder)', fontSize: '12px' }}>—</span>;
+  const cfg = STATUS_CONFIG[status] || { label: status, color: 'var(--color-text-muted)', bg: 'var(--color-text-muted)15' };
   return <span style={{ background: cfg.bg, color: cfg.color, fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px' }}>{cfg.label}</span>;
 }
 
@@ -820,8 +820,8 @@ function ModalOverlay({ children, onClose }) {
   );
 }
 
-const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 500, color: '#64748b', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' };
-const selectStyle = { width: '100%', padding: '9px 12px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: '#f1f5f9', fontSize: '14px', outline: 'none' };
+const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--color-text-muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' };
+const selectStyle = { width: '100%', padding: '9px 12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-primary)', fontSize: '14px', outline: 'none' };
 const inpStyle = { ...selectStyle };
 
 Object.assign(window, { AdminPanel });

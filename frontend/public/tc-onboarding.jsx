@@ -86,26 +86,26 @@ function OnboardingWizard({ onComplete }) {
   const stepPos = isAdmin ? step : step - 1;
 
   const overlayStyle = {
-    position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.96)', zIndex: 9000,
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9000,
     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
   };
 
   const cardStyle = {
-    background: '#0f172a', border: '1px solid #1e293b', borderRadius: '20px',
+    background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '20px',
     width: 'min(520px, 100%)', maxHeight: '92vh', overflow: 'auto',
     boxShadow: '0 32px 64px rgba(0,0,0,0.6)',
   };
 
   const btnPrimary = (disabled) => ({
-    padding: '11px 24px', background: disabled ? '#1e293b' : '#0d9488', color: disabled ? '#475569' : 'white',
+    padding: '11px 24px', background: disabled ? 'var(--color-border-input)' : 'var(--color-brand-600)', color: disabled ? 'var(--color-text-placeholder)' : 'white',
     border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
     cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
     display: 'flex', alignItems: 'center', gap: '8px',
   });
 
   const btnGhost = {
-    padding: '11px 20px', background: 'transparent', color: '#64748b',
-    border: '1px solid #1e293b', borderRadius: '10px', fontSize: '13px',
+    padding: '11px 20px', background: 'transparent', color: 'var(--color-text-muted)',
+    border: '1px solid var(--color-border-card)', borderRadius: '10px', fontSize: '13px',
     cursor: 'pointer', fontFamily: 'var(--font-sans)',
   };
 
@@ -116,15 +116,15 @@ function OnboardingWizard({ onComplete }) {
         <React.Fragment key={s}>
           <div style={{
             width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-            background: s < stepPos ? '#0d9488' : s === stepPos ? '#14b8a6' : '#1e293b',
-            border: `2px solid ${s <= stepPos ? '#0d9488' : '#334155'}`,
+            background: s < stepPos ? 'var(--color-brand-600)' : s === stepPos ? 'var(--color-brand-500)' : 'var(--color-border-card)',
+            border: `2px solid ${s <= stepPos ? 'var(--color-brand-600)' : 'var(--color-border-default)'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '12px', fontWeight: 700, color: s <= stepPos ? 'white' : '#475569',
+            fontSize: '12px', fontWeight: 700, color: s <= stepPos ? 'white' : 'var(--color-text-placeholder)',
           }}>
             {s < stepPos ? <i className="fas fa-check" style={{ fontSize: '10px' }}></i> : s}
           </div>
           <div style={{ flex: 1, display: s < totalSteps ? 'block' : 'none' }}>
-            <div style={{ height: '2px', background: s < stepPos ? '#0d9488' : '#1e293b', borderRadius: '2px', transition: 'background 0.3s' }}></div>
+            <div style={{ height: '2px', background: s < stepPos ? 'var(--color-brand-600)' : 'var(--color-border-card)', borderRadius: '2px', transition: 'background 0.3s' }}></div>
           </div>
         </React.Fragment>
       ))}
@@ -139,34 +139,34 @@ function OnboardingWizard({ onComplete }) {
           <StepIndicator />
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
             <div style={{ width: 48, height: 48, borderRadius: '12px', background: wppConnected ? 'rgba(34,197,94,0.15)' : 'rgba(20,184,166,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="fab fa-whatsapp" style={{ fontSize: '24px', color: wppConnected ? '#22c55e' : '#14b8a6' }}></i>
+              <i className="fab fa-whatsapp" style={{ fontSize: '24px', color: wppConnected ? 'var(--color-low)' : 'var(--color-brand-500)' }}></i>
             </div>
             <div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9', marginBottom: '2px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '2px' }}>
                 {stepLabels[0]}
               </div>
-              <div style={{ fontSize: '13px', color: '#64748b' }}>Etapa 1 de {totalSteps}</div>
+              <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Etapa 1 de {totalSteps}</div>
             </div>
           </div>
 
           {wppChecking ? (
             <div style={{ textAlign: 'center', padding: '32px' }}>
-              <Spinner size={28} color="#14b8a6" />
-              <div style={{ color: '#64748b', fontSize: '13px', marginTop: '12px' }}>Verificando conexão...</div>
+              <Spinner size={28} color="var(--color-brand-500)" />
+              <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginTop: '12px' }}>Verificando conexão...</div>
             </div>
           ) : wppConnected ? (
             <div style={{ textAlign: 'center', padding: '24px', background: 'rgba(34,197,94,0.08)', borderRadius: '12px', border: '1px solid rgba(34,197,94,0.2)', marginBottom: '20px' }}>
-              <i className="fas fa-check-circle" style={{ fontSize: '36px', color: '#22c55e', display: 'block', marginBottom: '10px' }}></i>
-              <div style={{ fontWeight: 700, color: '#22c55e', fontSize: '16px' }}>WhatsApp conectado!</div>
-              <div style={{ color: '#64748b', fontSize: '13px', marginTop: '4px' }}>Sua conta está ativa e pronta para receber mensagens.</div>
+              <i className="fas fa-check-circle" style={{ fontSize: '36px', color: 'var(--color-low)', display: 'block', marginBottom: '10px' }}></i>
+              <div style={{ fontWeight: 700, color: 'var(--color-low)', fontSize: '16px' }}>WhatsApp conectado!</div>
+              <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginTop: '4px' }}>Sua conta está ativa e pronta para receber mensagens.</div>
             </div>
           ) : (
             <div style={{ marginBottom: '20px' }}>
-              <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: '0 0 16px 0' }}>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: '0 0 16px 0' }}>
                 Para começar a monitorar grupos do WhatsApp, você precisa conectar sua conta escaneando o QR Code pelo celular.
               </p>
-              <div style={{ background: '#1e293b', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-                <div style={{ color: '#64748b', fontSize: '13px', marginBottom: '12px' }}>Acesse a tela de conexão para escanear o QR Code:</div>
+              <div style={{ background: 'var(--color-bg-page)', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '12px' }}>Acesse a tela de conexão para escanear o QR Code:</div>
                 <WppConnectionScreen inOnboarding={true} onConnected={() => setWppConnected(true)} />
               </div>
             </div>
@@ -194,46 +194,46 @@ function OnboardingWizard({ onComplete }) {
           <StepIndicator />
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
             <div style={{ width: 48, height: 48, borderRadius: '12px', background: 'rgba(20,184,166,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="fas fa-users" style={{ fontSize: '20px', color: '#14b8a6' }}></i>
+              <i className="fas fa-users" style={{ fontSize: '20px', color: 'var(--color-brand-500)' }}></i>
             </div>
             <div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9', marginBottom: '2px' }}>{stepLabels[stepPos - 1]}</div>
-              <div style={{ fontSize: '13px', color: '#64748b' }}>Etapa {stepPos} de {totalSteps}</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '2px' }}>{stepLabels[stepPos - 1]}</div>
+              <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Etapa {stepPos} de {totalSteps}</div>
             </div>
           </div>
 
-          <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: '0 0 16px 0' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: '0 0 16px 0' }}>
             Escolha um grupo do WhatsApp para começar a monitorar. Você poderá adicionar mais grupos depois.
           </p>
 
           {activatedGroup ? (
             <div style={{ background: 'rgba(34,197,94,0.08)', borderRadius: '12px', border: '1px solid rgba(34,197,94,0.2)', padding: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <i className="fas fa-check-circle" style={{ color: '#22c55e', fontSize: '20px' }}></i>
+              <i className="fas fa-check-circle" style={{ color: 'var(--color-low)', fontSize: '20px' }}></i>
               <div>
-                <div style={{ fontWeight: 600, color: '#22c55e', fontSize: '14px' }}>{activatedGroup.name} ativado!</div>
-                <div style={{ color: '#64748b', fontSize: '12px', marginTop: '2px' }}>Importando histórico dos últimos 3 meses em background...</div>
+                <div style={{ fontWeight: 600, color: 'var(--color-low)', fontSize: '14px' }}>{activatedGroup.name} ativado!</div>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '2px' }}>Importando histórico dos últimos 3 meses em background...</div>
               </div>
             </div>
           ) : loadGroups ? (
-            <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={24} color="#14b8a6" /></div>
+            <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={24} color="var(--color-brand-500)" /></div>
           ) : groups.length === 0 ? (
-            <div style={{ background: '#1e293b', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '20px' }}>
-              <i className="fas fa-comment-slash" style={{ fontSize: '28px', color: '#475569', display: 'block', marginBottom: '10px' }}></i>
-              <div style={{ color: '#64748b', fontSize: '13px' }}>Nenhum grupo encontrado. Verifique se o WhatsApp está conectado.</div>
+            <div style={{ background: 'var(--color-bg-page)', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '20px' }}>
+              <i className="fas fa-comment-slash" style={{ fontSize: '28px', color: 'var(--color-text-placeholder)', display: 'block', marginBottom: '10px' }}></i>
+              <div style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>Nenhum grupo encontrado. Verifique se o WhatsApp está conectado.</div>
             </div>
           ) : (
             <div style={{ maxHeight: '260px', overflowY: 'auto', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {groups.slice(0, 20).map(g => (
-                <div key={g.wpp_id} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>
+                <div key={g.wpp_id} style={{ background: 'var(--color-bg-page)', border: '1px solid var(--color-border-default)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--color-border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>
                     {(g.name || '?')[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name || g.wpp_id}</div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>{g.participant_count || 0} participantes</div>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name || g.wpp_id}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{g.participant_count || 0} participantes</div>
                   </div>
                   <button onClick={() => activateGroup(g)} disabled={!!activating}
-                    style={{ padding: '6px 12px', background: '#0d9488', color: 'white', border: 'none', borderRadius: '7px', cursor: activating ? 'wait' : 'pointer', fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    style={{ padding: '6px 12px', background: 'var(--color-brand-600)', color: 'white', border: 'none', borderRadius: '7px', cursor: activating ? 'wait' : 'pointer', fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {activating === g.wpp_id ? <Spinner size={12} color="white" /> : 'Monitorar'}
                   </button>
                 </div>
@@ -262,26 +262,26 @@ function OnboardingWizard({ onComplete }) {
           <StepIndicator />
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
             <div style={{ width: 48, height: 48, borderRadius: '12px', background: 'rgba(20,184,166,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <i className="fas fa-robot" style={{ fontSize: '20px', color: '#14b8a6' }}></i>
+              <i className="fas fa-robot" style={{ fontSize: '20px', color: 'var(--color-brand-500)' }}></i>
             </div>
             <div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9', marginBottom: '2px' }}>{stepLabels[stepPos - 1]}</div>
-              <div style={{ fontSize: '13px', color: '#64748b' }}>Etapa {stepPos} de {totalSteps} · Opcional</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '2px' }}>{stepLabels[stepPos - 1]}</div>
+              <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Etapa {stepPos} de {totalSteps} · Opcional</div>
             </div>
           </div>
 
-          <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: '0 0 20px 0' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: '0 0 20px 0' }}>
             Dê um nome e personalidade ao seu agente virtual. Ele assinará os resumos enviados no WhatsApp.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>Nome do agente</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '6px' }}>Nome do agente</label>
               <input value={agentName} onChange={e => setAgentName(e.target.value)} placeholder="Ex: Maya, Alex, ENVOX Assistant..."
-                style={{ width: '100%', padding: '10px 14px', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f1f5f9', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                style={{ width: '100%', padding: '10px 14px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border-input)', borderRadius: '8px', color: 'var(--color-text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>Tom de comunicação</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '6px' }}>Tom de comunicação</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 {[
                   { value: 'profissional', label: '💼 Profissional', desc: 'Formal e objetivo' },
@@ -290,9 +290,9 @@ function OnboardingWizard({ onComplete }) {
                   { value: 'casual',       label: '💬 Casual',        desc: 'Descontraído e leve' },
                 ].map(t => (
                   <button key={t.value} onClick={() => setAgentTone(t.value)}
-                    style={{ padding: '10px 12px', background: agentTone === t.value ? 'rgba(20,184,166,0.15)' : '#1e293b', border: `1px solid ${agentTone === t.value ? '#0d9488' : '#334155'}`, borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: agentTone === t.value ? '#14b8a6' : '#e2e8f0' }}>{t.label}</div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{t.desc}</div>
+                    style={{ padding: '10px 12px', background: agentTone === t.value ? 'rgba(20,184,166,0.15)' : 'var(--color-bg-input)', border: `1px solid ${agentTone === t.value ? 'var(--color-brand-600)' : 'var(--color-border-input)'}`, borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: agentTone === t.value ? 'var(--color-text-brand)' : 'var(--color-text-primary)' }}>{t.label}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{t.desc}</div>
                   </button>
                 ))}
               </div>
@@ -317,8 +317,8 @@ function OnboardingWizard({ onComplete }) {
       <div style={{ ...cardStyle, textAlign: 'center' }}>
         <div style={{ padding: '48px 32px' }}>
           <div style={{ fontSize: '56px', marginBottom: '20px' }}>🎉</div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', margin: '0 0 10px 0' }}>Tudo pronto!</h2>
-          <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: '0 0 28px 0', maxWidth: '360px', display: 'inline-block' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-text-primary)', margin: '0 0 10px 0' }}>Tudo pronto!</h2>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: '0 0 28px 0', maxWidth: '360px', display: 'inline-block' }}>
             Seu ATENX está configurado. Em breve você começará a receber insights dos seus grupos do WhatsApp.
           </p>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>

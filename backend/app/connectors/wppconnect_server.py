@@ -100,11 +100,18 @@ class WppConnectClient:
             return False
 
     async def get_all_groups(self, token: str) -> list[dict]:
-        """Retorna todos os grupos do WhatsApp com metadados."""
-        async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.get(
-                f"{self.base}/api/{self.session}/all-chats",
-                headers={"Authorization": f"Bearer {token}"},
+        """Retorna todos os grupos do WhatsApp com metadados.
+
+        Usa /list-chats (não /all-chats): a rota all-chats depende do método
+        getAllChats() da lib, deprecado e que nesta versão do servidor volta
+        `undefined` (resposta sem "response"), fazendo a tela de Grupos WhatsApp
+        aparecer sempre vazia mesmo com a sessão conectada.
+        """
+        async with httpx.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                f"{self.base}/api/{self.session}/list-chats",
+                json={"onlyGroups": True},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             )
             r.raise_for_status()
             data = r.json()

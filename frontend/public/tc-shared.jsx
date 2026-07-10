@@ -161,7 +161,16 @@ function useWppStatus() {
 function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdmin, onLogout, onOpenProfile }) {
   const [hovered, setHovered] = React.useState(null);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(() => {
+    try { return localStorage.getItem('atenx-sidebar-collapsed') === 'true'; } catch (e) { return false; }
+  });
   const wppConnected = useWppStatus();
+
+  const toggleCollapsed = () => setCollapsed(v => {
+    const next = !v;
+    try { localStorage.setItem('atenx-sidebar-collapsed', String(next)); } catch (e) {}
+    return next;
+  });
 
   const navItems = [
     { id: 'dashboard',     icon: 'tachometer-alt', label: 'Visão Geral' },
@@ -187,39 +196,57 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
   ];
 
   const itemStyle = (id) => ({
-    display: 'flex', alignItems: 'center', gap: '12px',
-    padding: '10px 16px', borderRadius: 'var(--radius-lg)',
+    display: 'flex', alignItems: 'center', gap: collapsed ? 0 : '12px',
+    justifyContent: collapsed ? 'center' : 'flex-start',
+    padding: collapsed ? '10px 8px' : '10px 16px', borderRadius: 'var(--radius-lg)',
     background: activePage === id ? 'var(--color-brand-600)' : hovered === id ? 'var(--color-bg-hover-sidebar)' : 'transparent',
     color: activePage === id ? 'white' : 'var(--color-text-on-sidebar)',
-    cursor: 'pointer', transition: 'background 0.15s ease', userSelect: 'none',
+    cursor: 'pointer', transition: 'background 0.15s ease, padding 0.2s ease', userSelect: 'none',
   });
 
   return (
     <aside style={{
-      width: 'var(--sidebar-width)', background: 'var(--color-bg-sidebar)',
+      width: collapsed ? '72px' : 'var(--sidebar-width)', background: 'var(--color-bg-sidebar)',
       display: 'flex', flexDirection: 'column',
       boxShadow: 'var(--shadow-sidebar)', flexShrink: 0,
+      transition: 'width var(--transition-default, 0.2s ease)', overflow: 'hidden',
     }}>
-      <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--color-border-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+      <div style={{ padding: collapsed ? '24px 12px' : '24px 20px', borderBottom: '1px solid var(--color-border-sidebar)', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: collapsed ? 0 : '12px', minWidth: 0 }}>
           <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, color: 'var(--color-text-on-sidebar)', fontSize: 'var(--text-lg)', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{company}</div>
-            <div style={{ color: 'var(--color-brand-400)', fontSize: 'var(--text-xs)' }}>by Envox</div>
-          </div>
+          {!collapsed && (
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, color: 'var(--color-text-on-sidebar)', fontSize: 'var(--text-lg)', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{company}</div>
+              <div style={{ color: 'var(--color-brand-400)', fontSize: 'var(--text-xs)' }}>by Envox</div>
+            </div>
+          )}
         </div>
-        <ThemeToggle />
+        {!collapsed && <ThemeToggle />}
       </div>
 
-      <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto' }}>
+      <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', overflowX: 'hidden' }}>
+        <div
+          style={itemStyle('__collapse__')}
+          onClick={toggleCollapsed}
+          onMouseEnter={() => setHovered('__collapse__')}
+          onMouseLeave={() => setHovered(null)}
+          title={collapsed ? 'Expandir menu' : undefined}
+          aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+        >
+          <i className={`fas fa-chevron-${collapsed ? 'right' : 'left'}`} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
+          {!collapsed && <span style={{ fontSize: 'var(--text-sm)', flex: 1 }}>Recolher menu</span>}
+        </div>
+        <div style={{ borderBottom: '1px solid var(--color-border-sidebar)', margin: '0 4px 8px' }}></div>
+
         {navItems.map(item => (
           <div key={item.id} style={itemStyle(item.id)}
             onClick={() => onNavigate(item.id)}
             onMouseEnter={() => setHovered(item.id)}
             onMouseLeave={() => setHovered(null)}
+            title={collapsed ? item.label : undefined}
           >
             <i className={`fas fa-${item.icon}`} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: activePage === item.id ? 500 : 400, flex: 1 }}>{item.label}</span>
+            {!collapsed && <span style={{ fontSize: 'var(--text-sm)', fontWeight: activePage === item.id ? 500 : 400, flex: 1 }}>{item.label}</span>}
             {item.badge > 0 && (
               <span style={{ background: 'var(--color-critical)', color: 'white', fontSize: '11px', borderRadius: '9999px', minWidth: '18px', height: '18px', padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                 {item.badge > 9 ? '9+' : item.badge}
@@ -229,7 +256,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
         ))}
 
         <div style={{ borderTop: '1px solid var(--color-border-sidebar)', margin: '10px 4px' }}></div>
-        <div style={{ fontSize: '11px', color: 'var(--color-text-on-sidebar-muted)', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>
+        {!collapsed && <div style={{ fontSize: '11px', color: 'var(--color-text-on-sidebar-muted)', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>}
         {sysItems.map(item => {
           const iconClass = item.icon === 'whatsapp fab' ? 'fab fa-whatsapp' : `fas fa-${item.icon}`;
           const isWpp = item.id === 'wpp';
@@ -238,9 +265,10 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
               onClick={() => onNavigate(item.id)}
               onMouseEnter={() => setHovered(item.id)}
               onMouseLeave={() => setHovered(null)}
+              title={collapsed ? item.label : undefined}
             >
               <i className={iconClass} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
-              <span style={{ fontSize: 'var(--text-sm)', flex: 1 }}>{item.label}</span>
+              {!collapsed && <span style={{ fontSize: 'var(--text-sm)', flex: 1 }}>{item.label}</span>}
               {isWpp && wppConnected !== null && (
                 <span title={wppConnected ? 'WhatsApp conectado' : 'WhatsApp desconectado'} style={{
                   width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
@@ -253,7 +281,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
         })}
 
         {/* Banner WhatsApp desconectado */}
-        {wppConnected === false && (
+        {!collapsed && wppConnected === false && (
           <div onClick={() => onNavigate('wpp')} style={{
             marginTop: '6px', padding: '8px 12px', borderRadius: '8px',
             background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
@@ -269,13 +297,14 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
       </nav>
 
       {/* User section com popover */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-border-sidebar)', position: 'relative' }}>
+      <div style={{ padding: collapsed ? '12px 8px' : '12px 16px', borderTop: '1px solid var(--color-border-sidebar)', position: 'relative' }}>
         {/* Popover menu */}
         {menuOpen && (
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 198 }} />
             <div style={{
-              position: 'absolute', bottom: '64px', left: '12px', right: '12px',
+              position: 'absolute', bottom: '64px', left: '12px',
+              right: collapsed ? 'auto' : '12px', width: collapsed ? '240px' : 'auto',
               background: 'var(--color-bg-popover)', border: '1px solid var(--color-border-sidebar)', borderRadius: '12px',
               boxShadow: '0 -8px 32px rgba(0,0,0,0.4)', zIndex: 199,
               overflow: 'hidden', animation: 'fadeInUp 0.18s ease',
@@ -319,7 +348,8 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
         {/* User avatar clicável */}
         <div
           onClick={() => setMenuOpen(v => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '6px 8px', borderRadius: 'var(--radius-lg)', transition: 'background 0.15s', userSelect: 'none' }}
+          title={collapsed ? userName : undefined}
+          style={{ display: 'flex', alignItems: 'center', gap: collapsed ? 0 : '10px', justifyContent: collapsed ? 'center' : 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: 'var(--radius-lg)', transition: 'background 0.15s', userSelect: 'none' }}
           onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
@@ -331,11 +361,15 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
               </div>
             )}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-on-sidebar)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-on-sidebar-muted)' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
-          </div>
-          <i className={`fas fa-chevron-${menuOpen ? 'down' : 'up'}`} style={{ color: 'var(--color-text-on-sidebar-muted)', fontSize: '11px', transition: 'transform 0.2s' }}></i>
+          {!collapsed && (
+            <>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-on-sidebar)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-on-sidebar-muted)' }}>{isAdmin ? 'Super Admin' : 'Usuário'}</div>
+              </div>
+              <i className={`fas fa-chevron-${menuOpen ? 'down' : 'up'}`} style={{ color: 'var(--color-text-on-sidebar-muted)', fontSize: '11px', transition: 'transform 0.2s' }}></i>
+            </>
+          )}
         </div>
       </div>
     </aside>

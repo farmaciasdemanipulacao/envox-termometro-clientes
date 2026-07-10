@@ -224,20 +224,30 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
         {!collapsed && <ThemeToggle />}
       </div>
 
-      <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', overflowX: 'hidden' }}>
+      {/* Botão isolado de recolher/expandir — não é item de navegação */}
+      <div style={{
+        padding: collapsed ? '8px 12px' : '8px 16px',
+        borderBottom: '1px solid var(--color-border-sidebar)',
+        display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-end',
+      }}>
         <div
-          style={itemStyle('__collapse__')}
           onClick={toggleCollapsed}
-          onMouseEnter={() => setHovered('__collapse__')}
-          onMouseLeave={() => setHovered(null)}
-          title={collapsed ? 'Expandir menu' : undefined}
+          title={collapsed ? 'Expandir' : 'Recolher'}
           aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '32px', height: '32px', borderRadius: 'var(--radius-lg)',
+            cursor: 'pointer', color: 'var(--color-text-on-sidebar-muted)', flexShrink: 0,
+            transition: 'background 0.15s ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
         >
-          <i className={`fas fa-chevron-${collapsed ? 'right' : 'left'}`} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
-          {!collapsed && <span style={{ fontSize: 'var(--text-sm)', flex: 1 }}>Recolher menu</span>}
+          <i className={`fas fa-angles-${collapsed ? 'right' : 'left'}`} style={{ fontSize: '14px' }}></i>
         </div>
-        <div style={{ borderBottom: '1px solid var(--color-border-sidebar)', margin: '0 4px 8px' }}></div>
+      </div>
 
+      <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', overflowX: 'hidden' }}>
         {navItems.map(item => (
           <div key={item.id} style={itemStyle(item.id)}
             onClick={() => onNavigate(item.id)}

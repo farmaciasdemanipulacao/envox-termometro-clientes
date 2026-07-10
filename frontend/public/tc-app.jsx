@@ -121,6 +121,9 @@ function App() {
   const [installBanner, setInstallBanner] = React.useState(false);
   // Onboarding
   const [showOnboarding, setShowOnboarding] = React.useState(false);
+  // Tela de loading logo após o login (logo pulsando + pontinhos)
+  const [postLoginLoading, setPostLoginLoading] = React.useState(false);
+  const [postLoginFading,  setPostLoginFading]  = React.useState(false);
   // Fluxo público
   const [publicView,    setPublicView]    = React.useState('login');  // 'login' | 'pricing' | 'register'
   const [regPlan,       setRegPlan]       = React.useState(null);
@@ -185,6 +188,14 @@ function App() {
     return () => { window._onInstallPromptReady = null; };
   }, [loggedIn]);
 
+  // Some com a tela de loading pós-login após um breve período (1 pulso completo + fade)
+  React.useEffect(() => {
+    if (!postLoginLoading) return;
+    const fadeTimer = setTimeout(() => setPostLoginFading(true), 1600);
+    const hideTimer = setTimeout(() => { setPostLoginLoading(false); setPostLoginFading(false); }, 2000);
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
+  }, [postLoginLoading]);
+
   // Carrega contagem de alertas periodicamente
   React.useEffect(() => {
     if (!loggedIn) return;
@@ -207,6 +218,8 @@ function App() {
     localStorage.setItem('envox_user_id', uid || '');
     localStorage.setItem('envox_full_name', fn || '');
     setLoggedIn(true);
+    setPostLoginFading(false);
+    setPostLoginLoading(true);
   }
 
   function handleLogout() {
@@ -253,6 +266,10 @@ function App() {
         onCreateAccount={() => setPublicView('pricing')}
       />
     );
+  }
+
+  if (postLoginLoading) {
+    return <PostLoginLoadingScreen fading={postLoginFading} />;
   }
 
   const renderPage = () => {

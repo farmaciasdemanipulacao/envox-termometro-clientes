@@ -82,31 +82,34 @@
       pointer-events: none;
     }
     .boot-logo {
-      width: 64px;
-      height: 64px;
-      display: block;
-      filter: drop-shadow(0 0 24px rgba(13,148,136,0.5));
+      width: 220px;
+      max-width: 60vw;
+      display: none;
+      animation: logoPulse 2.4s ease-in-out infinite;
     }
-    .boot-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--color-text-primary);
-      letter-spacing: -0.5px;
-    }
-    .boot-subtitle {
-      font-size: 13px;
-      color: var(--color-text-muted);
-      margin-top: -12px;
-    }
-    .boot-spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid rgba(13,148,136,0.2);
-      border-top-color: #0d9488;
+    :root[data-theme="light"] .boot-logo-light { display: block; }
+    :root[data-theme="dark"]  .boot-logo-dark  { display: block; }
+    .boot-dots { display: flex; gap: 8px; }
+    .boot-dots span {
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      background: #0d9488;
+      animation: dotBlink 1.3s ease-in-out infinite;
     }
+    .boot-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .boot-dots span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Tela de loading pós-login: logo horizontal pulsando + pontinhos */
+    @keyframes logoPulse {
+      0%, 100% { opacity: 1;    transform: scale(1); }
+      50%      { opacity: 0.55; transform: scale(0.94); }
+    }
+    @keyframes dotBlink {
+      0%, 80%, 100% { opacity: 0.25; transform: scale(0.75); }
+      40%           { opacity: 1;    transform: scale(1); }
+    }
 
     /* Toast notifications */
     #toast-container {
@@ -187,12 +190,9 @@
 
   <!-- Boot loading screen (removed when React mounts) -->
   <div id="boot-loading">
-    <img class="boot-logo" src="/atenx_assets/png/atenx-icon-dark-transparent-256.png" alt="ATENX" />
-    <div>
-      <p class="boot-title">ATENX</p>
-      <p class="boot-subtitle">Carregando sistema…</p>
-    </div>
-    <div class="boot-spinner"></div>
+    <img class="boot-logo boot-logo-light" src="/atenx_assets/png/atenx-logo-transparent-600.png" alt="ATENX" />
+    <img class="boot-logo boot-logo-dark"  src="/atenx_assets/png/atenx-logo-white-transparent-600.png" alt="ATENX" />
+    <div class="boot-dots"><span></span><span></span><span></span></div>
   </div>
 
   <!-- Toast notification container -->

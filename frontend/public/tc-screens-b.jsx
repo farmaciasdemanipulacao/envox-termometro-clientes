@@ -77,7 +77,7 @@ function IntelligenceScreen({ onSelectGroup }) {
 
           <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg-card)' }}>
             {loading
-              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
+              ? <SectionLoader />
               : items.length === 0
                 ? <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-placeholder)', fontSize: 'var(--text-sm)' }}>
                     <i className="fas fa-check-circle" style={{ fontSize: '32px', color: '#22c55e', display: 'block', marginBottom: '12px' }}></i>
@@ -170,7 +170,7 @@ function IntelligenceScreen({ onSelectGroup }) {
             {/* Mensagens como bolhas WhatsApp */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px', background: '#e5ddd5' }}>
               {ctxLoading
-                ? <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={20} color="var(--color-brand-600)" /></div>
+                ? <SectionLoader padding="32px" />
                 : !context || context.messages.length === 0
                   ? <div style={{ textAlign: 'center', padding: '32px' }}>
                       <div style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '10px', padding: '16px 20px', display: 'inline-block', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Sem mensagens recentes neste grupo.</div>
@@ -271,7 +271,7 @@ function GroupsScreen({ onSelectGroup }) {
 
       <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg-card)' }}>
         {loading
-          ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
+          ? <SectionLoader />
           : filtered.length === 0
             ? <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-placeholder)', fontSize: 'var(--text-sm)' }}>
                 {groups.length === 0 ? 'Nenhum grupo monitorado ainda. Ingira dados via API.' : 'Nenhum grupo encontrado.'}
@@ -458,7 +458,7 @@ function SummaryScreen({ onNavigateAlerts }) {
         {/* ── TAB: RESUMO ── */}
         {activeTab === 'resumo' && (
           loading
-            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="var(--color-brand-600)" /></div>
+            ? <SectionLoader padding="64px" />
             : !summary
               ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: '16px', animation: 'fadeIn 0.4s ease' }}>
                   <div style={{ width: '72px', height: '72px', background: '#f0fdfa', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -535,7 +535,7 @@ function SummaryScreen({ onNavigateAlerts }) {
         {/* ── TAB: BRIEFING 18h ── */}
         {activeTab === 'briefing' && (
           loadingBriefing
-            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="#7c3aed" /></div>
+            ? <SectionLoader padding="64px" />
             : !briefing
               ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: '16px', animation: 'fadeIn 0.4s ease' }}>
                   <div style={{ width: '72px', height: '72px', background: '#f5f3ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -795,7 +795,7 @@ function TeamScreen() {
         {tab === 'members' && (
           <>
             {loading
-              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
+              ? <SectionLoader />
               : filteredMembers.length === 0
               ? (
                 <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-secondary)' }}>
@@ -881,7 +881,7 @@ function TeamScreen() {
         {tab === 'add' && (
           <>
             {loadCand
-              ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
+              ? <SectionLoader />
               : filteredCandidates.length === 0
               ? (
                 <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-secondary)' }}>
@@ -1114,7 +1114,7 @@ function UsersSection() {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Spinner size={24} /></div>
+        <SectionLoader padding="24px" />
       ) : users.length === 0 ? (
         <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: '24px', fontSize: 'var(--text-sm)' }}>Nenhum usuário cadastrado.</div>
       ) : (
@@ -1429,7 +1429,7 @@ function ConvMessagesTab({ convId, group }) {
 
       {/* Chat area com fundo WhatsApp */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: '2px', background: '#e5ddd5' }}>
-        {loading ? <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
+        {loading ? <SectionLoader />
           : !data || data.messages.length === 0
             ? <div style={{ textAlign: 'center', padding: '64px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '12px', padding: '20px 28px', display: 'inline-block' }}>
@@ -1842,7 +1842,7 @@ function ConvProfileTab({ convId, onNameChange }) {
     { value: 'other',      label: '📁 Outro' },
   ];
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>;
+  if (loading) return <SectionLoader padding="64px" />;
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -2041,7 +2041,7 @@ function ConvParticipantsTab({ convId }) {
   const roleLabels = { customer: 'Cliente', collaborator: 'Colaborador', manager: 'Gestor', bot: 'Bot', unknown: '—' };
   const inp = { width: '100%', padding: '7px 10px', boxSizing: 'border-box', border: '1px solid var(--color-border-input)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', outline: 'none', background: 'var(--color-bg-card)' };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>;
+  if (loading) return <SectionLoader padding="64px" />;
   const parts = profile?.participants || [];
 
   return (
@@ -2291,7 +2291,7 @@ function TagsScreen({ onSelectGroup }) {
         {/* Lista de tags com barras */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {loading
-            ? <div style={{ textAlign: 'center', padding: '64px' }}><Spinner size={28} color="var(--color-brand-600)" /></div>
+            ? <SectionLoader padding="64px" />
             : !data || data.tags.length === 0
               ? (
                 <div style={{ textAlign: 'center', padding: '64px 32px' }}>
@@ -2431,7 +2431,7 @@ function TagsScreen({ onSelectGroup }) {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {msgsLoading
-                ? <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={20} color="var(--color-brand-600)" /></div>
+                ? <SectionLoader padding="32px" />
                 : !tagMsgs || tagMsgs.messages.length === 0
                   ? <div style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
                       Nenhuma mensagem encontrada.
@@ -2578,7 +2578,7 @@ function UserProfileModal({ onClose, onSaved }) {
 
         <div style={{ padding: '24px' }}>
           {!profile ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
+            <SectionLoader padding="24px" />
           ) : tab === 'profile' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
@@ -2735,7 +2735,7 @@ function UsersScreen({ onBack }) {
         {/* Lista de usuários */}
         <DsCard style={{ padding: 0, overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}><Spinner size={28} color="var(--color-brand-600)" /></div>
+            <SectionLoader />
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
               <i className="fas fa-users" style={{ fontSize: '32px', display: 'block', marginBottom: '12px', opacity: 0.3 }}></i>
@@ -2979,7 +2979,7 @@ function EmailAccountsSection() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}><i className="fas fa-spinner fa-spin"></i></div>
+        <SectionLoader padding="24px" />
       ) : accounts.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)' }}>
           <i className="fas fa-envelope-open" style={{ fontSize: '28px', marginBottom: '10px', display: 'block', opacity: 0.4 }}></i>
@@ -3161,7 +3161,7 @@ function EmailScreen({ onNavigateConfig }) {
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
         {loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--color-brand-600)' }}></i>
+            <SectionLoader />
           </div>
         ) : accounts.length === 0 ? (
           <EmptyAccounts />
@@ -3493,10 +3493,7 @@ function WppGroupsManagerScreen({ onSelectGroup }) {
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
         {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '80px', gap: '12px' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: 'var(--color-brand-600)' }}></i>
-            <span style={{ color: 'var(--color-text-secondary)' }}>Carregando grupos...</span>
-          </div>
+          <SectionLoader label="Carregando grupos..." padding="56px" />
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--color-text-muted)' }}>
             <i className="fas fa-users-slash" style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}></i>
@@ -3772,7 +3769,7 @@ function RangeSummaryScreen() {
                   </div>
                   <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
                     {loadingConvs ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px' }}>Carregando...</div>
+                      <div style={{ padding: '16px', textAlign: 'center' }}><LoadingDots size={4} /></div>
                     ) : filteredConvs.length === 0 ? (
                       <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
                     ) : filteredConvs.map(c => (
@@ -4334,9 +4331,9 @@ function CustomAnalysisScreen() {
                 </div>
               </div>
             ) : loadingDetail ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-secondary)' }}><i className="fas fa-spinner fa-spin" /> Carregando...</div>
+              <SectionLoader padding="60px 0" />
             ) : loadingHistory ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-secondary)' }}><i className="fas fa-spinner fa-spin" /> Carregando histórico...</div>
+              <SectionLoader label="Carregando histórico..." padding="60px 0" />
             ) : history.length === 0 ? (
               <div style={{ textAlign: 'center', paddingTop: '60px', color: 'var(--color-text-muted)' }}>
                 <i className="fas fa-clock-rotate-left" style={{ fontSize: '40px', display: 'block', marginBottom: '16px', color: 'var(--color-text-primary)' }}></i>
@@ -4441,7 +4438,7 @@ function CustomAnalysisScreen() {
                   </div>
                   <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
                     {loadingConvs ? (
-                      <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '13px' }}>Carregando...</div>
+                      <div style={{ padding: '16px', textAlign: 'center' }}><LoadingDots size={4} /></div>
                     ) : filteredConvs.length === 0 ? (
                       <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Nenhum grupo encontrado.</div>
                     ) : filteredConvs.map(c => {
@@ -4539,7 +4536,7 @@ function CustomAnalysisScreen() {
                 }}
               >
                 {suggesting
-                  ? <><i className="fas fa-spinner fa-spin" />Pensando...</>
+                  ? <><LoadingDots size={4} color="currentColor" />Pensando...</>
                   : <><i className="fas fa-wand-magic-sparkles" />Sugerir com IA</>
                 }
               </button>
@@ -4934,9 +4931,8 @@ function AgentConfigScreen() {
   };
 
   if (loading) return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-      <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: 'var(--color-brand-600)' }} />
-      <span style={{ color: 'var(--color-text-secondary)' }}>Carregando configurações...</span>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <SectionLoader label="Carregando configurações..." />
     </div>
   );
 
@@ -5470,7 +5466,7 @@ function AutomationsScreen() {
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <PageHeader title="Automações do Sistema" subtitle="Tudo que roda sozinho — jobs, regras e limites, agora editáveis por aqui" />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: 'var(--color-bg-page)' }}>
-        {loading && <div style={{ textAlign: 'center', padding: '48px' }}><Spinner size={24} color="var(--color-brand-600)" /></div>}
+        {loading && <SectionLoader />}
         {error && <div style={{ padding: '16px', color: '#dc2626' }}>{error}</div>}
 
         {data && (

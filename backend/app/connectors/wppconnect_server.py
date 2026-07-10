@@ -86,8 +86,8 @@ class WppConnectClient:
             logger.info("wpp_session_status", status=current, session=self.session)
 
             if current in ("CONNECTED", "isLogged"):
-                await self.start_session(token, wh)
-                logger.info("wpp_session_active_webhook_confirmed", session=self.session)
+                # Sessão já conectada — não chama start_session de novo, isso reabre
+                # o ciclo OPENING/PAIRING no WppConnect sem necessidade.
                 return True
 
             result = await self.start_session(token, wh)

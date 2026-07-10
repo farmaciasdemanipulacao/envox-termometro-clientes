@@ -74,7 +74,8 @@ function WppConnectionScreen({ inOnboarding = false, onConnected = null }) {
     try {
       const data = await window.apiPost('/tenant/wpp/start', {});
       if (data.connected) {
-        markConnected(data.phone);
+        // /start não retorna o número — busca em /status para exibir o número real
+        await checkStatus();
         return;
       }
       // QR embutido na resposta do start-session
@@ -204,6 +205,11 @@ function WppConnectionScreen({ inOnboarding = false, onConnected = null }) {
             <div style={{ fontWeight: 700, fontSize: 'var(--text-lg)', color: 'var(--color-text-primary)', marginBottom: '8px' }}>
               WhatsApp Conectado!
             </div>
+            {phone && (
+              <div style={{ fontWeight: 600, fontSize: 'var(--text-base)', color: 'var(--color-brand-600)', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <i className="fas fa-phone"></i>{phone}
+              </div>
+            )}
             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
               O sistema está recebendo mensagens dos grupos. Os alertas aparecerão automaticamente no Dashboard.
             </div>

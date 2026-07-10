@@ -150,10 +150,7 @@ function OnboardingWizard({ onComplete }) {
           </div>
 
           {wppChecking ? (
-            <div style={{ textAlign: 'center', padding: '32px' }}>
-              <Spinner size={28} color="var(--color-brand-500)" />
-              <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginTop: '12px' }}>Verificando conexão...</div>
-            </div>
+            <SectionLoader label="Verificando conexão..." padding="32px" />
           ) : wppConnected ? (
             <div style={{ textAlign: 'center', padding: '24px', background: 'rgba(34,197,94,0.08)', borderRadius: '12px', border: '1px solid rgba(34,197,94,0.2)', marginBottom: '20px' }}>
               <i className="fas fa-check-circle" style={{ fontSize: '36px', color: 'var(--color-low)', display: 'block', marginBottom: '10px' }}></i>
@@ -215,7 +212,7 @@ function OnboardingWizard({ onComplete }) {
               </div>
             </div>
           ) : loadGroups ? (
-            <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={24} color="var(--color-brand-500)" /></div>
+            <SectionLoader padding="32px" />
           ) : groups.length === 0 ? (
             <div style={{ background: 'var(--color-bg-page)', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '20px' }}>
               <i className="fas fa-comment-slash" style={{ fontSize: '28px', color: 'var(--color-text-placeholder)', display: 'block', marginBottom: '10px' }}></i>

@@ -434,7 +434,7 @@ function AlertsScreen() {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
             {loading
-              ? <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}><Spinner size={24} color="var(--color-brand-600)" /></div>
+              ? <SectionLoader />
               : alerts.length === 0
                 ? <div style={{ textAlign: 'center', padding: '64px 32px' }}>
                     <i className="fas fa-check-circle" style={{ fontSize: '48px', color: '#22c55e', display: 'block', marginBottom: '16px' }}></i>
@@ -500,7 +500,7 @@ function AlertsScreen() {
             {/* Mensagens da conversa — mesma UI de bolhas do IntelligenceScreen */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px', background: '#e5ddd5', minHeight: '160px' }}>
               {ctxLoading
-                ? <div style={{ textAlign: 'center', padding: '32px' }}><Spinner size={20} color="var(--color-brand-600)" /></div>
+                ? <SectionLoader padding="32px" />
                 : !context || context.messages.length === 0
                   ? <div style={{ textAlign: 'center', padding: '32px' }}>
                       <div style={{ background: 'rgba(255,255,255,0.8)', borderRadius: '10px', padding: '16px 20px', display: 'inline-block', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Sem mensagens recentes neste grupo.</div>

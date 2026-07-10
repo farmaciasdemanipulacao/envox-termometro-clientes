@@ -56,9 +56,7 @@ function PricingPage({ onSelectPlan, onLogin }) {
         <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '40px' }}>Sem fidelidade. Cancele quando quiser.</p>
 
         {loading ? (
-          <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px' }}>
-            <Spinner size={24} />
-          </div>
+          <SectionLoader padding="40px" />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
             {plans.map(plan => (

@@ -634,4 +634,78 @@ function Spinner({ size, color }) {
   );
 }
 
-Object.assign(window, { useIsMobile, useTheme, ThemeToggle, Sidebar, MobileTopBar, BottomNav, MobileDrawer, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, Button, KPICard, AlertItem, GroupCard });
+// ── LoadingDots ───────────────────────────────────────────────
+// Pontinhos pulsando inline — para legendas/indicadores de "carregando"
+// ou "pensando" dentro do fluxo de texto (não substitui Spinner de botão).
+function LoadingDots({ size, color, gap }) {
+  size = size || 6; color = color || '#0d9488'; gap = gap || Math.max(4, size);
+  function dotStyle(delay) {
+    return {
+      width: size + 'px', height: size + 'px', borderRadius: '50%', background: color,
+      animation: 'dotBlink 1.3s ease-in-out ' + delay + 's infinite',
+    };
+  }
+  return (
+    <span style={{ display: 'inline-flex', gap: gap + 'px', alignItems: 'center' }}>
+      <span style={dotStyle(0)}></span>
+      <span style={dotStyle(0.2)}></span>
+      <span style={dotStyle(0.4)}></span>
+    </span>
+  );
+}
+
+// ── SectionLoader ─────────────────────────────────────────────
+// Substitui o Spinner tradicional quando um bloco/tela inteira está
+// aguardando dados: logo horizontal pulsando + pontinhos (mesmo estilo
+// da PostLoginLoadingScreen), em vez do anel girando.
+function SectionLoader({ label, padding }) {
+  var theme = useTheme();
+  var logoSrc = theme === 'light'
+    ? '/atenx_assets/png/atenx-logo-transparent-600.png'
+    : '/atenx_assets/png/atenx-logo-white-transparent-600.png';
+  return (
+    <div style={{ textAlign: 'center', padding: (padding || '48px') + ' 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+      <img src={logoSrc} alt="ATENX" style={{ width: '110px', maxWidth: '40vw', animation: 'logoPulse 2.4s ease-in-out infinite' }} />
+      <LoadingDots />
+      {label && <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{label}</span>}
+    </div>
+  );
+}
+
+// ── PostLoginLoadingScreen ──────────────────────────────────────
+// Tela cheia exibida logo após o login: logo horizontal pulsando devagar
+// + pontinhos de "carregando", enquanto os dados iniciais são buscados.
+function PostLoginLoadingScreen({ fading }) {
+  var theme = useTheme();
+  var logoSrc = theme === 'light'
+    ? '/atenx_assets/png/atenx-logo-transparent-600.png'
+    : '/atenx_assets/png/atenx-logo-white-transparent-600.png';
+  function dotStyle(delay) {
+    return {
+      width: '9px', height: '9px', borderRadius: '50%', background: '#0d9488',
+      animation: 'dotBlink 1.3s ease-in-out ' + delay + 's infinite',
+    };
+  }
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9500,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: '32px', background: 'var(--color-bg-page)',
+      opacity: fading ? 0 : 1, transition: 'opacity 0.4s ease',
+      pointerEvents: fading ? 'none' : 'auto',
+    }}>
+      <img
+        src={logoSrc}
+        alt="ATENX"
+        style={{ width: '200px', maxWidth: '55vw', animation: 'logoPulse 2.4s ease-in-out infinite' }}
+      />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <span style={dotStyle(0)}></span>
+        <span style={dotStyle(0.2)}></span>
+        <span style={dotStyle(0.4)}></span>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { useIsMobile, useTheme, ThemeToggle, Sidebar, MobileTopBar, BottomNav, MobileDrawer, PageHeader, TemperatureGauge, SectionTitle, DsCard, Spinner, LoadingDots, SectionLoader, PostLoginLoadingScreen, Button, KPICard, AlertItem, GroupCard });

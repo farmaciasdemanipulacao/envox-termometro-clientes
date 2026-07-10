@@ -198,11 +198,29 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
   const itemStyle = (id) => ({
     display: 'flex', alignItems: 'center', gap: collapsed ? 0 : '12px',
     justifyContent: collapsed ? 'center' : 'flex-start',
-    padding: collapsed ? '10px 8px' : '10px 16px', borderRadius: 'var(--radius-lg)',
+    padding: collapsed ? '8px' : '8px 16px', borderRadius: 'var(--radius-lg)',
     background: activePage === id ? 'var(--color-brand-600)' : hovered === id ? 'var(--color-bg-hover-sidebar)' : 'transparent',
     color: activePage === id ? 'white' : 'var(--color-text-on-sidebar)',
     cursor: 'pointer', transition: 'background 0.15s ease, padding 0.2s ease', userSelect: 'none',
   });
+
+  const collapseBtn = (
+    <div
+      onClick={toggleCollapsed}
+      title={collapsed ? 'Expandir' : 'Recolher'}
+      aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: '32px', height: '32px', borderRadius: 'var(--radius-lg)',
+        cursor: 'pointer', color: 'var(--color-text-on-sidebar-muted)', flexShrink: 0,
+        transition: 'background 0.15s ease',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+    >
+      <i className={`fas fa-angles-${collapsed ? 'right' : 'left'}`} style={{ fontSize: '14px' }}></i>
+    </div>
+  );
 
   return (
     <aside style={{
@@ -211,41 +229,30 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
       boxShadow: 'var(--shadow-sidebar)', flexShrink: 0,
       transition: 'width var(--transition-default, 0.2s ease)', overflow: 'hidden',
     }}>
-      <div style={{ padding: collapsed ? '24px 12px' : '24px 20px', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: collapsed ? 0 : '12px', minWidth: 0 }}>
-          <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
-          {!collapsed && (
+      {collapsed ? (
+        <>
+          <div style={{ padding: '20px 12px 6px', display: 'flex', justifyContent: 'center' }}>
+            <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
+          </div>
+          <div style={{ padding: '6px 12px 14px', borderBottom: '1px solid var(--color-border-sidebar)', display: 'flex', justifyContent: 'center' }}>
+            {collapseBtn}
+          </div>
+        </>
+      ) : (
+        <div style={{ padding: '20px 20px', borderBottom: '1px solid var(--color-border-sidebar)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, color: 'var(--color-text-on-sidebar)', fontSize: 'var(--text-lg)', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{company}</div>
               <div style={{ color: 'var(--color-brand-400)', fontSize: 'var(--text-xs)' }}>by Envox</div>
             </div>
-          )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            <ThemeToggle />
+            {collapseBtn}
+          </div>
         </div>
-      </div>
-
-      {/* Tema + recolher/expandir — icones utilitários, não são itens de navegação */}
-      <div style={{
-        padding: collapsed ? '4px 12px 12px' : '4px 16px 12px',
-        borderBottom: '1px solid var(--color-border-sidebar)',
-        display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-end', gap: '4px',
-      }}>
-        {!collapsed && <ThemeToggle />}
-        <div
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Expandir' : 'Recolher'}
-          aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '32px', height: '32px', borderRadius: 'var(--radius-lg)',
-            cursor: 'pointer', color: 'var(--color-text-on-sidebar-muted)', flexShrink: 0,
-            transition: 'background 0.15s ease',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-bg-hover-sidebar)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-        >
-          <i className={`fas fa-angles-${collapsed ? 'right' : 'left'}`} style={{ fontSize: '14px' }}></i>
-        </div>
-      </div>
+      )}
 
       <nav style={{ flex: 1, padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', overflowX: 'hidden' }}>
         {navItems.map(item => (
@@ -256,7 +263,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
             title={collapsed ? item.label : undefined}
           >
             <i className={`fas fa-${item.icon}`} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
-            {!collapsed && <span style={{ fontSize: 'var(--text-sm)', fontWeight: activePage === item.id ? 500 : 400, flex: 1 }}>{item.label}</span>}
+            {!collapsed && <span style={{ fontSize: 'var(--text-xs)', fontWeight: activePage === item.id ? 500 : 400, flex: 1 }}>{item.label}</span>}
             {item.badge > 0 && (
               <span style={{ background: 'var(--color-critical)', color: 'white', fontSize: '11px', borderRadius: '9999px', minWidth: '18px', height: '18px', padding: '0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                 {item.badge > 9 ? '9+' : item.badge}
@@ -266,7 +273,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
         ))}
 
         <div style={{ borderTop: '1px solid var(--color-border-sidebar)', margin: '10px 4px' }}></div>
-        {!collapsed && <div style={{ fontSize: '11px', color: 'var(--color-text-on-sidebar-muted)', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>}
+        {!collapsed && <div style={{ fontSize: '10px', color: 'var(--color-text-on-sidebar-muted)', padding: '2px 16px', textTransform: 'uppercase', letterSpacing: '.07em' }}>Sistema</div>}
         {sysItems.map(item => {
           const iconClass = item.icon === 'whatsapp fab' ? 'fab fa-whatsapp' : `fas fa-${item.icon}`;
           const isWpp = item.id === 'wpp';
@@ -278,7 +285,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
               title={collapsed ? item.label : undefined}
             >
               <i className={iconClass} style={{ width: '18px', textAlign: 'center', fontSize: '14px' }}></i>
-              {!collapsed && <span style={{ fontSize: 'var(--text-sm)', flex: 1 }}>{item.label}</span>}
+              {!collapsed && <span style={{ fontSize: 'var(--text-xs)', flex: 1 }}>{item.label}</span>}
               {isWpp && wppConnected !== null && (
                 <span title={wppConnected ? 'WhatsApp conectado' : 'WhatsApp desconectado'} style={{
                   width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,

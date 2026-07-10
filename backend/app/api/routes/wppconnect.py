@@ -277,6 +277,28 @@ def _normalize_history_message(msg: dict, group_id: str, group_name: str) -> dic
     }
 
 
+async def _transcribe_backfilled_audio(client, token: str, message_id: str, normalized: dict) -> None:
+    """
+    get-messages (histórico) não traz o base64 do áudio — só get-media-by-message
+    por mensagem individual. Busca a mídia, transcreve e sobrescreve o content
+    (placeholder "[ptt]"/"[audio]") pelo texto antes do processor rodar as
+    heurísticas — assim o backfill trata áudio igual a mensagem de texto normal.
+    Falha silenciosa (sem chave de API, mídia indisponível, etc.) mantém o
+    placeholder, sem quebrar o backfill.
+    """
+    from app.services.transcription import transcribe_audio_b64
+
+    try:
+        audio_b64, _mimetype = await client.get_media_by_message(token, message_id)
+        if not audio_b64:
+            return
+        text = await transcribe_audio_b64(audio_b64)
+        if text:
+            normalized["content"] = text
+    except Exception as e:
+        logger.warning("wpp_backfill_transcribe_failed", message_id=message_id, error=str(e))
+
+
 async def _backfill_group_history(wpp_id: str, group_name: str, source_id: str, days_back: int | None = 90, tenant_id: str | None = None):
     """Busca e ingere mensagens históricas de um grupo em background.
 
@@ -347,6 +369,9 @@ async def _backfill_group_history(wpp_id: str, group_name: str, source_id: str, 
                     if dup.scalar_one_or_none():
                         skipped_dup += 1
                         continue
+
+                if normalized["message_type"] in ("audio", "ptt") and ext_id:
+                    await _transcribe_backfilled_audio(client, token, ext_id, normalized)
 
                 try:
                     await processor.process_message(db, normalized, source)

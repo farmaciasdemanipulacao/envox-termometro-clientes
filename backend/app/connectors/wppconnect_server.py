@@ -179,6 +179,22 @@ class WppConnectClient:
             msgs = data.get("response", data) if isinstance(data, dict) else data
             return msgs if isinstance(msgs, list) else []
 
+    async def get_media_by_message(self, token: str, message_id: str) -> tuple[str | None, str | None]:
+        """
+        Baixa a mídia (base64) de uma mensagem específica do histórico.
+        get-messages não embute o base64 de áudio/imagem — precisa buscar
+        por mensagem. Retorna (base64, mimetype) ou (None, None) se falhar.
+        """
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(
+                f"{self.base}/api/{self.session}/get-media-by-message/{message_id}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if not r.is_success:
+                return None, None
+            data = r.json()
+            return data.get("base64"), data.get("mimetype")
+
     async def send_file_base64(
         self, token: str, phone: str, base64_data: str, mime: str,
         filename: str = "imagem.png", caption: str = "", is_group: bool = True,

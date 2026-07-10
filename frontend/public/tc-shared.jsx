@@ -211,7 +211,7 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
       boxShadow: 'var(--shadow-sidebar)', flexShrink: 0,
       transition: 'width var(--transition-default, 0.2s ease)', overflow: 'hidden',
     }}>
-      <div style={{ padding: collapsed ? '24px 12px' : '24px 20px', borderBottom: '1px solid var(--color-border-sidebar)', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', gap: '8px' }}>
+      <div style={{ padding: collapsed ? '24px 12px' : '24px 20px', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: collapsed ? 0 : '12px', minWidth: 0 }}>
           <img src="/atenx_assets/web/atenx-mark-96.png" alt="ATENX" style={{ width: '40px', height: '40px', flexShrink: 0 }} />
           {!collapsed && (
@@ -221,15 +221,15 @@ function Sidebar({ activePage, onNavigate, alertsCount, company, userName, isAdm
             </div>
           )}
         </div>
-        {!collapsed && <ThemeToggle />}
       </div>
 
-      {/* Botão isolado de recolher/expandir — não é item de navegação */}
+      {/* Tema + recolher/expandir — icones utilitários, não são itens de navegação */}
       <div style={{
-        padding: collapsed ? '8px 12px' : '8px 16px',
+        padding: collapsed ? '4px 12px 12px' : '4px 16px 12px',
         borderBottom: '1px solid var(--color-border-sidebar)',
-        display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-end',
+        display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-end', gap: '4px',
       }}>
+        {!collapsed && <ThemeToggle />}
         <div
           onClick={toggleCollapsed}
           title={collapsed ? 'Expandir' : 'Recolher'}

@@ -32,6 +32,17 @@ function IntelligenceScreen({ onSelectGroup }) {
     finally { setCtxLoading(false); }
   };
 
+  // Polling silencioso do painel de contexto aberto (sem spinner, sem
+  // resetar seleção) — mantém as últimas mensagens atualizadas.
+  React.useEffect(() => {
+    if (!selected) return;
+    const convId = selected.conversation_id;
+    const iv = setInterval(() => {
+      window.apiGet('/intelligence/context/' + convId + '?limit=20').then(setContext).catch(() => {});
+    }, 6000);
+    return () => clearInterval(iv);
+  }, [selected?.conversation_id, selected?.kind]);
+
   const kindMeta = {
     alert:       { label: 'Alerta',      color: '#dc2626', bg: '#fef2f2', icon: 'exclamation-circle' },
     churn:       { label: 'Risco Churn', color: '#ea580c', bg: '#fff7ed', icon: 'user-minus'         },
@@ -1367,6 +1378,7 @@ function ConvMessagesTab({ convId, group }) {
   const [loading, setLoading]  = React.useState(true);
   const [loadingMore, setMore] = React.useState(false);
   const bottomRef              = React.useRef(null);
+  const containerRef           = React.useRef(null);
 
   const load = async (ft, reset = true) => {
     if (reset) { setLoading(true); setData(null); }
@@ -1385,6 +1397,28 @@ function ConvMessagesTab({ convId, group }) {
     if (!loading && data?.messages?.length && filter === 'all')
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   }, [loading]);
+
+  // Polling silencioso: busca a janela mais recente e só anexa mensagens novas
+  // (sem mexer na paginação de "carregar anteriores"), rolando pro fim se o
+  // usuário já estava perto do fim.
+  React.useEffect(() => {
+    const iv = setInterval(async () => {
+      try {
+        const d = await window.apiGet(`/conversations/${convId}/messages?filter_type=${filter}&limit=60&offset=0`);
+        setData(prev => {
+          if (!prev) return prev;
+          const existingIds = new Set(prev.messages.map(m => m.id));
+          const fresh = (d.messages || []).filter(m => !existingIds.has(m.id));
+          if (fresh.length === 0) return prev.total === d.total ? prev : { ...prev, total: d.total };
+          const el = containerRef.current;
+          const nearBottom = el ? (el.scrollHeight - el.scrollTop - el.clientHeight < 120) : false;
+          if (nearBottom) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+          return { ...prev, messages: [...prev.messages, ...fresh], total: d.total };
+        });
+      } catch (_) {}
+    }, 6000);
+    return () => clearInterval(iv);
+  }, [convId, filter]);
 
   const filters = [
     { id: 'all',         label: 'Todas',     icon: 'comments',           color: 'var(--color-brand-600)' },
@@ -1428,7 +1462,7 @@ function ConvMessagesTab({ convId, group }) {
       </div>
 
       {/* Chat area com fundo WhatsApp */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: '2px', background: '#e5ddd5' }}>
+      <div ref={containerRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 24px', display: 'flex', flexDirection: 'column', gap: '2px', background: '#e5ddd5' }}>
         {loading ? <SectionLoader />
           : !data || data.messages.length === 0
             ? <div style={{ textAlign: 'center', padding: '64px' }}>

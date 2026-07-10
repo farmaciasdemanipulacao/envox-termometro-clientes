@@ -392,6 +392,17 @@ function AlertsScreen() {
     finally { setCtxLoading(false); }
   };
 
+  // Polling silencioso do painel de contexto aberto (sem spinner) —
+  // mantém as últimas mensagens do alerta selecionado atualizadas.
+  React.useEffect(() => {
+    if (!selected) return;
+    const convId = selected.conversation_id;
+    const iv = setInterval(() => {
+      window.apiGet('/intelligence/context/' + convId + '?limit=20').then(setContext).catch(() => {});
+    }, 6000);
+    return () => clearInterval(iv);
+  }, [selected?.conversation_id]);
+
   const closePanel = () => { setSelected(null); setContext(null); setComment(''); };
 
   const patchAlert = async (id, payload, successMsg) => {

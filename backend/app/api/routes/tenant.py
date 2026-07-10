@@ -87,9 +87,15 @@ async def get_wpp_status(
         token = await client.generate_token()
         status = await client.get_status(token)
         current = status.get("status", "UNKNOWN")
-        phone = status.get("phoneNumber") or status.get("pushname") or ""
+        connected = current in ("CONNECTED", "isLogged")
+        phone = ""
+        if connected:
+            try:
+                phone = await client.get_phone_number(token)
+            except Exception:
+                phone = ""
         return {
-            "connected": current in ("CONNECTED", "isLogged"),
+            "connected": connected,
             "status": current,
             "phone": phone,
             "session": config.wpp_session,

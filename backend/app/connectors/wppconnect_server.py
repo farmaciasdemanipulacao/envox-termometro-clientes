@@ -36,6 +36,20 @@ class WppConnectClient:
             r.raise_for_status()
             return r.json()
 
+    async def get_phone_number(self, token: str) -> str:
+        """
+        status-session não retorna o número — só o WppConnect expõe isso via
+        get-phone-number (response é o WID cru, ex: "5511999999999@c.us").
+        """
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"{self.base}/api/{self.session}/get-phone-number",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            r.raise_for_status()
+            raw = r.json().get("response") or ""
+            return raw.split("@")[0] if raw else ""
+
     async def start_session(self, token: str, webhook_url: str | None = None) -> dict:
         body: dict = {"waitForLogin": False, "autoClose": 0}
         if webhook_url:

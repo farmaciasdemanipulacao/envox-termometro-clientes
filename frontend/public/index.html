@@ -247,6 +247,20 @@
       if (window._onInstallPromptReady) window._onInstallPromptReady();
     });
 
+    // iOS (Safari/Chrome/Firefox — todos WebKit) NUNCA dispara beforeinstallprompt.
+    // Precisamos detectar e mostrar instruções manuais (Compartilhar > Adicionar à Tela de Início).
+    window._isIOS = function() {
+      var ua = navigator.userAgent;
+      var isIOSDevice = /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS 13+ se identifica como Mac
+      return isIOSDevice;
+    };
+
+    window._isStandalone = function() {
+      return window.navigator.standalone === true ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    };
+
     // Registra o Service Worker (necessário para PWA install e push)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(function(reg) {

@@ -1,7 +1,7 @@
 // ATENX — Service Worker
 // Habilita PWA install e push notifications
 
-const CACHE_NAME = 'atenx-v4';
+const CACHE_NAME = 'atenx-v5';
 
 // Instala o SW e faz cache dos assets estáticos essenciais
 self.addEventListener('install', (event) => {
@@ -64,7 +64,7 @@ self.addEventListener('push', (event) => {
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: data.tag || 'envox-alert',
-    data: { url: data.url || '/' },
+    data: { url: data.url || '/', delivery_id: data.delivery_id || null },
     requireInteraction: data.critical === true,
     vibrate: data.critical ? [200, 100, 200, 100, 200] : [200],
     actions: [
@@ -78,9 +78,21 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Click na notificação: abre o app na página de alertas
+// Click na notificação: abre o app na página de alertas + reporta o clique
+// (alimenta o relatório de interatividade do admin — ver /admin/push/stats)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  const deliveryId = event.notification.data && event.notification.data.delivery_id;
+  if (deliveryId) {
+    event.waitUntil(
+      fetch('/api/v1/push/track-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delivery_id: deliveryId }),
+      }).catch(() => {})
+    );
+  }
 
   if (event.action === 'dismiss') return;
 

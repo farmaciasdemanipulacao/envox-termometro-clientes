@@ -1277,7 +1277,7 @@ function ConfigScreen() {
         </Section>
 
         <Section icon="globe" title="Domínio / Acesso">
-          <Field label="Domínio da aplicação" value={domain} onChange={setDomain} hint="Ex: intel.envox.com.br ou 187.127.6.191:8080" />
+          <Field label="Domínio da aplicação" value={domain} onChange={setDomain} hint="Ex: atenx.com.br ou 187.127.6.191:8080" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <a href="/docs" target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: 'var(--radius-lg)', color: 'var(--color-text-primary)', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
               <i className="fas fa-book" style={{ color: 'var(--color-brand-600)' }}></i> Swagger UI (API Docs)

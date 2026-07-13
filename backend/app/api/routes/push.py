@@ -1,4 +1,5 @@
 """Endpoints de Web Push — subscribe, unsubscribe, test, vapid-public-key."""
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
@@ -105,3 +106,29 @@ async def test_push(
     if sent == 0:
         raise HTTPException(status_code=404, detail="Nenhuma subscription ativa encontrada")
     return {"sent": sent}
+
+
+class TrackClickRequest(BaseModel):
+    delivery_id: str
+
+
+@router.post("/track-click")
+async def track_click(payload: TrackClickRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Chamado pelo Service Worker (sw.js, notificationclick) quando o usuário toca
+    numa notificação. Sem auth de propósito: o SW não tem acesso ao localStorage/JWT,
+    e o delivery_id é um UUID não-adivinhável — só marca clicked_at, não expõe nada.
+    """
+    from app.models.push_delivery import PushDelivery
+
+    try:
+        delivery_uuid = uuid.UUID(payload.delivery_id)
+    except ValueError:
+        return {"status": "ignored"}
+
+    delivery = await db.get(PushDelivery, delivery_uuid)
+    if delivery and delivery.clicked_at is None:
+        from datetime import datetime, timezone
+        delivery.clicked_at = datetime.now(timezone.utc)
+        await db.commit()
+    return {"status": "ok"}

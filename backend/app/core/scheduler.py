@@ -6,6 +6,7 @@ Jobs configurados:
 - AlertScanJob: escaneia alertas pendentes a cada 15 min
 - MetricsUpdateJob: atualiza métricas de grupos/colaboradores a cada 30 min
 - CleanupJob: remove dados antigos (retenção LGPD) todo domingo
+- PushCampaignSweepJob: retoma campanhas de push manuais travadas (queued/sending)
 """
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -28,6 +29,7 @@ JOB_SCHEDULE_TYPES = {
     "wpp_health_check": "interval",
     "eod_briefing": "cron_daily",
     "data_cleanup": "cron_weekly",
+    "push_campaign_sweep": "interval",
 }
 
 # Defaults de código — usados quando não há override no banco (ScheduledJobConfig)
@@ -38,6 +40,7 @@ _JOB_DEFAULTS = {
     "wpp_health_check": {"interval_minutes": settings.WPP_HEALTH_CHECK_INTERVAL_MIN},
     "eod_briefing": {"hour": 18, "minute": 0},
     "data_cleanup": {"day_of_week": "sun", "hour": 2, "minute": 0},
+    "push_campaign_sweep": {"interval_minutes": settings.PUSH_CAMPAIGN_SWEEP_INTERVAL_MIN},
 }
 
 _JOB_NAMES = {
@@ -47,6 +50,7 @@ _JOB_NAMES = {
     "wpp_health_check": "Health Check WppConnect",
     "eod_briefing": "Briefing de Fim de Dia (18h)",
     "data_cleanup": "Limpeza de Dados (LGPD)",
+    "push_campaign_sweep": "Retomada de Campanhas de Push",
 }
 
 _JOB_FUNCS = {
@@ -56,6 +60,7 @@ _JOB_FUNCS = {
     "wpp_health_check": lambda: run_wpp_health_check_job,
     "eod_briefing": lambda: run_eod_briefing_job,
     "data_cleanup": lambda: run_cleanup_job,
+    "push_campaign_sweep": lambda: run_push_campaign_sweep_job,
 }
 
 _JOB_MISFIRE_GRACE = {
@@ -418,3 +423,35 @@ async def run_cleanup_job():
         )
         db.add(run)
         await db.commit()
+
+
+async def run_push_campaign_sweep_job():
+    """
+    Rede de segurança das campanhas de push manuais (admin_push.py): o disparo
+    normal roda em background assim que a campanha é criada (asyncio.create_task),
+    mas se o processo cair no meio (deploy, crash), a campanha fica travada em
+    QUEUED/SENDING. Este job varre e retoma — `process_campaign` é idempotente
+    (só envia pra quem ainda não tem PushDelivery concluído), então rodar de novo
+    não duplica notificação.
+    """
+    from app.db.session import AsyncSessionLocal
+    from sqlalchemy import select as _sel
+    from app.models.push_campaign import PushCampaign, PushCampaignStatus
+    from app.services.push import process_campaign
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            _sel(PushCampaign.id).where(
+                PushCampaign.status.in_([PushCampaignStatus.QUEUED, PushCampaignStatus.SENDING])
+            )
+        )
+        stuck_ids = [row[0] for row in result.all()]
+
+    for campaign_id in stuck_ids:
+        try:
+            await process_campaign(campaign_id)
+        except Exception as e:
+            logger.error("push_campaign_sweep_failed", campaign_id=str(campaign_id), error=str(e))
+
+    if stuck_ids:
+        logger.info("push_campaign_sweep_processed", count=len(stuck_ids))

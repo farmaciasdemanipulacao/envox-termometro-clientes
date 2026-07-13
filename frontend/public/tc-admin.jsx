@@ -36,21 +36,45 @@ function AdminPanel({ onBack }) {
   const [subs, setSubs]     = React.useState([]);
   const [plans, setPlans]   = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [pushCampaigns, setPushCampaigns] = React.useState([]);
+  const [pushStats, setPushStats]         = React.useState([]);
+  const [pushUsers, setPushUsers]         = React.useState([]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [st, us, sb, pl] = await Promise.all([
+      const [st, us, sb, pl, pc, ps, pu] = await Promise.all([
         window.apiGet('/admin/stats').catch(() => ({})),
         window.apiGet('/users/stats').catch(() => []),
         window.apiGet('/admin/subscriptions').catch(() => []),
         window.apiGet('/admin/plans').catch(() => []),
+        window.apiGet('/admin/push/campaigns').catch(() => []),
+        window.apiGet('/admin/push/stats').catch(() => []),
+        window.apiGet('/admin/push/users').catch(() => []),
       ]);
       setStats(st); setUsers(us); setSubs(sb); setPlans(pl);
+      setPushCampaigns(pc); setPushStats(ps); setPushUsers(pu);
     } finally {
       setLoading(false);
     }
   };
+
+  // Recarrega só os dados de push (usado depois de criar campanha, e por polling
+  // enquanto alguma campanha ainda está sending/queued)
+  const loadPush = async () => {
+    const [pc, ps] = await Promise.all([
+      window.apiGet('/admin/push/campaigns').catch(() => []),
+      window.apiGet('/admin/push/stats').catch(() => []),
+    ]);
+    setPushCampaigns(pc); setPushStats(ps);
+  };
+
+  React.useEffect(() => {
+    const hasPending = pushCampaigns.some(c => c.status === 'queued' || c.status === 'sending');
+    if (!hasPending) return;
+    const iv = setInterval(loadPush, 4000);
+    return () => clearInterval(iv);
+  }, [pushCampaigns]);
 
   React.useEffect(() => { load(); }, []);
 
@@ -59,6 +83,7 @@ function AdminPanel({ onBack }) {
     { id: 'users',     label: 'Usuários',    icon: 'users' },
     { id: 'plans',     label: 'Planos',      icon: 'layer-group' },
     { id: 'subs',      label: 'Assinaturas', icon: 'credit-card' },
+    { id: 'push',      label: 'Notificações Push', icon: 'bell' },
   ];
 
   return (
@@ -77,8 +102,8 @@ function AdminPanel({ onBack }) {
         </button>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ background: 'var(--color-bg-header)', borderBottom: '1px solid var(--color-border-card)', padding: '0 24px', display: 'flex', gap: '2px', flexShrink: 0 }}>
+      {/* Tab bar — overflow-x pra caber em telas estreitas (arrasta/desliza se não couber tudo) */}
+      <div style={{ background: 'var(--color-bg-header)', borderBottom: '1px solid var(--color-border-card)', padding: '0 24px', display: 'flex', gap: '2px', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
         {TABS.map(t => (
           <button
             key={t.id}
@@ -87,6 +112,7 @@ function AdminPanel({ onBack }) {
               background: 'none', border: 'none', cursor: 'pointer', padding: '12px 16px',
               color: tab === t.id ? 'var(--color-brand-600)' : 'var(--color-text-muted)', fontSize: '13px', fontWeight: tab === t.id ? 600 : 400,
               borderBottom: `2px solid ${tab === t.id ? 'var(--color-brand-600)' : 'transparent'}`, display: 'flex', alignItems: 'center', gap: '7px', transition: 'color 0.15s',
+              whiteSpace: 'nowrap', flexShrink: 0,
             }}
           >
             <i className={`fas fa-${t.icon}`} style={{ fontSize: '12px' }} />{t.label}
@@ -104,6 +130,7 @@ function AdminPanel({ onBack }) {
             {tab === 'users'     && <AdminUsers users={users} subs={subs} plans={plans} onRefresh={load} />}
             {tab === 'plans'     && <AdminPlans plans={plans} onRefresh={load} />}
             {tab === 'subs'      && <AdminSubscriptions subs={subs} plans={plans} onRefresh={load} />}
+            {tab === 'push'      && <AdminPush campaigns={pushCampaigns} statsRows={pushStats} pushUsers={pushUsers} onRefresh={loadPush} />}
           </>
         )}
       </div>
@@ -770,6 +797,242 @@ function AdminSubscriptions({ subs, plans, onRefresh }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// ── Notificações Push: compor campanha + progresso + relatório de interatividade ──
+function AdminPush({ campaigns, statsRows, pushUsers, onRefresh }) {
+  const [subTab, setSubTab] = React.useState('compose'); // compose | campaigns | report
+  const [title, setTitle]   = React.useState('');
+  const [body, setBody]     = React.useState('');
+  const [url, setUrl]       = React.useState('/');
+  const [targetType, setTargetType] = React.useState('all'); // all | specific
+  const [selectedUserIds, setSelectedUserIds] = React.useState([]);
+  const [sending, setSending] = React.useState(false);
+
+  const reachableCount = targetType === 'all'
+    ? pushUsers.filter(u => u.device_count > 0).length
+    : selectedUserIds.filter(id => (pushUsers.find(u => u.id === id)?.device_count || 0) > 0).length;
+
+  function toggleUser(id) {
+    setSelectedUserIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  async function handleSend() {
+    if (!title.trim() || !body.trim()) {
+      window.showToast && window.showToast('Preencha título e mensagem.', 'warning');
+      return;
+    }
+    if (targetType === 'specific' && selectedUserIds.length === 0) {
+      window.showToast && window.showToast('Selecione ao menos um usuário.', 'warning');
+      return;
+    }
+    setSending(true);
+    try {
+      await window.apiPost('/admin/push/campaigns', {
+        title: title.trim(),
+        body: body.trim(),
+        url: url.trim() || '/',
+        target_type: targetType,
+        user_ids: targetType === 'specific' ? selectedUserIds : undefined,
+      });
+      window.showToast && window.showToast('Campanha criada! Envio em andamento.', 'success');
+      setTitle(''); setBody(''); setUrl('/'); setSelectedUserIds([]); setTargetType('all');
+      setSubTab('campaigns');
+      onRefresh();
+    } catch (e) {
+      window.showToast && window.showToast('Erro ao criar campanha.', 'error');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const SUB_TABS = [
+    { id: 'compose',   label: 'Nova campanha' },
+    { id: 'campaigns', label: `Campanhas (${campaigns.length})` },
+    { id: 'report',    label: 'Interatividade por usuário' },
+  ];
+
+  return (
+    <div>
+      <h2 style={{ color: 'var(--color-text-primary)', fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Notificações Push</h2>
+
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--color-border-card)' }}>
+        {SUB_TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSubTab(t.id)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '10px 14px',
+              color: subTab === t.id ? 'var(--color-brand-600)' : 'var(--color-text-muted)',
+              fontSize: '13px', fontWeight: subTab === t.id ? 600 : 400,
+              borderBottom: `2px solid ${subTab === t.id ? 'var(--color-brand-600)' : 'transparent'}`,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === 'compose' && (
+        <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', padding: '20px', maxWidth: '560px' }}>
+          <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Título</label>
+          <input
+            type="text" value={title} onChange={e => setTitle(e.target.value)} maxLength={200}
+            placeholder="Ex: Nova funcionalidade disponível"
+            style={{ width: '100%', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '9px 12px', fontSize: '13px', outline: 'none', marginBottom: '14px', boxSizing: 'border-box' }}
+          />
+
+          <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Mensagem</label>
+          <textarea
+            value={body} onChange={e => setBody(e.target.value)} rows={3} maxLength={500}
+            placeholder="Texto que vai aparecer na notificação"
+            style={{ width: '100%', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '9px 12px', fontSize: '13px', outline: 'none', marginBottom: '14px', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+          />
+
+          <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Link ao tocar na notificação (opcional)</label>
+          <input
+            type="text" value={url} onChange={e => setUrl(e.target.value)}
+            placeholder="/"
+            style={{ width: '100%', background: 'var(--color-bg-page)', border: '1px solid var(--color-border-card)', borderRadius: '8px', color: 'var(--color-text-primary)', padding: '9px 12px', fontSize: '13px', outline: 'none', marginBottom: '18px', boxSizing: 'border-box' }}
+          />
+
+          <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Destinatários</label>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <button
+              onClick={() => setTargetType('all')}
+              style={{
+                flex: 1, padding: '8px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                border: `1px solid ${targetType === 'all' ? 'var(--color-brand-600)' : 'var(--color-border-card)'}`,
+                background: targetType === 'all' ? 'rgba(13,148,136,0.1)' : 'var(--color-bg-page)',
+                color: targetType === 'all' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
+              }}
+            >
+              Todos os usuários
+            </button>
+            <button
+              onClick={() => setTargetType('specific')}
+              style={{
+                flex: 1, padding: '8px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                border: `1px solid ${targetType === 'specific' ? 'var(--color-brand-600)' : 'var(--color-border-card)'}`,
+                background: targetType === 'specific' ? 'rgba(13,148,136,0.1)' : 'var(--color-bg-page)',
+                color: targetType === 'specific' ? 'var(--color-brand-600)' : 'var(--color-text-secondary)',
+              }}
+            >
+              Usuários específicos
+            </button>
+          </div>
+
+          {targetType === 'specific' && (
+            <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--color-border-card)', borderRadius: '8px', marginBottom: '14px' }}>
+              {pushUsers.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-placeholder)', fontSize: '13px' }}>Nenhum usuário encontrado</div>
+              ) : pushUsers.map(u => (
+                <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderBottom: '1px solid var(--color-border-card)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={selectedUserIds.includes(u.id)} onChange={() => toggleUser(u.id)} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</div>
+                    <div style={{ color: 'var(--color-text-placeholder)', fontSize: '11px' }}>{u.email || '—'}</div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px',
+                    background: u.device_count > 0 ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)',
+                    color: u.device_count > 0 ? '#22c55e' : 'var(--color-text-placeholder)',
+                  }}>
+                    {u.device_count} disp.
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div style={{ color: 'var(--color-text-placeholder)', fontSize: '12px', marginBottom: '14px' }}>
+            <i className="fas fa-circle-info" style={{ marginRight: '5px' }} />
+            {reachableCount} usuário(s) com dispositivo ativo vão receber de fato.
+          </div>
+
+          <button
+            onClick={handleSend}
+            disabled={sending}
+            style={{
+              background: 'var(--color-brand-600)', color: '#fff', border: 'none', borderRadius: '8px',
+              padding: '10px 20px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', opacity: sending ? 0.6 : 1,
+            }}
+          >
+            {sending ? 'Enviando...' : 'Enviar campanha'}
+          </button>
+        </div>
+      )}
+
+      {subTab === 'campaigns' && (
+        <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 100px 1fr 1fr 90px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', color: 'var(--color-text-placeholder)', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
+            <span>Campanha</span><span>Status</span><span>Progresso</span><span>Cliques</span><span>Criada em</span>
+          </div>
+          {campaigns.length === 0 ? (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-placeholder)' }}>Nenhuma campanha criada ainda</div>
+          ) : campaigns.map(c => (
+            <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '1.6fr 100px 1fr 1fr 90px', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', alignItems: 'center' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</div>
+                <div style={{ color: 'var(--color-text-placeholder)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.body}</div>
+              </div>
+              <PushCampaignStatusBadge status={c.status} />
+              <div style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
+                {c.sent}/{c.total} enviados{c.failed > 0 ? `, ${c.failed} falhas` : ''}
+              </div>
+              <div style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
+                {c.clicked} cliques ({c.click_rate}%)
+              </div>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>{c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '—'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {subTab === 'report' && (
+        <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border-card)', borderRadius: '12px', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 90px 90px 90px 90px 1fr', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', color: 'var(--color-text-placeholder)', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
+            <span>Usuário</span><span>Disp.</span><span>Enviados</span><span>Cliques</span><span>Taxa</span><span>Última atividade</span>
+          </div>
+          {statsRows.length === 0 ? (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-placeholder)' }}>Nenhum envio de push registrado ainda</div>
+          ) : statsRows.map(r => (
+            <div key={r.user_id} style={{ display: 'grid', gridTemplateColumns: '1.4fr 90px 90px 90px 90px 1fr', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border-card)', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                <UserAvatar name={r.name} size={26} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ color: 'var(--color-text-placeholder)', fontSize: '11px' }}>{r.email || '—'}</div>
+                </div>
+              </div>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{r.device_count}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{r.sent}{r.failed > 0 ? ` (${r.failed} falhas)` : ''}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{r.clicked}</span>
+              <span style={{ color: 'var(--color-brand-600)', fontSize: '13px', fontWeight: 600 }}>{r.click_rate}%</span>
+              <span style={{ color: 'var(--color-text-placeholder)', fontSize: '12px' }}>
+                {r.last_clicked_at ? `Clicou em ${new Date(r.last_clicked_at).toLocaleString('pt-BR')}` : (r.last_sent_at ? `Recebeu em ${new Date(r.last_sent_at).toLocaleString('pt-BR')}` : '—')}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PushCampaignStatusBadge({ status }) {
+  const map = {
+    queued:    { label: 'Na fila',    bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' },
+    sending:   { label: 'Enviando',   bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b' },
+    completed: { label: 'Concluída',  bg: 'rgba(34,197,94,0.15)',   color: '#22c55e' },
+    failed:    { label: 'Falhou',     bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
+  };
+  const s = map[status] || map.queued;
+  return (
+    <span style={{ background: s.bg, color: s.color, fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px', display: 'inline-block', width: 'fit-content' }}>
+      {s.label}
+    </span>
   );
 }
 

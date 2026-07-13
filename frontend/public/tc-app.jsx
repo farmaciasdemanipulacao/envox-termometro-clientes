@@ -58,7 +58,7 @@ function PushPermissionBanner({ onDismiss }) {
   );
 }
 
-function InstallBanner({ onDismiss }) {
+function InstallBanner({ onDismiss, ios }) {
   const [loading, setLoading] = React.useState(false);
 
   async function handleInstall() {
@@ -70,6 +70,48 @@ function InstallBanner({ onDismiss }) {
     window._installPrompt = null;
     setLoading(false);
     onDismiss();
+  }
+
+  if (ios) {
+    return (
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        zIndex: 8001, display: 'flex', flexDirection: 'column', alignItems: 'center',
+        pointerEvents: 'none',
+      }}>
+        <style>{`
+          @keyframes atenxBounceDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
+          }
+        `}</style>
+        <div style={{
+          background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-600)', borderRadius: '12px',
+          padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: '12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          maxWidth: '420px', width: 'calc(100% - 32px)', marginBottom: '8px',
+          pointerEvents: 'auto',
+        }}>
+          <i className="fas fa-arrow-up-from-bracket" style={{ color: 'var(--color-brand-600)', fontSize: '20px', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ color: 'var(--color-text-primary)', fontSize: '13px', fontWeight: 600 }}>Instalar app (iPhone/iPad)</div>
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '4px', lineHeight: 1.4 }}>
+              Este aviso é só instrução — não tem botão aqui. Toque no ícone <i className="fas fa-arrow-up-from-bracket" style={{ margin: '0 2px' }} /> <strong>Compartilhar do Safari</strong>, na barra cinza <strong>embaixo da tela</strong> (fora do app), depois em <strong>"Adicionar à Tela de Início"</strong>.
+            </div>
+          </div>
+          <button
+            onClick={onDismiss}
+            style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '4px', fontSize: '16px' }}
+          >
+            <i className="fas fa-times" />
+          </button>
+        </div>
+        <i className="fas fa-chevron-down" style={{
+          color: 'var(--color-brand-600)', fontSize: '18px', marginBottom: '4px',
+          animation: 'atenxBounceDown 1s ease-in-out infinite',
+        }} />
+      </div>
+    );
   }
 
   return (
@@ -119,6 +161,7 @@ function App() {
   const [profileOpen,   setProfileOpen]   = React.useState(false);
   const [pushBanner,    setPushBanner]    = React.useState(false);
   const [installBanner, setInstallBanner] = React.useState(false);
+  const [installIOS,    setInstallIOS]    = React.useState(false);
   // Onboarding
   const [showOnboarding, setShowOnboarding] = React.useState(false);
   // Tela de loading logo após o login (logo pulsando + pontinhos)
@@ -177,9 +220,18 @@ function App() {
   }, [loggedIn]);
 
   // Mostra banner de instalação PWA quando o browser disparar o evento
+  // (Android/desktop Chrome). No iOS esse evento nunca existe — mostra
+  // instruções manuais em vez disso (Compartilhar > Adicionar à Tela de Início).
   React.useEffect(() => {
     if (!loggedIn) return;
     if (sessionStorage.getItem('install_banner_dismissed')) return;
+
+    if (window._isIOS && window._isIOS() && !(window._isStandalone && window._isStandalone())) {
+      setInstallIOS(true);
+      setInstallBanner(true);
+      return;
+    }
+
     // Evento pode ter chegado antes do React montar
     if (window._installPrompt) { setInstallBanner(true); return; }
     window._onInstallPromptReady = () => {
@@ -326,7 +378,7 @@ function App() {
       <div style={{ height: '100vh', overflow: 'hidden', fontFamily: 'var(--font-sans)', background: 'var(--color-bg-page)' }}>
         {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
         <MobileTopBar company={company} onMenuOpen={() => setDrawerOpen(true)} />
-        {installBanner && <InstallBanner onDismiss={handleInstallDismiss} />}
+        {installBanner && <InstallBanner onDismiss={handleInstallDismiss} ios={installIOS} />}
         {pushBanner && !installBanner && <PushPermissionBanner onDismiss={handlePushDismiss} />}
         <MobileDrawer
           open={drawerOpen}
@@ -372,7 +424,7 @@ function App() {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: 'var(--font-sans)' }}>
       {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
-      {installBanner && <InstallBanner onDismiss={handleInstallDismiss} />}
+      {installBanner && <InstallBanner onDismiss={handleInstallDismiss} ios={installIOS} />}
       {pushBanner && !installBanner && <PushPermissionBanner onDismiss={handlePushDismiss} />}
       <Sidebar
         activePage={page}

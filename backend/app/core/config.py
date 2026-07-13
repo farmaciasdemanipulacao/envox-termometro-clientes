@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     SUMMARY_SCHEDULE_MINUTE: int = 0
     ALERT_SCAN_INTERVAL_MIN: int = 15  # Scan de alertas a cada 15 min
     METRICS_UPDATE_INTERVAL_MIN: int = 30
+    PUSH_CAMPAIGN_SWEEP_INTERVAL_MIN: int = 2  # Retoma campanhas de push travadas (queued/sending)
 
     # Thresholds de alerta configuráveis
     ALERT_RISK_THRESHOLD: int = 65       # Score de risco >= 65 → alerta
@@ -74,7 +75,7 @@ class Settings(BaseSettings):
     WPP_BASE_URL: str = "http://localhost:21465"
     WPP_SESSION: str = "termonitor"
     WPP_SECRET: str = "THISISMYSECURETOKEN"
-    WPP_WEBHOOK_URL: str = "https://intel.envox.com.br/api/v1/webhooks/wppconnect"
+    WPP_WEBHOOK_URL: str = "https://atenx.com.br/api/v1/webhooks/wppconnect"
     WPP_AUTO_RECONNECT: bool = True
     WPP_HEALTH_CHECK_INTERVAL_MIN: int = 5
 

@@ -289,7 +289,7 @@ async def _connect_wppconnect():
     if connected:
         logger.info("wpp_startup_connected")
     else:
-        logger.info("wpp_startup_awaiting_qr", hint="Escaneie o QR em intel.envox.com.br")
+        logger.info("wpp_startup_awaiting_qr", hint="Escaneie o QR em atenx.com.br")
 
 
 @asynccontextmanager
@@ -511,7 +511,7 @@ app.add_middleware(
 
 # === ROTAS DA API ===
 
-from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence, users, tenant, email, push, agent_config, register, plans, subscriptions, team, system  # noqa: E501
+from app.api.routes import health, auth, ingest, dashboard, alerts, summaries, wppconnect, intelligence, users, tenant, email, push, agent_config, register, plans, subscriptions, team, system, admin_push  # noqa: E501
 
 API_PREFIX = "/api/v1"
 
@@ -533,6 +533,7 @@ app.include_router(push.router, prefix=API_PREFIX)
 app.include_router(agent_config.router, prefix=API_PREFIX)
 app.include_router(team.router, prefix=API_PREFIX, tags=["Time"])
 app.include_router(system.router, prefix=API_PREFIX, tags=["Sistema"])
+app.include_router(admin_push.router, prefix=API_PREFIX, tags=["Push Admin"])
 
 # === STATIC FILES (Frontend) ===
 # Serve o dashboard HTML estático

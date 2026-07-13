@@ -17,6 +17,9 @@ from app.models.plan import Plan
 from app.models.subscription import Subscription
 from app.models.automation import ScheduledJobConfig, SystemSetting, CustomAlertRule
 from app.models.custom_analysis import CustomAnalysisRun
+from app.models.push_subscription import PushSubscription
+from app.models.push_campaign import PushCampaign
+from app.models.push_delivery import PushDelivery
 
 __all__ = [
     "IngestionSource",
@@ -37,4 +40,7 @@ __all__ = [
     "SystemSetting",
     "CustomAlertRule",
     "CustomAnalysisRun",
+    "PushSubscription",
+    "PushCampaign",
+    "PushDelivery",
 ]

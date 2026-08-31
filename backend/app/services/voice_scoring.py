@@ -14,7 +14,7 @@ DIMENSION_LABELS = {
 ACTION_BY_DIMENSION = {
     "atendimento": "Revisar canais, SLA de retorno inicial, responsáveis e fechamento de solicitações.",
     "prazo": "Mapear gargalos de prazo, pactuar SLA por tipo de entrega e criar alertas de atraso.",
-    "qualidade": "Reforçar revisão técnica e factual antes de publicar, com checklist de nomes, empresas e informações.",
+    "qualidade": "Reforçar revisão técnica e factual antes de publicar, com checklist de briefing, referências, nomes, empresas e informações.",
     "proatividade": "Implantar rotina de sugestões proativas por área, com pauta mensal de oportunidades e próximos passos.",
     "confianca": "Fazer recuperação ativa de confiança com plano de ação, responsáveis, prazos e retorno de correções.",
     "entendimento": "Aprofundar briefing e repertório de cada unidade/setor antes de propor ou executar entregas.",
@@ -73,10 +73,21 @@ def calculate_respondent_score(questions, answer_by_question_id):
             weighted[q.dimension][0] += s * weight
             weighted[q.dimension][1] += weight
 
-        if q.key == "left_to_request" and str(answer.value_json).lower() in {"sim", "yes", "true"}:
+        normalized = str(answer.value_json).strip().lower()
+        if q.key == "left_to_request" and normalized in {"sim", "yes", "true"}:
             flags["left_to_request"] = True
-        if q.key == "information_errors" and str(answer.value_json).lower() in {"frequentes", "muito frequentes"}:
+        if q.key == "information_errors" and normalized in {"frequentes", "muito frequentes"}:
             flags["repeated_information_errors"] = True
+        if q.key == "correction_resolution":
+            if normalized == "foram necessárias novas tentativas para executar a mesma orientação já passada":
+                flags["same_instruction_execution_failure"] = True
+            elif normalized == "o pedido/briefing mudou entre uma versão e outra":
+                flags["briefing_changed"] = True
+            elif normalized == "aconteceram os dois cenários: mudança de pedido e falha na execução da orientação":
+                flags["same_instruction_execution_failure"] = True
+                flags["briefing_changed"] = True
+            elif normalized == "a correção demorou ou o material não retornou adequadamente":
+                flags["correction_flow_failure"] = True
         if q.key == "deadline_delivery":
             try:
                 if float(answer.value_json) <= 5:
@@ -107,6 +118,9 @@ def calculate_respondent_score(questions, answer_by_question_id):
     penalty = 0.0
     penalty += 12.0 if flags.get("left_to_request") else 0.0
     penalty += 8.0 if flags.get("repeated_information_errors") else 0.0
+    penalty += 9.0 if flags.get("same_instruction_execution_failure") else 0.0
+    penalty += 7.0 if flags.get("correction_flow_failure") else 0.0
+    # Mudança de briefing é sinal diagnóstico, não penalidade automática contra a Envox.
     penalty += 7.0 if flags.get("deadline_risk") else 0.0
     penalty += 15.0 if flags.get("low_trust") else 0.0
 
@@ -188,6 +202,12 @@ def build_recommendations(respondents):
 
 
 def count_answer_values(questions, answers):
+    """Agrega respostas categóricas e textos.
+
+    Para ranking, aplica pontuação posicional (Borda): em uma lista de N itens,
+    o 1º recebe N pontos, o 2º N-1 etc. Assim os itens não empatam artificialmente
+    apenas porque todos aparecem uma vez em cada ranking.
+    """
     question_by_id = {q.id: q for q in questions}
     counters = defaultdict(Counter)
     open_text = defaultdict(list)
@@ -197,7 +217,11 @@ def count_answer_values(questions, answers):
         if not q:
             continue
         value = a.value_json
-        if isinstance(value, list):
+        if q.question_type == "ranking" and isinstance(value, list):
+            total = len(value)
+            for idx, item in enumerate(value):
+                counters[q.key][str(item)] += max(total - idx, 1)
+        elif isinstance(value, list):
             for item in value:
                 counters[q.key][str(item)] += 1
         elif q.question_type in {"open_text", "text"}:

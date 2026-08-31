@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Voz do Cliente | Envox Intelligence</title>
+  <style>
+    :root{--bg:#0b1220;--panel:#111b2e;--panel2:#162238;--line:#273653;--text:#e8eef7;--muted:#8ea1bd;--brand:#14b8a6;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif} button,input,textarea{font:inherit} button{cursor:pointer}.hidden{display:none!important}.muted{color:var(--muted)}
+    .login{max-width:420px;margin:12vh auto;padding:28px;background:var(--panel);border:1px solid var(--line);border-radius:18px}.login h1{margin:3px 0 5px}.brand{font-weight:800}.top{height:62px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:#0d1727}.wrap{max-width:1450px;margin:0 auto;padding:22px}.grid{display:grid;grid-template-columns:330px 1fr;gap:18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.panel h2,.panel h3{margin:0 0 10px}.campaign{padding:12px;border:1px solid var(--line);border-radius:12px;margin:8px 0;cursor:pointer}.campaign:hover,.campaign.active{border-color:#2dd4bf;background:#10243a}.campaign-tags{display:flex;gap:6px;margin-top:6px}.tag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#1d2b42;color:#a9bad2;font-size:11px}
+    label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px} input,textarea{width:100%;background:#0d1727;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px 12px;outline:none} input:focus,textarea:focus{border-color:#2dd4bf}.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;background:var(--brand);color:#052e2b}.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cards{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin-bottom:14px}.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}.kpi b{font-size:24px;display:block;margin-top:4px}.section{margin-top:16px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:800px}th,td{padding:10px 12px;border-bottom:1px solid #20304a;text-align:left}th{color:#9fb0c8;font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#0e192a;position:sticky;top:0}.health{font-weight:800}.healthy{color:var(--ok)}.attention{color:var(--warn)}.critical{color:var(--bad)}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cause{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #20304a}.action{padding:11px 12px;border-left:3px solid var(--brand);background:#0e192a;border-radius:0 9px 9px 0;margin:8px 0}.action-text{margin-top:5px}.notice{padding:12px;border:1px solid #31516b;background:#0f2133;border-radius:10px;color:#b9cadc}.err{color:#fca5a5;font-size:12px;margin-top:8px}.ok{color:#86efac;font-size:12px;margin-top:8px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}.modal .box{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}.modal-actions{margin-top:12px} code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#99f6e4}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <section id="login" class="login">
+    <div class="brand">ENVOX Intelligence</div>
+    <h1>Voz do Cliente</h1>
+    <p class="muted">Acesso administrativo às pesquisas confidenciais de percepção.</p>
+    <label>Usuário</label><input id="user" autocomplete="username" />
+    <label>Senha</label><input id="pass" type="password" autocomplete="current-password" />
+    <button class="btn" id="loginBtn" style="width:100%;margin-top:14px">Entrar</button>
+    <div id="loginErr" class="err"></div>
+  </section>
+
+  <div id="app" class="hidden">
+    <header class="top">
+      <div><span class="brand">ENVOX Intelligence</span> <span class="muted">/ Voz do Cliente</span></div>
+      <div class="toolbar"><span id="who" class="muted"></span><button class="btn ghost" id="logoutBtn">Sair</button></div>
+    </header>
+    <div class="wrap">
+      <div class="grid">
+        <aside class="panel">
+          <div class="toolbar" style="justify-content:space-between"><h2>Campanhas</h2><button class="btn" id="newSecovi">+ Secovi</button></div>
+          <p class="muted" style="font-size:12px">Cria a versão refinada de 19 perguntas, com separação causal de briefing x execução.</p>
+          <div id="campaigns"></div>
+        </aside>
+
+        <main>
+          <section id="empty" class="panel"><h2>Selecione uma campanha</h2><p class="muted">Acompanhe abertura, início, conclusão, risco, matriz por unidade/setor/regional e causas de insatisfação.</p></section>
+          <div id="detail" class="hidden">
+            <div class="cards">
+              <div class="kpi"><span class="muted">Respondentes</span><b id="kTotal">–</b></div>
+              <div class="kpi"><span class="muted">Conclusão</span><b id="kCompletion">–</b></div>
+              <div class="kpi"><span class="muted">Percepção</span><b id="kScore">–</b></div>
+              <div class="kpi"><span class="muted">Risco</span><b id="kRisk">–</b></div>
+              <div class="kpi"><span class="muted">Críticos</span><b id="kCritical">–</b></div>
+            </div>
+
+            <section class="panel">
+              <div class="toolbar" style="justify-content:space-between">
+                <div><h2 id="campaignTitle"></h2><div id="campaignMeta" class="muted"></div></div>
+                <div class="toolbar"><button class="btn ghost" id="refreshBtn">Atualizar</button><button class="btn" id="importBtn">Importar respondentes</button></div>
+              </div>
+            </section>
+
+            <section class="panel section"><h3>Status dos respondentes</h3><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Unidade / Setor</th><th>Regional</th><th>Status</th><th>Percepção</th><th>Risco</th><th>Classificação</th><th>Link</th></tr></thead><tbody id="respondentRows"></tbody></table></div></section>
+            <section class="panel section"><h3>Matriz Unidade/Setor × Atendimento × Prazo × Qualidade × Proatividade × Confiança × Risco</h3><div class="table-wrap"><table><thead><tr><th>Unidade</th><th>Setor</th><th>Regional</th><th>N</th><th>Atendimento</th><th>Prazo</th><th>Qualidade</th><th>Proatividade</th><th>Confiança</th><th>Risco</th></tr></thead><tbody id="matrixRows"></tbody></table></div></section>
+            <div class="row section"><section class="panel"><h3>Principais causas</h3><div id="causes"></div></section><section class="panel"><h3>Ações recomendadas</h3><div id="actions"></div></section></div>
+            <section class="panel section"><h3>Diagnóstico causal de correção/retrabalho</h3><div class="notice">Separa mudanças do próprio briefing de falhas em executar a mesma orientação já fornecida, evitando atribuições causais indevidas.</div><div id="causal" style="margin-top:10px"></div></section>
+            <section class="panel section"><h3>Demandas invisíveis / perdidas</h3><div id="lost"></div></section>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal hidden"><div class="box"><div class="toolbar" style="justify-content:space-between"><h2 id="modalTitle">Importar</h2><button class="btn ghost" id="closeModal">Fechar</button></div><div id="modalBody"></div></div></div>
+  <script src="/voice-admin.js?v=1"></script>
+</body>
+</html>
